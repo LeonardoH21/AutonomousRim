@@ -2,6 +2,7 @@ using AutonomousRim.Core;
 using RimWorld;
 using UnityEngine;
 using Verse;
+using System.Linq;
 
 namespace AutonomousRim.UI
 {
@@ -9,6 +10,7 @@ namespace AutonomousRim.UI
     {
         private Vector2 scrollPosition;
         private float contentHeight = 1000f;
+        private int lootPage;
         public override Vector2 RequestedTabSize => new Vector2(760f, 580f);
 
         public override void DoWindowContents(Rect inRect)
@@ -21,22 +23,43 @@ namespace AutonomousRim.UI
                 return;
             }
 
-            Widgets.Label(new Rect(inRect.x, inRect.y, inRect.width, 32f), "AutonomousRim — Colony inspector (observation mode)");
+            Widgets.Label(new Rect(inRect.x, inRect.y, inRect.width, 32f), "AutonomousRim — Colônia, equipamentos e automação");
             Rect viewport = new Rect(inRect.x, inRect.y + 36f, inRect.width, inRect.height - 36f);
             Rect content = new Rect(0f, 0f, viewport.width - 20f, contentHeight);
             Widgets.BeginScrollView(viewport, ref scrollPosition, content);
             var listing = new Listing_Standard();
             listing.Begin(content);
             listing.Label(state.ToString());
+            var component = map.GetComponent<AutonomousRimMapComponent>();
+            bool foodAutomation = component.FoodAutomation;
+            bool workAutomation = component.WorkAutomation;
+            listing.CheckboxLabeled("Alimentação automática: caça, abate e refeições", ref foodAutomation);
+            listing.CheckboxLabeled("Gerenciar prioridades de trabalho dos colonos", ref workAutomation);
+            if (foodAutomation != component.FoodAutomation || workAutomation != component.WorkAutomation)
+                component.SetAutomation(foodAutomation, workAutomation);
+            listing.Label(component.ManagementStatus);
+            listing.Label("Prioridades usam o modo numérico. Ao desligar, a IA restaura prioridades e remove suas ordens que não foram editadas pelo jogador.");
             ThreatState threat = state.Threat;
             listing.Label($"Threat: {threat.Risk} | Humans: {threat.Humanlikes} | Mechs: {threat.Mechanoids} | Animals: {threat.Animals} | Other: {threat.Other}");
             listing.Label($"Ranged: {threat.Ranged} | Melee/unarmed: {threat.Melee} | Strength heuristic: allies {threat.FriendlyStrength:0.0} / enemies {threat.EnemyStrength:0.0}");
             listing.Label(threat.LastTransition);
             listing.Label("Threat detection is based on hostile pawns, not raid incidents. Turrets, traps and special abilities are not modeled.");
-            listing.Label($"Stored food: {state.FoodNutrition:0.0} nutrition / ~{state.EstimatedFoodDays:0.0} days (adult baseline)");
-            listing.Label("Food estimate excludes genes, guests, animals and spoilage. Combat score is an initial heuristic.");
+            listing.Label($"Comida armazenada: {state.FoodNutrition:0.0} nutrição / ~{state.EstimatedFoodDays:0.0} dias | Consumo dos colonos: {state.DailyFoodNutrition:0.0}/dia");
+            listing.Label("Reserva estimada com fome e dietas dos colonos; visitantes, animais, acesso físico e deterioração futura não estão incluídos.");
             foreach (var resource in state.Resources)
                 listing.Label($"{resource.Key}: {resource.Value}");
+            listing.GapLine();
+            listing.Label($"Armas e roupas identificadas no mapa: {state.Loot.Count} (inclui itens proibidos e equipamentos em cadáveres)");
+            int pages = Mathf.Max(1, (state.Loot.Count + 39) / 40);
+            lootPage = Mathf.Clamp(lootPage, 0, pages - 1);
+            if (pages > 1 && listing.ButtonText($"Equipamentos: página {lootPage + 1}/{pages} — próxima página")) lootPage = (lootPage + 1) % pages;
+            foreach (LootProfile loot in state.Loot.Skip(lootPage * 40).Take(40))
+            {
+                listing.Label($"{loot.Kind}: {loot.Name} | Estado: {loot.Condition:P0} | Proibido: {loot.Forbidden} | Usado por cadáver: {loot.Tainted}");
+                listing.Label(loot.Location);
+                if (loot.Weapon != null) listing.Label($"DPS: {loot.Weapon.DamagePerSecond:0.0} | Alcance: {loot.Weapon.Range:0.0}");
+                else listing.Label($"Proteção cortante: {loot.SharpArmor:P0} | Contusão: {loot.BluntArmor:P0}");
+            }
             listing.GapLine();
             foreach (PawnProfile pawn in state.Pawns)
             {

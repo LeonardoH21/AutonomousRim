@@ -26,6 +26,17 @@ internal static class Program
         Equal("High", CombatMath.AssessRisk(2, 3, 150f, 100f), "Strength ratio at the high-risk boundary");
         Equal("High", CombatMath.AssessRisk(6, 3, 10f, 100f), "Numerical disadvantage is considered independently of strength");
         Equal("Threat present", CombatMath.AssessRisk(1, 3, 10f, 100f), "Weak enemies remain a threat rather than being called safe");
-        Console.WriteLine($"Passed {checks} combat calculation and risk checks.");
+        Equal(true, ColonyPolicy.SafePrey(false, 0f, false, false, false), "Passive wild prey is eligible");
+        Equal(false, ColonyPolicy.SafePrey(true, 0f, false, false, false), "Predators are excluded even without a revenge roll");
+        Equal(false, ColonyPolicy.SafePrey(false, 0.01f, false, false, false), "Even a small retaliation chance is excluded");
+        Equal(false, ColonyPolicy.SafePrey(false, 0f, true, false, false), "Owned animals are not automatic prey");
+        Equal(false, ColonyPolicy.SafePrey(false, 0f, false, true, false), "Downed animals are not designated for hunting");
+        Equal(false, ColonyPolicy.SafePrey(false, 0f, false, false, true), "Hostile animals are handled as threats");
+        Equal(6, ColonyPolicy.MealTarget(1.6f, 0.9f), "Three-day meal reserve rounds up");
+        Equal(0, ColonyPolicy.MealTarget(0f, 0.9f), "No eaters require no meals");
+        Equal(400, ColonyPolicy.MealTarget(1000f, 0.9f), "Production reserve has a bounded target");
+        Equal(true, ColonyPolicy.WorkScore(10, 2, 0) > ColonyPolicy.WorkScore(10, 0, 0), "Passion distinguishes equal skill levels");
+        Equal(true, ColonyPolicy.WorkScore(10, 0, 0) > ColonyPolicy.WorkScore(10, 0, 2), "Specialist load spreads professions");
+        Console.WriteLine($"Passed {checks} combat and colony policy checks.");
     }
 }

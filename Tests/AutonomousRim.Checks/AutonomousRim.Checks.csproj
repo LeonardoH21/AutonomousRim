@@ -5,5 +5,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../Source/AutonomousRim/Core/CombatMath.cs" Link="CombatMath.cs" />
+    <Compile Include="../../Source/AutonomousRim/Core/ColonyPolicy.cs" Link="ColonyPolicy.cs" />
   </ItemGroup>
 </Project>

@@ -10,6 +10,8 @@ namespace AutonomousRim.Core
         public int HostilePawnCount { get; set; }
         public int DownedColonists { get; set; }
         public float FoodNutrition { get; set; }
+        public float DailyFoodNutrition { get; set; }
+        public List<LootProfile> Loot { get; set; } = new List<LootProfile>();
         public float EstimatedFoodDays { get; set; }
         public List<PawnProfile> Pawns { get; } = new List<PawnProfile>();
         public ThreatState Threat { get; set; }
@@ -21,7 +23,7 @@ namespace AutonomousRim.Core
         public override string ToString()
         {
             return $"Tick={Tick}, Colonists={ColonistCount}, CombatCapable={CombatCapableColonists}, " +
-                   $"Hostiles={HostilePawnCount}, Downed={DownedColonists}, Temp={OutdoorTemperature:0.0}C";
+                   $"Hostiles={HostilePawnCount}, Downed={DownedColonists}, Temp={OutdoorTemperature:0.0}C, Loot={Loot.Count}, FoodDays={EstimatedFoodDays:0.0}";
         }
     }
 }

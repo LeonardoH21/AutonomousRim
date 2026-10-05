@@ -6,7 +6,7 @@ The long-term goal is a full autonomous player capable of perceiving the map, ev
 
 ## Current milestone
 
-**Milestone 0 / 1 — Foundation & Perception**
+**Foundation, perception and initial colony management**
 
 - RimWorld 1.6 mod metadata
 - C# project targeting .NET Framework 4.7.2
@@ -15,9 +15,11 @@ The long-term goal is a full autonomous player capable of perceiving the map, ev
 - Initial colony-state scanner
 - In-game `Rim AI` inspector with pawn skills, health, traits, weapons, range and apparel
 - Combat readiness filtering and initial weapon-aware skill scoring
-- Stored-food nutrition and baseline reserve estimate
+- Stored-food nutrition, food-policy filtering and reserve estimate using actual colonist hunger rates
 - Projectile burst DPS, armor penetration and per-garment armor ratings
-- Advisory weapon recommendations from accessible stored equipment
+- Identification of visible weapons/apparel on the ground and on corpses, including forbidden loot
+- Advisory weapon recommendations from accessible allowed ground equipment
+- Optional automatic hunting, butchering/meal bills and skill/passion-based work priorities
 - Hostile composition, heuristic risk and presence transitions checked every 120 ticks
 - Structured project layout for future AI systems
 
@@ -90,9 +92,13 @@ The smoke test starts a temporary colony using the game's `-quicktest` option, u
 3. Check the observed colonists, resources and equipment. The snapshot refreshes every 600 game ticks (10 seconds at normal speed); pausing also pauses refreshes.
 4. Enable developer mode to see `[AutonomousRim] Scan:` entries in `Player.log`.
 
-The current version observes only. It does not draft colonists, change equipment or issue construction orders. Food reserve uses 1.6 nutrition per colonist per day and excludes genes, animals, guests and spoilage; it is an approximate diagnostic. Combat values are provisional heuristics, not predictions of raid outcomes. Hostile count excludes dead and downed pawns. The threat scanner classifies pawn composition, not raid incidents, and does not yet model turrets, traps, cover or special abilities. Threats refresh every 120 ticks; allied profiles refresh every 600 ticks.
+Observation runs by default. Enable food automation and/or work management in **Rim AI** for each map; these settings persist in saves. Food management maintains a three-day simple-meal target when an appropriate colony cooking station exists, and adds a butchering order when a suitable station exists. Existing player bills are respected. AI bills exclude humanlike corpses/meat. Bill counts follow colonist demand while the AI bill remains unedited. When reserves are low, it designates up to two pending hunts for accessible wild, non-predatory animals with zero species retaliation chance, within 60 cells of an equipped hunter. It requires a butchering station and an enabled, capable ranged hunter. Hostile presence stops new hunting and removes AI hunting designations; native jobs already running remain under RimWorld's job system. No direct combat or equipment control is implemented.
 
-Weapon recommendations compare theoretical sustained damage, short-distance accuracy, the pawn's skill/accuracy, range and penetration. They use a 12-cell reference for ranged attacks and require a score improvement above 15%. Only stored, allowed weapons the pawn can equip, reserve and reach are considered; reachability checks are limited to the strongest five improvements. Explosives and nonstandard attack verbs are excluded. Recommendations are independent for each pawn, so multiple colonists can be offered the same weapon. They do not reserve or equip items, model a specific target, or account for ammunition systems from other mods. Armor is listed per garment rather than summed across body coverage.
+Work management enables numerical priorities, prioritizes emergency tasks and medicine, selects specialists by skill/passion/health, and penalizes accumulating several specialties on one pawn. Cooking/growing gain urgency when food is low. Disabled work, drafted/downed pawns and mental states are respected. Manual priority changes are retained; disabling automation restores untouched AI priority changes. The global numerical-priority mode remains enabled unless the player turns it off; turning it off pauses automatic updates. Disabling food automation removes AI hunting designations and unedited AI production bills, preserving existing player bills.
+
+Food reserves use stored, permitted, unspoiled food accepted by current colonist diets and food policies, and colonists' fed-state hunger rates. The estimate excludes guests, animals, physical food reachability and future spoilage; differing diets can still make shared-stock allocation approximate. Combat values remain provisional heuristics. Hostile count excludes dead/downed pawns; turrets, traps and special abilities are not modeled. Threats refresh every 120 ticks; profiles and management refresh every 600 ticks.
+
+Weapon recommendations compare theoretical sustained damage, short-distance accuracy, the pawn's skill/accuracy, range and penetration. They use a 12-cell reference for ranged attacks and require a score improvement above 15%. Visible, allowed ground weapons the pawn can equip, reserve and reach are considered, including items outside storage; reachability checks are limited to the strongest five improvements. The loot inventory also identifies forbidden gear and corpse apparel, without unforbidding, stripping or equipping it. Explosives and nonstandard attack verbs are excluded from recommendations. Recommendations are independent for each pawn, so multiple colonists can be offered the same weapon. They do not model a specific target or ammunition systems from other mods. Armor is listed per garment rather than summed across body coverage. Loot is paginated in the inspector to bound UI work.
 
 ## Calculation checks
 
@@ -102,6 +108,15 @@ dotnet run --project Tests/AutonomousRim.Checks
 
 These checks cover burst-cycle damage, invalid inputs and threat-risk boundaries. A separate isolated RimWorld quicktest has confirmed repeated colony scans with Harmony and all DLCs. Inspector rendering, recommendation quality and live hostile transitions still require in-game validation.
 
+Runtime checks also exercise forbidden ground gear, corpse clothing, actual food demand, production bill creation/removal, hunting designation and work priority restoration/manual overrides. To run them, build the add-on and request it in the smoke test:
+
+```powershell
+dotnet build Tests/AutonomousRim.RuntimeChecks -c Release -p:RimWorldDir="C:\Path\To\RimWorld"
+.\scripts\SmokeTest.ps1 -RimWorldDir "C:\Path\To\RimWorld" -RuntimeChecks
+```
+
+The test add-on is installed temporarily and removed when the smoke test ends. It mutates only the generated test colony. Long-running food sufficiency, hostile interruptions, save/load round trips and the inspector's visual layout still need broader validation.
+
 ## Status
 
-Early development. The AI currently observes the colony; autonomous decisions and actions will be added incrementally.
+Early development. Optional food/work management is available; combat control, automated equipment changes and base construction remain on the roadmap.

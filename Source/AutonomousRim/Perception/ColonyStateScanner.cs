@@ -32,7 +32,7 @@ namespace AutonomousRim.Perception
             };
 
             var availableWeapons = map.listerThings.ThingsInGroup(ThingRequestGroup.Weapon)
-                .Where(t => t.IsInAnyStorage() && !t.IsForbidden(Faction.OfPlayer))
+                .Where(t => !t.Position.Fogged(map) && !t.IsForbidden(Faction.OfPlayer))
                 .Select(t => new { Thing = t, Profile = EquipmentAnalyzer.Analyze(t) }).ToList();
             foreach (Pawn pawn in map.mapPawns.FreeColonistsSpawned)
             {
@@ -59,17 +59,8 @@ namespace AutonomousRim.Perception
             }
             state.Threat = ThreatScanner.Scan(map, state);
             state.HostilePawnCount = state.Threat.ActiveCount;
-
-            foreach (Thing thing in map.listerThings.ThingsInGroup(ThingRequestGroup.HaulableEver))
-            {
-                if (thing.def.ingestible != null && thing.def.ingestible.HumanEdible &&
-                    !thing.IsForbidden(Faction.OfPlayer) && thing.IsInAnyStorage())
-                {
-                    state.FoodNutrition += thing.GetStatValue(StatDefOf.Nutrition) * thing.stackCount;
-                }
-            }
-            // Baseline only: 1.6 nutrition per adult per day. Genes, guests and spoilage are not modeled yet.
-            state.EstimatedFoodDays = state.ColonistCount > 0 ? state.FoodNutrition / (state.ColonistCount * 1.6f) : 0f;
+            state.Loot = LootScanner.Scan(map);
+            FoodScanner.Scan(map, state);
 
             foreach (ThingDef resource in TrackedResources)
             {

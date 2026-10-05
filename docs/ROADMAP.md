@@ -13,7 +13,7 @@
 - [ ] Pawn traits/health/genes analyzer
 - [x] Initial equipment analyzer (weapon DPS, penetration, condition, garment armor and advisory matching)
 - [x] Initial threat scanner (active hostile pawns, race/weapon composition and heuristic risk)
-- [ ] Resource/food security model (stored nutrition and baseline days implemented; consumption and spoilage pending)
+- [ ] Full resource/food security model (colonist hunger, diet-aware stored reserves implemented; animal/visitor demand and spoilage prediction pending)
 - [ ] Season/environment scanner
 - [x] Debug inspector UI
 
@@ -23,7 +23,8 @@
 - Game startup with an isolated profile: `[AutonomousRim] Loaded successfully.` confirmed.
 - Graphics-enabled startup with Harmony, Core and all five DLCs: no exceptions or XML/configuration errors in the log. An earlier `-nographics` run produced engine texture/shader errors, so it was replaced by the graphics-enabled check.
 - Colony scanning has now been verified repeatedly in an automatically generated test colony with three colonists and two combat-ready pawns. Inspector rendering and behavior during live threats still need in-game validation.
-- Thirteen checks cover burst damage calculations, invalid data and threat-risk classification boundaries.
+- Twenty-four checks cover combat calculations, threat boundaries, prey exclusions, meal targets and profession scoring.
+- In-game runtime checks pass for ground/corpse loot, food demand, production orders, hunting designation, work overrides and restoration.
 
 ## Milestone 2 — Combat foundation
 - [ ] Raid incident detection (active-hostile appearance/disappearance implemented)
@@ -47,8 +48,9 @@
 - [ ] Power planning
 
 ## Milestone 4 — Colony management
-- [ ] Work priorities
-- [ ] Food production
+- [x] Initial optional skill/passion-based work priorities with manual overrides and restoration
+- [x] Initial optional food production: passive-wildlife hunting, butchering and simple-meal orders
+- [ ] Full agricultural planning and diet-aware recipe optimization
 - [ ] Bills/crafting
 - [ ] Research selection
 - [ ] Clothing/equipment assignments
