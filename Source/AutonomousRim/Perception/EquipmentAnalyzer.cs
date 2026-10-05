@@ -27,6 +27,7 @@ namespace AutonomousRim.Perception
             var properties = verb?.verbProps;
             var projectile = properties?.defaultProjectile?.projectile;
             profile.Range = properties?.range ?? 0f;
+            profile.MinimumRange = properties?.minRange ?? 0f;
             profile.SpecialAttack = projectile == null || projectile.explosionRadius > 0f ||
                                     properties.verbClass != typeof(Verb_Shoot) || properties.consumeFuelPerShot > 0f;
             if (projectile == null)
@@ -35,8 +36,11 @@ namespace AutonomousRim.Perception
                 return profile;
             }
             int shots = Mathf.Max(1, properties.burstShotCount);
-            float cycle = properties.warmupTime + weapon.GetStatValue(StatDefOf.RangedWeapon_Cooldown) +
-                          (shots - 1) * properties.ticksBetweenBurstShots / 60f;
+            profile.WarmupSeconds = properties.warmupTime;
+            profile.CooldownSeconds = weapon.GetStatValue(StatDefOf.RangedWeapon_Cooldown);
+            profile.BurstSpacingSeconds = (shots - 1) * properties.ticksBetweenBurstShots / 60f;
+            profile.BurstDamage = projectile.GetDamageAmount(weapon) * shots;
+            float cycle = profile.WarmupSeconds + profile.CooldownSeconds + profile.BurstSpacingSeconds;
             profile.DamagePerSecond = CombatMath.BurstDps(projectile.GetDamageAmount(weapon), shots, cycle);
             profile.ArmorPenetration = projectile.GetArmorPenetration(weapon);
             profile.Accuracy = weapon.GetStatValue(StatDefOf.AccuracyShort);
@@ -49,11 +53,15 @@ namespace AutonomousRim.Perception
         // Advisory score at a fixed reference distance, not a prediction of real damage.
         public static float Suitability(Pawn pawn, EquipmentProfile weapon)
         {
-            if (weapon == null || weapon.SpecialAttack || (weapon.Ranged && weapon.Range < 12f)) return 0f;
+            if (weapon == null || weapon.SpecialAttack || (weapon.Ranged && (weapon.Range < 12f || weapon.MinimumRange > 12f))) return 0f;
             float skill = pawn.skills?.GetSkill(weapon.Ranged ? SkillDefOf.Shooting : SkillDefOf.Melee)?.Level ?? 0;
-            float accuracy = weapon.Ranged ? weapon.Accuracy * Mathf.Pow(Mathf.Clamp01(pawn.GetStatValue(StatDefOf.ShootingAccuracyPawn)), 12f) : 1f;
-            return weapon.DamagePerSecond * accuracy * (0.5f + skill / 20f) *
-                   (1f + Mathf.Clamp(weapon.Range, 0f, 40f) / 80f) * (1f + Mathf.Clamp01(weapon.ArmorPenetration));
+            float accuracy = weapon.Ranged ? weapon.Accuracy * Mathf.Pow(Mathf.Clamp01(pawn.GetStatValue(StatDefOf.ShootingAccuracyPawn)), 12f) : Mathf.Clamp01(pawn.GetStatValue(StatDefOf.MeleeHitChance));
+            float dps = weapon.Ranged ? EquipmentPolicy.EffectiveBurstDps(weapon.BurstDamage, weapon.WarmupSeconds,
+                pawn.GetStatValue(StatDefOf.AimingDelayFactor), weapon.CooldownSeconds, weapon.BurstSpacingSeconds) :
+                weapon.DamagePerSecond * pawn.GetStatValue(StatDefOf.MeleeDamageFactor) / Mathf.Max(0.1f, pawn.GetStatValue(StatDefOf.MeleeCooldownFactor));
+            return dps * accuracy * (0.5f + skill / 20f) *
+                   (1f + Mathf.Clamp(weapon.Range, 0f, 40f) / 80f) * (1f + Mathf.Clamp01(weapon.ArmorPenetration)) *
+                   EquipmentPolicy.RoleMultiplier(weapon.Ranged, TraitAnalyzer.PreferMelee(pawn), TraitAnalyzer.HasActiveTrait(pawn, "Brawler"));
         }
     }
 }

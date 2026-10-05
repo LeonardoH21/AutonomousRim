@@ -3,6 +3,9 @@ using AutonomousRim.Core;
 using RimWorld;
 using Verse;
 using Verse.AI;
+using AutonomousRim.Planning;
+using AutonomousRim.Execution;
+using System.Collections.Generic;
 
 namespace AutonomousRim.Perception
 {
@@ -31,36 +34,24 @@ namespace AutonomousRim.Perception
                 OutdoorTemperature = map.mapTemperature.OutdoorTemp
             };
 
-            var availableWeapons = map.listerThings.ThingsInGroup(ThingRequestGroup.Weapon)
-                .Where(t => !t.Position.Fogged(map) && !t.IsForbidden(Faction.OfPlayer))
-                .Select(t => new { Thing = t, Profile = EquipmentAnalyzer.Analyze(t) }).ToList();
             foreach (Pawn pawn in map.mapPawns.FreeColonistsSpawned)
             {
                 PawnProfile profile = PawnAnalyzer.Analyze(pawn);
-                if (profile.CombatReady && profile.Equipment?.SpecialAttack != true)
-                {
-                    float currentScore = EquipmentAnalyzer.Suitability(pawn, profile.Equipment);
-                    // Check only the strongest five improvements to bound pathfinding work.
-                    var improvements = availableWeapons
-                        .Select(w => new { w.Thing, w.Profile, Score = EquipmentAnalyzer.Suitability(pawn, w.Profile) })
-                        .Where(w => w.Score > currentScore * 1.15f && w.Score > 0f)
-                        .OrderByDescending(w => w.Score).Take(5);
-                    foreach (var candidate in improvements)
-                    {
-                        if (EquipmentUtility.CanEquip(candidate.Thing, pawn) &&
-                            pawn.CanReserveAndReach(candidate.Thing, Verse.AI.PathEndMode.Touch, Danger.Some))
-                        {
-                            profile.RecommendedWeapon = candidate.Profile.Name + " (advisory; not assigned)";
-                            break;
-                        }
-                    }
-                }
                 state.Pawns.Add(profile);
             }
             state.Threat = ThreatScanner.Scan(map, state);
             state.HostilePawnCount = state.Threat.ActiveCount;
             state.Loot = LootScanner.Scan(map);
             FoodScanner.Scan(map, state);
+            state.EquipmentDecisions = EquipmentPlanner.Plan(map, map.GetComponent<AutonomousRimMapComponent>()?.ManagedApparel ?? new List<ManagedApparel>());
+            foreach (PawnProfile profile in state.Pawns)
+            {
+                var weapon = state.EquipmentDecisions.FirstOrDefault(d => d.Pawn.thingIDNumber == profile.PawnId && !d.Wear);
+                var apparel = state.EquipmentDecisions.FirstOrDefault(d => d.Pawn.thingIDNumber == profile.PawnId && d.Wear);
+                if (weapon != null) profile.RecommendedWeapon = weapon.Item.LabelCap.ToString();
+                if (apparel != null) profile.RecommendedApparel = apparel.Item.LabelCap.ToString();
+                profile.EquipmentReason = (weapon?.Reason ?? "") + " " + (apparel?.Reason ?? "");
+            }
 
             foreach (ThingDef resource in TrackedResources)
             {

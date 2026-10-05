@@ -56,8 +56,8 @@ namespace AutonomousRim.Execution
             return work.relevantSkills.Average(skill =>
             {
                 SkillRecord record = pawn.skills?.GetSkill(skill);
-                return ColonyPolicy.WorkScore(record?.Level ?? 0, (int)(record?.passion ?? Passion.None), load);
-            }) * pawn.health.summaryHealth.SummaryHealthPercent;
+                return ColonyPolicy.WorkScore(record?.Level ?? 0, (int)(record?.passion ?? Passion.None), 0);
+            }) * pawn.health.summaryHealth.SummaryHealthPercent * UnityEngine.Mathf.Clamp(pawn.GetStatValue(StatDefOf.WorkSpeedGlobal), 0.1f, 3f) - load * 6f;
         }
 
         private static void SetManagedPriority(Pawn pawn, WorkTypeDef work, int desired, List<WorkPriorityChange> changes)

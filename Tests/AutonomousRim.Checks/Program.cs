@@ -37,6 +37,17 @@ internal static class Program
         Equal(400, ColonyPolicy.MealTarget(1000f, 0.9f), "Production reserve has a bounded target");
         Equal(true, ColonyPolicy.WorkScore(10, 2, 0) > ColonyPolicy.WorkScore(10, 0, 0), "Passion distinguishes equal skill levels");
         Equal(true, ColonyPolicy.WorkScore(10, 0, 0) > ColonyPolicy.WorkScore(10, 0, 2), "Specialist load spreads professions");
+        Equal(true, EquipmentPolicy.PreferMelee(true, 20, 3), "Brawler preference survives a higher shooting skill");
+        Equal(false, EquipmentPolicy.PreferMelee(false, 14, 8), "Good shooters keep a ranged role");
+        Equal(true, EquipmentPolicy.PreferMelee(false, 5, 15), "Large melee advantage creates a melee role");
+        Equal(true, EquipmentPolicy.RoleMultiplier(false, true, true) > EquipmentPolicy.RoleMultiplier(true, true, true), "Brawler prefers melee equipment");
+        Equal(false, EquipmentPolicy.WorthUpgrade(10f, 12f), "Marginal upgrades do not cause repeated swapping");
+        Equal(true, EquipmentPolicy.WorthUpgrade(10f, 13f), "A material score improvement allows replacement");
+        Equal(false, EquipmentPolicy.WorthUpgrade(1f, float.NaN), "Invalid scores never trigger equipment jobs");
+        Equal(false, EquipmentPolicy.WorthUpgrade(1f, float.PositiveInfinity), "Infinite scores never trigger equipment jobs");
+        Equal(6f, EquipmentPolicy.EffectiveBurstDps(24f, 2f, 1f, 2f, 0f), "Pawn aiming time is part of the attack cycle");
+        Equal(8f, EquipmentPolicy.EffectiveBurstDps(24f, 2f, 0.5f, 2f, 0f), "Faster aiming increases effective burst damage rate");
+        Equal(0f, EquipmentPolicy.EffectiveBurstDps(24f, 0f, 1f, 0f, 0f), "Zero-duration firing remains invalid");
         Console.WriteLine($"Passed {checks} combat and colony policy checks.");
     }
 }

@@ -10,7 +10,7 @@
 ## Milestone 1 — Perception
 - [x] Initial colony scanner
 - [x] Basic pawn combat scoring
-- [ ] Pawn traits/health/genes analyzer
+- [ ] Full pawn traits/health/genes analyzer (active trait modifiers, suppressed traits, effective stats and Brawler/Nudist preferences implemented)
 - [x] Initial equipment analyzer (weapon DPS, penetration, condition, garment armor and advisory matching)
 - [x] Initial threat scanner (active hostile pawns, race/weapon composition and heuristic risk)
 - [ ] Full resource/food security model (colonist hunger, diet-aware stored reserves implemented; animal/visitor demand and spoilage prediction pending)
@@ -23,8 +23,9 @@
 - Game startup with an isolated profile: `[AutonomousRim] Loaded successfully.` confirmed.
 - Graphics-enabled startup with Harmony, Core and all five DLCs: no exceptions or XML/configuration errors in the log. An earlier `-nographics` run produced engine texture/shader errors, so it was replaced by the graphics-enabled check.
 - Colony scanning has now been verified repeatedly in an automatically generated test colony with three colonists and two combat-ready pawns. Inspector rendering and behavior during live threats still need in-game validation.
-- Twenty-four checks cover combat calculations, threat boundaries, prey exclusions, meal targets and profession scoring.
+- Thirty-five checks cover combat calculations, threat boundaries, prey exclusions, meal targets and profession scoring.
 - In-game runtime checks pass for ground/corpse loot, food demand, production orders, hunting designation, work overrides and restoration.
+- Native weapon pickup and armor wear passed in the generated colony, including active trait stats, Brawler preference, player-forced/apparel policy guards, biocoding, shield compatibility, cooldown and AI force cleanup.
 
 ## Milestone 2 — Combat foundation
 - [ ] Raid incident detection (active-hostile appearance/disappearance implemented)
@@ -53,7 +54,7 @@
 - [ ] Full agricultural planning and diet-aware recipe optimization
 - [ ] Bills/crafting
 - [ ] Research selection
-- [ ] Clothing/equipment assignments
+- [x] Initial optional native weapon/apparel assignments with player-policy and forced-item protection
 - [ ] Medical management
 - [ ] Recruitment policy
 

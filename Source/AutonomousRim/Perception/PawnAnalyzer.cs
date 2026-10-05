@@ -24,6 +24,10 @@ namespace AutonomousRim.Perception
             return new PawnProfile
             {
                 Name = pawn.LabelShortCap,
+                PawnId = pawn.thingIDNumber,
+                TraitEffects = TraitAnalyzer.Describe(pawn),
+                DerivedStats = TraitAnalyzer.DerivedStats(pawn),
+                PreferredCombatRole = !ready ? "Não combatente" : TraitAnalyzer.PreferMelee(pawn) ? "Corpo a corpo" : "Combate à distância",
                 CombatReady = ready,
                 Role = !ready ? "Unavailable" : weapon == null ? "Unarmed" : ranged ? "Ranged" : "Melee",
                 Weapon = weapon?.LabelCap.ToString() ?? "None",
@@ -59,7 +63,7 @@ namespace AutonomousRim.Perception
             float capabilityScore = ((healthFactor + consciousness + movement) / 3f) * 20f;
 
             var equipment = EquipmentAnalyzer.Analyze(pawn.equipment?.Primary);
-            float equipmentValue = equipment == null ? 0f : equipment.DamagePerSecond;
+            float equipmentValue = EquipmentAnalyzer.Suitability(pawn, equipment);
             return (skillScore + capabilityScore + equipmentValue) * healthFactor;
         }
     }

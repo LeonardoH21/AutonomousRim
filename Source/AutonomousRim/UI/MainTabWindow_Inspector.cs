@@ -33,11 +33,16 @@ namespace AutonomousRim.UI
             var component = map.GetComponent<AutonomousRimMapComponent>();
             bool foodAutomation = component.FoodAutomation;
             bool workAutomation = component.WorkAutomation;
+            bool equipmentAutomation = component.EquipmentAutomation;
             listing.CheckboxLabeled("Alimentação automática: caça, abate e refeições", ref foodAutomation);
             listing.CheckboxLabeled("Gerenciar prioridades de trabalho dos colonos", ref workAutomation);
+            listing.CheckboxLabeled("Autoequipar armas e roupas dos colonos", ref equipmentAutomation);
             if (foodAutomation != component.FoodAutomation || workAutomation != component.WorkAutomation)
                 component.SetAutomation(foodAutomation, workAutomation);
+            if (equipmentAutomation != component.EquipmentAutomation) component.SetEquipmentAutomation(equipmentAutomation);
             listing.Label(component.ManagementStatus);
+            listing.Label(component.EquipmentStatus);
+            listing.Label("Autoequipamento usa tarefas do jogo e respeita peças forçadas pelo jogador. Ao desligar, libera as fixações da IA e mantém os equipamentos atuais.");
             listing.Label("Prioridades usam o modo numérico. Ao desligar, a IA restaura prioridades e remove suas ordens que não foram editadas pelo jogador.");
             ThreatState threat = state.Threat;
             listing.Label($"Threat: {threat.Risk} | Humans: {threat.Humanlikes} | Mechs: {threat.Mechanoids} | Animals: {threat.Animals} | Other: {threat.Other}");
@@ -64,6 +69,14 @@ namespace AutonomousRim.UI
             foreach (PawnProfile pawn in state.Pawns)
             {
                 listing.Label($"{pawn.Name} — {pawn.Role} | Health: {pawn.Health:P0} | Combat: {pawn.CombatValue:0.0}");
+                Pawn actualPawn = map.mapPawns.FreeColonistsSpawned.FirstOrDefault(p => p.thingIDNumber == pawn.PawnId);
+                if (actualPawn != null)
+                {
+                    bool allowed = component.EquipmentAllowedFor(actualPawn);
+                    listing.CheckboxLabeled($"Permitir autoequipamento para {pawn.Name}", ref allowed);
+                    if (allowed != component.EquipmentAllowedFor(actualPawn)) component.SetEquipmentAllowedFor(actualPawn, allowed);
+                }
+                listing.Label($"Perfil preferido: {pawn.PreferredCombatRole}");
                 listing.Label($"Shooting: {pawn.Shooting} | Melee: {pawn.Melee} | Medical: {pawn.Medical}");
                 listing.Label($"Weapon: {pawn.Weapon} | Range: {pawn.WeaponRange:0.0}");
                 if (pawn.Equipment != null)
@@ -72,9 +85,13 @@ namespace AutonomousRim.UI
                     listing.Label(pawn.Equipment.Notes);
                 }
                 listing.Label($"Suggested weapon: {pawn.RecommendedWeapon}");
+                listing.Label($"Roupa sugerida: {pawn.RecommendedApparel}");
+                listing.Label(pawn.EquipmentReason);
                 listing.Label($"Apparel: {pawn.Apparel}");
                 listing.Label($"Armor by garment (coverage not combined): {pawn.ArmorDetails}");
                 listing.Label($"Traits: {pawn.Traits}");
+                listing.Label(pawn.TraitEffects);
+                listing.Label(pawn.DerivedStats);
                 listing.GapLine();
             }
             listing.End();

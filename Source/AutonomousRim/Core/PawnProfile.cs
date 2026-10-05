@@ -7,6 +7,12 @@ namespace AutonomousRim.Core
         public string Weapon { get; set; }
         public string Apparel { get; set; }
         public string Traits { get; set; }
+        public int PawnId { get; set; }
+        public string TraitEffects { get; set; }
+        public string DerivedStats { get; set; }
+        public string PreferredCombatRole { get; set; }
+        public string RecommendedApparel { get; set; } = "Nenhuma melhoria de roupa encontrada.";
+        public string EquipmentReason { get; set; } = "";
         public float Health { get; set; }
         public float CombatValue { get; set; }
         public float WeaponRange { get; set; }

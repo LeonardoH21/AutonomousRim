@@ -11,5 +11,10 @@ namespace AutonomousRim.Core
         public float Accuracy { get; set; }
         public float Condition { get; set; }
         public string Notes { get; set; }
+        public float BurstDamage { get; set; }
+        public float WarmupSeconds { get; set; }
+        public float CooldownSeconds { get; set; }
+        public float BurstSpacingSeconds { get; set; }
+        public float MinimumRange { get; set; }
     }
 }

@@ -14,6 +14,7 @@ namespace AutonomousRim.Core
         public List<LootProfile> Loot { get; set; } = new List<LootProfile>();
         public float EstimatedFoodDays { get; set; }
         public List<PawnProfile> Pawns { get; } = new List<PawnProfile>();
+        public List<EquipmentDecision> EquipmentDecisions { get; set; } = new List<EquipmentDecision>();
         public ThreatState Threat { get; set; }
 
         public float OutdoorTemperature { get; set; }

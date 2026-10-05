@@ -58,11 +58,13 @@ namespace AutonomousRim.RuntimeChecks
 
             var butcher = (Building_WorkTable)ThingMaker.MakeThing(DefDatabase<ThingDef>.GetNamed("ButcherSpot"));
             butcher.SetFaction(Faction.OfPlayer);
-            GenSpawn.Spawn(butcher, EmptyCell(colonist), map);
             ThingDef stoveDef = DefDatabase<ThingDef>.GetNamed("ElectricStove");
             var stove = (Building_WorkTable)ThingMaker.MakeThing(stoveDef, stoveDef.MadeFromStuff ? ThingDefOf.Steel : null);
             stove.SetFaction(Faction.OfPlayer);
             GenSpawn.Spawn(stove, EmptyCell(colonist), map);
+            // The stove occupies multiple cells; place the one-cell spot afterwards
+            // so its footprint cannot wipe the test butcher spot.
+            GenSpawn.Spawn(butcher, EmptyCell(colonist), map);
             var component = map.GetComponent<AutonomousRimMapComponent>();
             Pawn worker = map.mapPawns.FreeColonistsSpawned.First(p => WorkPriorityManager.CanWork(p) && !p.WorkTypeIsDisabled(WorkTypeDefOf.Research));
             worker.workSettings.EnableAndInitializeIfNotAlreadyInitialized();
