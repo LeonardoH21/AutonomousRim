@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <MainButtonDef>
+    <defName>AutonomousRimInspector</defName>
+    <label>Rim AI</label>
+    <description>Inspect the colony state observed by AutonomousRim.</description>
+    <tabWindowClass>AutonomousRim.UI.MainTabWindow_Inspector</tabWindowClass>
+    <order>95</order>
+  </MainButtonDef>
+</Defs>

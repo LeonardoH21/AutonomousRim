@@ -10,12 +10,22 @@
     <!-- Override with -p:RimWorldDir="..." when needed -->
     <RimWorldDir Condition="'$(RimWorldDir)' == ''">$(MSBuildProgramFiles32)\Steam\steamapps\common\RimWorld</RimWorldDir>
     <RimWorldManagedDir>$(RimWorldDir)\RimWorldWin64_Data\Managed</RimWorldManagedDir>
-    <HarmonyDir>$(RimWorldDir)\Mods\Harmony\Current\Assemblies</HarmonyDir>
+    <HarmonyDir Condition="'$(HarmonyDir)' == '' and Exists('$(RimWorldDir)\Mods\Harmony\Current\Assemblies\0Harmony.dll')">$(RimWorldDir)\Mods\Harmony\Current\Assemblies</HarmonyDir>
+    <HarmonyDir Condition="'$(HarmonyDir)' == ''">$(RimWorldDir)\Mods\2009463077\Current\Assemblies</HarmonyDir>
 
     <OutputPath>..\..\1.6\Assemblies\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <Target Name="ValidateGameReferences" BeforeTargets="ResolveReferences">
+    <Error Condition="!Exists('$(RimWorldManagedDir)\Assembly-CSharp.dll')" Text="RimWorld DLL not found. Set RimWorldDir to the game installation folder." />
+    <Error Condition="!Exists('$(HarmonyDir)\0Harmony.dll')" Text="Harmony DLL not found. Install Harmony or pass HarmonyDir to its Assemblies folder." />
+  </Target>
 
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
@@ -24,6 +34,10 @@
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>$(RimWorldManagedDir)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>$(RimWorldManagedDir)\UnityEngine.IMGUIModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="0Harmony">

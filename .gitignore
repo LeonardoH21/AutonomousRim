@@ -1,6 +1,8 @@
 # Build output
 Source/**/bin/
 Source/**/obj/
+Tests/**/bin/
+Tests/**/obj/
 1.6/Assemblies/*.dll
 1.6/Assemblies/*.pdb
 
@@ -13,3 +15,8 @@ Source/**/obj/
 # OS
 Thumbs.db
 .DS_Store
+
+# Local development tools and machine-specific paths
+.tools/
+build.local.ps1
+artifacts/

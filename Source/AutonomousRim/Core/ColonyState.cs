@@ -9,6 +9,10 @@ namespace AutonomousRim.Core
         public int CombatCapableColonists { get; set; }
         public int HostilePawnCount { get; set; }
         public int DownedColonists { get; set; }
+        public float FoodNutrition { get; set; }
+        public float EstimatedFoodDays { get; set; }
+        public List<PawnProfile> Pawns { get; } = new List<PawnProfile>();
+        public ThreatState Threat { get; set; }
 
         public float OutdoorTemperature { get; set; }
 

@@ -11,16 +11,24 @@
 - [x] Initial colony scanner
 - [x] Basic pawn combat scoring
 - [ ] Pawn traits/health/genes analyzer
-- [ ] Equipment analyzer
-- [ ] Threat scanner
-- [ ] Resource/food security model
+- [x] Initial equipment analyzer (weapon DPS, penetration, condition, garment armor and advisory matching)
+- [x] Initial threat scanner (active hostile pawns, race/weapon composition and heuristic risk)
+- [ ] Resource/food security model (stored nutrition and baseline days implemented; consumption and spoilage pending)
 - [ ] Season/environment scanner
-- [ ] Debug inspector UI
+- [x] Debug inspector UI
+
+## Local validation — 2026-10-05
+- Release compilation against RimWorld 1.6.4633: zero warnings, zero errors.
+- Installed DLL hash verified against build output.
+- Game startup with an isolated profile: `[AutonomousRim] Loaded successfully.` confirmed.
+- Graphics-enabled startup with Harmony, Core and all five DLCs: no exceptions or XML/configuration errors in the log. An earlier `-nographics` run produced engine texture/shader errors, so it was replaced by the graphics-enabled check.
+- Colony scanning has now been verified repeatedly in an automatically generated test colony with three colonists and two combat-ready pawns. Inspector rendering and behavior during live threats still need in-game validation.
+- Thirteen checks cover burst damage calculations, invalid data and threat-risk classification boundaries.
 
 ## Milestone 2 — Combat foundation
-- [ ] Raid detection
+- [ ] Raid incident detection (active-hostile appearance/disappearance implemented)
 - [ ] Threat classification
-- [ ] Weapon-role matching
+- [ ] Tactical weapon-role matching (initial skill-based stored-weapon recommendations implemented)
 - [ ] Cover scoring
 - [ ] Line-of-fire analysis
 - [ ] Tactical position scoring
