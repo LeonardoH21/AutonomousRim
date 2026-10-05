@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>AutonomousRim</AssemblyName>
+    <RootNamespace>AutonomousRim</RootNamespace>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+
+    <!-- Override with -p:RimWorldDir="..." when needed -->
+    <RimWorldDir Condition="'$(RimWorldDir)' == ''">$(MSBuildProgramFiles32)\Steam\steamapps\common\RimWorld</RimWorldDir>
+    <RimWorldManagedDir>$(RimWorldDir)\RimWorldWin64_Data\Managed</RimWorldManagedDir>
+    <HarmonyDir>$(RimWorldDir)\Mods\Harmony\Current\Assemblies</HarmonyDir>
+
+    <OutputPath>..\..\1.6\Assemblies\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(RimWorldManagedDir)\Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(RimWorldManagedDir)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(HarmonyDir)\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+</Project>
