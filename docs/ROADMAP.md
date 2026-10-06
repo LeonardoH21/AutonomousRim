@@ -40,6 +40,7 @@
 - [ ] Rescue wounded logic
 
 ## Milestone 3 — Base planning
+- [x] Ordered base/production specification: [PLANO-BASE-AUTONOMA.md](PLANO-BASE-AUTONOMA.md) (design only; execution pending)
 - [ ] Map terrain analysis
 - [ ] Chokepoint detection
 - [ ] Base-site scoring
