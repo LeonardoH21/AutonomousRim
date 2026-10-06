@@ -23,6 +23,9 @@ namespace AutonomousRim.Execution
             if (map.mapPawns.AllPawnsSpawned.Any(p => !p.Dead && !p.Downed && p.HostileTo(Faction.OfPlayer)))
                 return "Allow suspenso: há hostis no mapa.";
             var pawns = map.mapPawns.FreeColonistsSpawned.Where(WorkPriorityManager.CanWork).ToList();
+            var landing = map.GetComponent<AutonomousRimMapComponent>().Strategy.Landing;
+            if (!landing.IsValid && pawns.Count > 0) landing = pawns[0].Position;
+            float accessRadius = Math.Min(60f, 24f + Math.Max(0, state.ColonistCount - 3) * 6f);
             var ground = map.listerThings.AllThings.Where(t => t.Spawned && t.def.category == ThingCategory.Item &&
                 t.def.EverHaulable && !(t is Corpse) && !t.Position.Fogged(map) && (t.Faction == null || t.Faction == Faction.OfPlayer)).ToList();
             var humanMeats = new HashSet<ThingDef>(DefDatabase<ThingDef>.AllDefsListForReading.Where(d => d.race?.Humanlike == true)
@@ -92,6 +95,9 @@ namespace AutonomousRim.Execution
                 if (materials.TryGetValue(t.def, out int needed) && needed > 0) return new Candidate { Item = t, Priority = 2, Reason = "material/combustível necessário" };
                 if (gear.Contains(t)) return new Candidate { Item = t, Priority = 3, Reason = "equipamento adequado a um colono" };
                 if (textileNeed > 0 && textileDefs.Contains(t.def)) return new Candidate { Item = t, Priority = 4, Reason = "material de costura necessário" };
+                if (landing.IsValid && t.Position.DistanceTo(landing) <= 24f && (edible(t) || t.def.IsMedicine ||
+                    t.def == ThingDefOf.WoodLog || t.def == ThingDefOf.Steel || t.def.defName == "ComponentIndustrial" ||
+                    gear.Contains(t))) return new Candidate { Item = t, Priority = 5, Reason = "suprimento útil na área inicial" };
                 return null;
             }).Where(c => c != null).OrderBy(c => c.Priority).ThenBy(c => pawns.Count == 0 ? float.MaxValue : pawns.Min(p => p.Position.DistanceTo(c.Item.Position)))
                 .ThenBy(c => c.Item.thingIDNumber).ToList();
@@ -101,7 +107,8 @@ namespace AutonomousRim.Execution
                 Thing item = candidate.Item;
                 if ((candidate.Priority == 0 && medicineNeeded <= 0) || (candidate.Priority == 1 && foodNeeded <= 0f) ||
                     (candidate.Priority == 2 && materials[item.def] <= 0) || (candidate.Priority == 4 && textileNeed <= 0)) continue;
-                if (!pawns.Any(p => p.Position.DistanceTo(item.Position) <= 60f && p.CanReserveAndReach(item, PathEndMode.Touch, Danger.None))) continue;
+                float radius = candidate.Priority <= 2 ? Math.Min(60f, accessRadius + 20f) : accessRadius;
+                if (!landing.IsValid || item.Position.DistanceTo(landing) > radius || !pawns.Any(p => p.CanReserveAndReach(item, PathEndMode.Touch, Danger.None))) continue;
                 item.SetForbidden(false, false);
                 releasedHistory.Add(item); released++;
                 if (candidate.Priority == 0) medicineNeeded -= item.stackCount;

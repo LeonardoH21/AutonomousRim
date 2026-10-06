@@ -39,14 +39,28 @@ namespace AutonomousRim.UI
             if (Widgets.ButtonText(new Rect(inRect.x, inRect.y + 138f, inRect.width, 30f), $"Itens do chão / allow gradual: {(component.LootAutomation ? "LIGADO" : "DESLIGADO")}"))
                 component.SetLootAutomation(!component.LootAutomation);
             state = component.CurrentState;
-            Rect viewport = new Rect(inRect.x, inRect.y + 176f, inRect.width, inRect.height - 176f);
+            if (Widgets.ButtonText(new Rect(inRect.x, inRect.y + 172f, half, 30f), $"Planejamento / pesquisa: {(component.StrategyAutomation ? "LIGADO" : "DESLIGADO")}"))
+                component.SetStrategyAutomation(!component.StrategyAutomation);
+            if (Widgets.ButtonText(new Rect(inRect.x + half + 8f, inRect.y + 172f, half, 30f), "Reavaliar metas estratégicas")) component.EvaluateStrategy();
+            if (Widgets.ButtonText(new Rect(inRect.x, inRect.y + 206f, half, 30f), $"Agenda dinâmica: {(component.ScheduleAutomation ? "LIGADA" : "DESLIGADA")}"))
+                component.SetScheduleAutomation(!component.ScheduleAutomation);
+            Rect viewport = new Rect(inRect.x, inRect.y + 244f, inRect.width, inRect.height - 244f);
             Rect content = new Rect(0f, 0f, viewport.width - 20f, contentHeight);
             Widgets.BeginScrollView(viewport, ref scrollPosition, content);
             var listing = new Listing_Standard();
             listing.Begin(content);
             listing.Label(state.ToString());
             listing.Label(component.BaseStatus);
-            listing.Label("Blocos compactos: quartos 5×5, cozinha 4×4, estoque e sala social 6×6; corredor coberto de 2 células e duas saídas. Planos antigos são preservados.");
+            listing.Label("Plano em anel: estoque e alimentação primeiro; quartos 5×5 por colono, cozinha e abate 4×4 separados; expansão reservada, energia e perímetro. Planos antigos são preservados.");
+            listing.Label("Rota final: " + component.Strategy.VictoryRoute);
+            listing.Label(component.Strategy.ResearchStatus);
+            listing.Label(component.Strategy.TerrainStatus);
+            listing.Label(component.ScheduleStatus);
+            listing.Label("A agenda usa Sleep, Work, Recreation, Anything e Meditation quando disponível. Incêndios, hostis e feridos entram em emergência; depois há recuperação de descanso e recreação. Mudanças manuais de horários são preservadas.");
+            foreach (var goal in component.Strategy.Goals)
+                listing.Label($"{goal.Horizon} — {goal.Description}: {goal.Status}");
+            listing.Label("Próximas pesquisas: " + string.Join(" → ", component.Strategy.Route.Take(8).Select(r => r.LabelCap.ToString())));
+            foreach (var unlock in component.Strategy.Unlocks) listing.Label("Tecnologia: " + unlock);
             listing.Label(AutonomousRim.Planning.CompactBasePlanner.ClimateSummary(map));
             foreach (var project in component.BaseProjects)
                 listing.Label($"{project.Kind} {(project.RequiresRoof ? $"{project.InteriorSize}×{project.Height}" : "instalações")} em {project.Origin}: {project.State}; prioridade {project.Priority}. {project.BlockReason}" +

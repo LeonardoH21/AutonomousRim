@@ -16,8 +16,13 @@ namespace AutonomousRim.Core
         public ColonyState CurrentState { get; private set; }
         private bool foodAutomation;
         private bool workAutomation;
+        private bool scheduleAutomation = true;
         private bool equipmentAutomation;
         private bool baseAutomation = true;
+        private bool strategyAutomation = true;
+        private StrategicPlan strategicPlan = new StrategicPlan();
+        public bool StrategyAutomation => strategyAutomation;
+        public StrategicPlan Strategy => strategicPlan;
         private int lastPlanTick = -3600;
         private int lastConstructionTick = -120;
         private int plannedPawnCount;
@@ -25,7 +30,7 @@ namespace AutonomousRim.Core
         private List<ConstructionOrder> constructionOrders = new List<ConstructionOrder>();
         private List<Thing> constructionGathering = new List<Thing>();
         public string GatheringStatus { get; private set; } = "Coleta desativada.";
-        private bool lootAutomation;
+        private bool lootAutomation = true;
         private int lastLootTick = -600;
         private List<Thing> releasedLoot = new List<Thing>();
         public bool LootAutomation => lootAutomation;
@@ -43,8 +48,11 @@ namespace AutonomousRim.Core
         private List<Pawn> ownedHunts = new List<Pawn>();
         private List<ManagedFoodBill> ownedBills = new List<ManagedFoodBill>();
         private List<WorkPriorityChange> workChanges = new List<WorkPriorityChange>();
+        private List<ScheduleChange> scheduleChanges = new List<ScheduleChange>();
         public bool FoodAutomation => foodAutomation;
         public bool WorkAutomation => workAutomation;
+        public bool ScheduleAutomation => scheduleAutomation;
+        public string ScheduleStatus { get; private set; } = "Agenda automática aguardando a primeira avaliação.";
         public string ManagementStatus { get; private set; } = "Automação desativada neste mapa.";
 
         public override void ExposeData()
@@ -52,8 +60,11 @@ namespace AutonomousRim.Core
             base.ExposeData();
             Scribe_Values.Look(ref foodAutomation, "foodAutomation");
             Scribe_Values.Look(ref workAutomation, "workAutomation");
+            Scribe_Values.Look(ref scheduleAutomation, "scheduleAutomation", true);
             Scribe_Values.Look(ref equipmentAutomation, "equipmentAutomation");
             Scribe_Values.Look(ref baseAutomation, "baseAutomation");
+            Scribe_Values.Look(ref strategyAutomation, "strategyAutomation");
+            Scribe_Deep.Look(ref strategicPlan, "strategicPlan");
             Scribe_Values.Look(ref lastPlanTick, "lastPlanTick", -3600);
             Scribe_Values.Look(ref plannedPawnCount, "plannedPawnCount");
             Scribe_Values.Look(ref plannedClimateResearch, "plannedClimateResearch");
@@ -69,11 +80,14 @@ namespace AutonomousRim.Core
             Scribe_Collections.Look(ref ownedHunts, "ownedHunts", LookMode.Reference);
             Scribe_Collections.Look(ref ownedBills, "ownedBills", LookMode.Deep);
             Scribe_Collections.Look(ref workChanges, "workChanges", LookMode.Deep);
+            Scribe_Collections.Look(ref scheduleChanges, "scheduleChanges", LookMode.Deep);
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
             {
+                strategicPlan = strategicPlan ?? new StrategicPlan();
                 ownedHunts = ownedHunts ?? new List<Pawn>();
                 ownedBills = ownedBills ?? new List<ManagedFoodBill>();
                 workChanges = workChanges ?? new List<WorkPriorityChange>();
+                scheduleChanges = scheduleChanges ?? new List<ScheduleChange>();
                 workChanges.RemoveAll(c => c.Pawn == null || c.Work == null);
                 equipmentOrders = equipmentOrders ?? new List<EquipmentOrder>();
                 managedApparel = managedApparel ?? new List<ManagedApparel>();
@@ -88,6 +102,7 @@ namespace AutonomousRim.Core
                 constructionOrders.RemoveAll(o => o.Pawn == null);
                 constructionGathering = constructionGathering ?? new List<Thing>();
                 constructionGathering.RemoveAll(t => t == null || t.Destroyed);
+                scheduleChanges.RemoveAll(c => c.Pawn == null || c.Pawn.Dead);
             }
         }
 
@@ -118,10 +133,44 @@ namespace AutonomousRim.Core
 
         public void DisableAll()
         {
+            SetStrategyAutomation(false);
             SetLootAutomation(false);
             SetBaseAutomation(false);
             SetEquipmentAutomation(false);
             SetAutomation(false, false);
+            SetScheduleAutomation(false);
+        }
+
+        public void SetScheduleAutomation(bool enabled)
+        {
+            if (!enabled) ScheduleManager.Restore(scheduleChanges);
+            scheduleAutomation = enabled;
+            ScheduleStatus = enabled ? ScheduleManager.Apply(map, CurrentState ?? ColonyStateScanner.Scan(map), scheduleChanges, true) : "Agenda automática desligada; agenda restaurada quando possível.";
+        }
+
+        public void SetStrategyAutomation(bool enabled)
+        {
+            if (!enabled && strategicPlan.OwnedResearch != null && Find.ResearchManager.GetProject() == strategicPlan.OwnedResearch)
+            {
+                if (strategicPlan.PreviousResearch?.IsFinished == false) Find.ResearchManager.SetCurrentProject(strategicPlan.PreviousResearch);
+                else Find.ResearchManager.StopProject(strategicPlan.OwnedResearch);
+            }
+            if (enabled && !strategyAutomation)
+            {
+                strategicPlan.ResearchOverride = false;
+                strategicPlan.PreviousResearch = Find.ResearchManager.GetProject();
+                // Explicit re-enable adopts the current selection without replacing it.
+                strategicPlan.OwnedResearch = strategicPlan.PreviousResearch;
+            }
+            strategyAutomation = enabled;
+            EvaluateStrategy();
+        }
+
+        public void EvaluateStrategy()
+        {
+            CurrentState = ColonyStateScanner.Scan(map);
+            StrategicPlanner.Evaluate(map, CurrentState, baseProjects, strategicPlan, strategyAutomation);
+            if (strategyAutomation && baseAutomation && StrategicInfrastructure.Add(map, baseProjects)) PreviewBase();
         }
 
         public void SetLootAutomation(bool enabled)
@@ -183,6 +232,7 @@ namespace AutonomousRim.Core
             base.MapComponentTick();
 
             int ticks = Find.TickManager?.TicksGame ?? 0;
+            if (ticks > 0 && ticks - strategicPlan.LastEvaluation >= 600) EvaluateStrategy();
             if (baseAutomation && ticks > 0 && ticks % BaseConstructionManager.ExecutionInterval == 0) ExecuteConstruction(ticks);
             if (CurrentState != null && ticks > 0 && ticks % ThreatIntervalTicks == 0)
             {
@@ -219,7 +269,8 @@ namespace AutonomousRim.Core
                 }
             }
             if (workAutomation && Find.PlaySettings.useWorkPriorities) WorkPriorityManager.Apply(map, CurrentState, workChanges,
-                baseAutomation && baseProjects.Exists(p => !p.Completed && p.Priority <= ConstructionPriority.High), constructionGathering.Count > 0);
+                baseAutomation && baseProjects.Exists(p => !p.Completed && p.Priority <= ConstructionPriority.High), constructionGathering.Count > 0, strategyAutomation && Find.ResearchManager.GetProject() != null);
+            if (scheduleAutomation) ScheduleStatus = ScheduleManager.Apply(map, CurrentState, scheduleChanges, true);
             ManagementStatus = foodAutomation ? FoodManager.Apply(map, CurrentState, ownedHunts, ownedBills) : "Comida / roupas automáticas desativadas.";
             if (workAutomation) ManagementStatus += Find.PlaySettings.useWorkPriorities
                 ? " Prioridades ativas; alterações manuais do jogador são preservadas."

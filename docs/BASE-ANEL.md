@@ -46,3 +46,13 @@ Compilação de produção e complemento de teste sem erros/avisos; 35 verifica�
 Para verificar transições de zonas, a fixture marca essenciais/quartos como completos, sem construir fisicamente esses módulos. Também fornece recursos, colonos com habilidades 20 e uma parede atribuída à IA para testar uma abertura. A fixture isola hostis gerados durante a preparação e simula uma nova oportunidade de execução ao religar após o carregamento; a produção conserva a pausa por perigo e o limite de execução por tick. Essas preparações existem apenas no complemento de teste.
 
 Ele **não demonstra a construção completa desta base expandida por colonos**, nem mede velocidade de construção, produção prolongada dos campos ou desempenho térmico em todos os biomas. O teste completo anterior foi feito no layout linear; não representa este plano. Killbox, airlocks e ampliação além de doze quartos continuam pendentes.
+
+## Planejamento de longo prazo e rotina
+
+O planejador estratégico mantém uma rota de pesquisa com pré-requisitos visíveis e ocultos, reavalia energia, comida, medicina, armas, produção e defesa, registra itens desbloqueados e separa metas de curto, médio e longo prazo. A rota padrão aponta para a nave construída na colônia; ela não concede pesquisa grátis, não substitui uma escolha manual de pesquisa e não declara a vitória antes que a construção e o lançamento sejam executados.
+
+Quando pesquisas liberam bancadas, o sistema tenta incorporá-las aos setores existentes por tarefas aditivas e validadas. Ele não duplica instalações, não desloca equipamentos do jogador e registra o bloqueio quando faltam materiais, espaço, bancada ou requisitos nativos.
+
+Work Priorities são revistas durante a partida. Skills, paixões, função, saúde, humor, descanso, urgência, trabalho pendente, comida, recursos, incêndios e feridos alteram temporariamente a escolha. O executor preserva uma alteração manual quando detecta que o jogador mudou a prioridade aplicada pela IA.
+
+A agenda usa Sleep, Work, Recreation, Anything e Meditation quando o colono possui suporte para meditar. Hostis, incêndios e colonos incapacitados entram em modo de emergência; ao terminar, a IA mantém um período de recuperação para sono, recreação e necessidades básicas. A agenda manual por horário também é preservada, e o botão da HUD restaura a agenda anterior quando a automação é desligada.
