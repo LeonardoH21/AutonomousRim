@@ -11,7 +11,7 @@ namespace AutonomousRim.Planning
     {
         private static string lastPlacementFailure;
         private static bool Researched(string name) => DefDatabase<ResearchProjectDef>.GetNamed(name).IsFinished;
-        private static int HeaterCount(int length) => Math.Max(2, (length + 6) / 7);
+        private static int HeaterCount(int length) => 2;
         private static int GeneratorCount(int length, int rooms, int freezers = 0)
         {
             float peak = HeaterCount(length) * DefDatabase<ThingDef>.GetNamed("Heater").GetCompProperties<CompProperties_Power>().PowerConsumption +
@@ -78,7 +78,7 @@ namespace AutonomousRim.Planning
                     if (stone != null && task.Def == ThingDefOf.Wall) task.Stuff = stone;
                     if (climate && request.Key == "Freezer" && task.Position.x == roomOrigin.x + (right ? request.Value + 1 : 0) &&
                         (task.Position.z == roomOrigin.z + 3 || task.Position.z == roomOrigin.z + 4))
-                    { task.Def = DefDatabase<ThingDef>.GetNamed("Cooler"); task.Stuff = null; task.Rotation = right ? Rot4.East : Rot4.West; task.TargetTemperature = -4f; }
+                    { task.Def = DefDatabase<ThingDef>.GetNamed("Cooler"); task.Stuff = null; task.Rotation = right ? Rot4.East : Rot4.West; task.TargetTemperature = -2f; }
                     else if (climate && request.Key != "Freezer" && task.Position.x == origin.x + (right ? 10 : 7) && task.Position.z == roomOrigin.z + (request.Key == "Quarto" ? 3 : 4))
                     {
                         task.Def = DefDatabase<ThingDef>.GetNamed("Vent"); task.Stuff = null; task.Rotation = Rot4.East;
@@ -124,7 +124,9 @@ namespace AutonomousRim.Planning
                         for (int x = Math.Min(origin.x + 8, cooler.Position.x); x <= Math.Max(origin.x + 8, cooler.Position.x); x++)
                             cableCells.Add(new IntVec3(x, 0, cooler.Position.z));
                 var lamps = result.Where(p => p != corridor).Select(room => new ConstructionTask { Def = lampDef,
-                    Position = room.Origin + (room.Kind == "Quarto" ? new IntVec3(1, 0, 3) : new IntVec3(room.Origin.x >= origin.x + 10 ? 1 : room.InteriorSize - 1, 0, room.InteriorSize)) }).ToList();
+                    Position = room.Origin + (room.Kind == "Hospital" ? new IntVec3(2, 0, 3) :
+                        room.Kind == "Oficina" || room.Kind == "Quarto" ? new IntVec3(1, 0, 3) :
+                        new IntVec3(room.Origin.x >= origin.x + 10 ? 1 : room.InteriorSize - 1, 0, room.InteriorSize)) }).ToList();
                 foreach (ConstructionTask lamp in lamps)
                     for (int x = Math.Min(origin.x + 8, lamp.Position.x); x <= Math.Max(origin.x + 8, lamp.Position.x); x++)
                         cableCells.Add(new IntVec3(x, 0, lamp.Position.z));
@@ -133,7 +135,7 @@ namespace AutonomousRim.Planning
                     power.Furniture.Add(new ConstructionTask { Def = DefDatabase<ThingDef>.GetNamed("PowerConduit"), Position = cell });
                 for (int i = 0; i < heaters; i++)
                     power.Furniture.Add(new ConstructionTask { Def = heaterDef,
-                        Position = origin + new IntVec3(9, 0, Math.Min(length - 2, 2 + i * 7)), TargetTemperature = 20f });
+                        Position = origin + new IntVec3(9, 0, i == 0 ? 1 : length - 2), TargetTemperature = 20f });
                 power.Furniture.AddRange(lamps);
                 result.Add(power);
             }
@@ -166,6 +168,18 @@ namespace AutonomousRim.Planning
                 foreach (IntVec3 cell in room.Interior)
                     finish.Furniture.Add(new ConstructionTask { Def = floor, OriginalTerrain = cell.GetTerrain(map), Position = cell });
             result.Add(finish);
+            // Native placement validates the current map, not collisions between
+            // future modules. Check reservations as well, allowing shared aliases
+            // and conduit/floor overlays only.
+            var reserved = new Dictionary<IntVec3, ConstructionTask>();
+            foreach (var task in result.SelectMany(p => p.Shell.Concat(p.Furniture)).Where(t => t.Def is ThingDef && t.Def.defName != "PowerConduit")
+                .GroupBy(t => new { t.Def, t.Stuff, t.Position, t.Rotation }).Select(g => g.First()))
+                foreach (var cell in GenAdj.OccupiedRect(task.Position, task.Rotation, task.Def.Size))
+                {
+                    if (reserved.TryGetValue(cell, out var other))
+                    { lastPlacementFailure = "Planned collision: " + other.Def.defName + "/" + task.Def.defName + " at " + cell; return null; }
+                    reserved[cell] = task;
+                }
             // Validate native placement including the generator, vents, both exhaust outlets and comfort furniture.
             foreach (ConstructionTask task in result.SelectMany(p => p.Shell.Concat(p.Furniture)))
             {

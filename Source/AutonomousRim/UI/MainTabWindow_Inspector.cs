@@ -30,7 +30,7 @@ namespace AutonomousRim.UI
                 component.SetBaseAutomation(!component.BaseAutomation);
             if (Widgets.ButtonText(new Rect(inRect.x + half + 8f, inRect.y + 36f, half, 30f), $"Itens / autoequipar: {(component.EquipmentAutomation ? "LIGADO" : "DESLIGADO")}"))
                 component.SetEquipmentAutomation(!component.EquipmentAutomation);
-            if (Widgets.ButtonText(new Rect(inRect.x, inRect.y + 70f, half, 30f), $"Alimentação: {(component.FoodAutomation ? "LIGADA" : "DESLIGADA")}"))
+            if (Widgets.ButtonText(new Rect(inRect.x, inRect.y + 70f, half, 30f), $"Comida / roupas: {(component.FoodAutomation ? "LIGADA" : "DESLIGADA")}"))
                 component.SetAutomation(!component.FoodAutomation, component.WorkAutomation);
             if (Widgets.ButtonText(new Rect(inRect.x + half + 8f, inRect.y + 70f, half, 30f), $"Prioridades: {(component.WorkAutomation ? "LIGADAS" : "DESLIGADAS")}"))
                 component.SetAutomation(component.FoodAutomation, !component.WorkAutomation);

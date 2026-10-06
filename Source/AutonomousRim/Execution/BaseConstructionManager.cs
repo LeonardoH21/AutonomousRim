@@ -47,29 +47,23 @@ namespace AutonomousRim.Execution
             // Power is independent of enclosing every room; valid reserved cells can be built early.
             if (p.Kind == "Energia e climatização") return false;
             if (p.Kind == "Conforto dos quartos") return all.Where(r => r.Kind == "Quarto").Any(r => !r.Completed);
+            if (p.Kind == "Prateleiras") return all.Where(r => r.Kind == "Estoque" || r.Kind == "Freezer" || r.Kind == "Armas").Any(r => !r.Completed);
+            if (p.Kind == "Hospital" || p.Kind == "Oficina" || p.Kind == "Armas")
+                return all.Where(r => r.Kind == "Quarto" || r.Kind == "Cozinha" || r.Kind == "Estoque" || r.Kind == "Freezer").Any(r => !r.Completed);
             return p.Kind == "Pisos e acabamento" && all.Where(r => r.RequiresRoof).Any(r => !r.Completed);
         }
         private static void Storage(Map map, RoomProject p)
         {
-            if (p.Kind != "Estoque" && p.Kind != "Freezer") return;
+            if (p.Kind != "Estoque" && p.Kind != "Freezer" && p.Kind != "Despejo" && p.Kind != "Medicamentos" && p.Kind != "Armas") return;
             if (p.Stockpile != null) { p.FunctionalStorage = true; return; }
             // Storage works immediately. The shell/roof is still required for weather protection.
-            if (p.Interior.Any(c => c.GetZone(map) != null)) { p.BlockReason = "Zona do jogador ocupa a área de armazenamento."; return; }
+            var cells = p.StorageCells.Count > 0 ? p.StorageCells : p.Interior.ToList();
+            if (cells.Any(c => c.GetZone(map) != null)) { p.BlockReason = "Zona do jogador ocupa a área de armazenamento."; return; }
             p.Stockpile = new Zone_Stockpile(StorageSettingsPreset.DefaultStockpile, map.zoneManager);
             map.zoneManager.RegisterZone(p.Stockpile);
             var doors = p.Shell.Where(t => t.Def == ThingDefOf.Door).Select(t => t.Position).ToList();
-            foreach (IntVec3 c in p.Interior.Where(c => !doors.Any(d => c.AdjacentToCardinal(d)))) p.Stockpile.AddCell(c);
-            var filter = p.Stockpile.GetStoreSettings().filter;
-            filter.SetAllow(ThingCategoryDefOf.Corpses, false);
-            ThingDef fuel = DefDatabase<ThingDef>.GetNamedSilentFail("Chemfuel"); if (fuel != null) filter.SetAllow(fuel, false);
-            ThingCategoryDef shells = DefDatabase<ThingCategoryDef>.GetNamedSilentFail("MortarShells"); if (shells != null) filter.SetAllow(shells, false);
-            if (p.Kind == "Freezer")
-            {
-                filter.SetDisallowAll();
-                var humanParts = new HashSet<ThingDef>(DefDatabase<ThingDef>.AllDefsListForReading.Where(d => d.race?.Humanlike == true).SelectMany(d => new[] { d.race.meatDef, d.race.corpseDef }));
-                foreach (ThingDef d in DefDatabase<ThingDef>.AllDefsListForReading.Where(d => d.ingestible?.HumanEdible == true && d.ingestible.drugCategory == DrugCategory.None && !humanParts.Contains(d))) filter.SetAllow(d, true);
-                p.Stockpile.GetStoreSettings().Priority = StoragePriority.Important;
-            }
+            foreach (IntVec3 c in cells.Where(c => !doors.Any(d => c.AdjacentToCardinal(d)))) p.Stockpile.AddCell(c);
+            StoragePolicy.Configure(p.Stockpile.GetStoreSettings(), p.Kind);
             p.FunctionalStorage = true;
         }
         private static float Progress(Map map, RoomProject p)
@@ -113,7 +107,17 @@ namespace AutonomousRim.Execution
                     projects.Any(r => r.RequiresRoof && r.Shell.All(t => t.Complete(map))) ? ConstructionPriority.Critical : ConstructionPriority.High;
                 foreach (var t in Tasks(p))
                 {
+                    // Pending coolers in older plans follow the new default too;
+                    // already configured/player-adjusted thermostats remain intact.
+                    if (p.Kind == "Freezer" && t.Def.defName == "Cooler" && !t.TemperatureConfigured) t.TargetTemperature = -2f;
                     Track(map, t);
+                    if (!t.SettingsConfigured && t.Complete(map) && (t.MedicalBed || t.StorageKind != null))
+                    {
+                        var building = t.Position.GetThingList(map).First(b => b.def == t.Def && b.Position == t.Position);
+                        if (t.MedicalBed && building is Building_Bed bed) bed.Medical = true;
+                        if (t.StorageKind != null && building is Building_Storage storage) StoragePolicy.Configure(storage.GetStoreSettings(), t.StorageKind, shelf: true);
+                        t.SettingsConfigured = true;
+                    }
                     if (!t.TemperatureConfigured && t.TargetTemperature > -999 && t.Complete(map))
                     {
                         var thermostat = t.Position.GetThingList(map).OfType<ThingWithComps>().First(b => b.def == t.Def).TryGetComp<CompTempControl>();

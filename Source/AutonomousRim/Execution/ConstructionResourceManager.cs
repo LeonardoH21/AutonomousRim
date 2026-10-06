@@ -25,11 +25,17 @@ namespace AutonomousRim.Execution
             }
             owned.RemoveAll(t => t == null || t.Destroyed || !t.Spawned || !Designated(map, t));
             var budget = BaseConstructionManager.Available(map);
-            var costs = projects.Where(p => !p.Completed && p.Priority <= ConstructionPriority.High && p.State != ConstructionState.Paused)
-                .OrderBy(p => p.Priority).Take(3).SelectMany(p => BaseConstructionManager.CurrentStage(map, p))
+            bool essentialsPending = projects.Any(p => !p.Completed && p.Priority <= ConstructionPriority.High && p.State != ConstructionState.Paused);
+            var forecast = projects.Where(p => !p.Completed && (p.Priority <= ConstructionPriority.High || !essentialsPending || BaseConstructionManager.CanContinueExistingWork(p)) && p.State != ConstructionState.Paused)
+                .OrderBy(p => p.Priority).Take(3).ToList();
+            var costs = forecast.SelectMany(p => BaseConstructionManager.CurrentStage(map, p))
                 .Where(t => !t.Complete(map) && t.Pending?.Spawned != true)
                 .GroupBy(t => new { t.Position, t.Def, t.Stuff, t.Rotation }).Select(g => g.First()).SelectMany(t => CostListCalculator.CostListAdjusted(t.Def, t.Stuff))
                 .GroupBy(c => c.thingDef).ToDictionary(g => g.Key, g => g.Sum(c => c.count));
+            foreach (var material in costs.Keys.ToList())
+                if (forecast.Any(p => p.Priority > ConstructionPriority.High && p.Shell.All(t => t.Complete(map)) &&
+                    BaseConstructionManager.CurrentStage(map, p).Any(t => !t.Complete(map) && CostListCalculator.CostListAdjusted(t.Def, t.Stuff).Any(c => c.thingDef == material))))
+                    costs[material] += material == ThingDefOf.WoodLog ? 60 : material == ThingDefOf.Steel ? 50 : material == ThingDefOf.ComponentIndustrial ? 2 : 0;
             foreach (var shortage in budget.Where(p => p.Value < 0)) { costs.TryGetValue(shortage.Key, out int required); costs[shortage.Key] = Math.Max(required, -shortage.Value); }
             int fuel = projects.SelectMany(BaseConstructionManager.Tasks).Where(t => t.Def.defName == "WoodFiredGenerator" && t.Complete(map))
                 .Select(t => t.Position.GetThingList(map).OfType<ThingWithComps>().First(b => b.def == t.Def).TryGetComp<CompRefuelable>()).Where(c => c != null)

@@ -11,8 +11,8 @@ using Verse;
 
 namespace AutonomousRim.RuntimeChecks
 {
-    // Observer/automation controls only: no resource spawning, map clearing, skill edits,
-    // need refills, artificial research or frame completion. Normal pawns do every job.
+    // Native work/cost/transport observer. The explicitly requested skilled fixture
+    // changes only the generated test pawns, before saving its separate initial state.
     public sealed class NormalConstructionChecks : MapComponent
     {
         private bool started, finished, initialRecorded;
@@ -79,6 +79,7 @@ namespace AutonomousRim.RuntimeChecks
         }
         public override void MapComponentTick()
         {
+            if (GenCommandLine.CommandLineArgPassed("autonomousrimcrafttest")) { CraftProductionChecks.Tick(map); return; }
             if (finished || !GenCommandLine.CommandLineArgPassed("autonomousrimnormaltest") || Find.TickManager.TicksGame % 120 != 0) return;
             bool baseline = GenCommandLine.CommandLineArgPassed("autonomousrimbaseline");
             var component = map.GetComponent<AutonomousRimMapComponent>();
@@ -96,11 +97,26 @@ namespace AutonomousRim.RuntimeChecks
                 {
                     checkpointObserved = true;
                     lastProgressTick = ticks; // A new recovery trial gets its own watchdog window; total elapsed is preserved.
+                    Find.TickManager.CurTimeSpeed = TimeSpeed.Superfast;
                     Log.Message("[AutonomousRim.NormalTests] RECOVERY TRIAL: native checkpoint resumed; total construction time remains unchanged.");
                 }
                 if (!started)
                 {
                     if (ticks < 120 || map.mapPawns.FreeColonistsSpawnedCount == 0) return;
+                    if (GenCommandLine.CommandLineArgPassed("autonomousrimskilledfixture") && !GenCommandLine.CommandLineArgPassed("autonomousrimloadstart"))
+                    {
+                        foreach (Pawn pawn in map.mapPawns.FreeColonistsSpawned)
+                        {
+                            foreach (var trait in pawn.story.traits.allTraits.ToList()) pawn.story.traits.RemoveTrait(trait);
+                            pawn.story.Childhood = DefDatabase<BackstoryDef>.AllDefsListForReading.First(b => b.slot == BackstorySlot.Childhood && b.workDisables == WorkTags.None);
+                            if (pawn.story.Adulthood != null) pawn.story.Adulthood = DefDatabase<BackstoryDef>.AllDefsListForReading.First(b => b.slot == BackstorySlot.Adulthood && b.workDisables == WorkTags.None);
+                            pawn.Notify_DisabledWorkTypesChanged();
+                            foreach (var skill in pawn.skills.skills) { skill.Level = 20; skill.xpSinceLastLevel = 0; }
+                            if (pawn.GetDisabledWorkTypes().Count != 0 || pawn.story.traits.allTraits.Count != 0)
+                                throw new InvalidOperationException("Skilled fixture still has disabled work/traits: " + pawn.LabelShort);
+                        }
+                        Log.Message("[AutonomousRim.NormalTests] SKILLED FIXTURE: test-only skills=20, no traits/backstory incapabilities, native costs/resources/needs/work, third speed. Not an ordinary-skill performance benchmark.");
+                    }
                     if ((baseline || GenCommandLine.CommandLineArgPassed("autonomousrimloadstart")) && !baselineLoaded)
                     {
                         baselineLoaded = true;
@@ -127,6 +143,24 @@ namespace AutonomousRim.RuntimeChecks
                         "; pawns=" + string.Join(",", map.mapPawns.FreeColonistsSpawned.Select(p => p.LabelShort + "/Construction=" + p.skills.GetSkill(SkillDefOf.Construction).Level)));
                     component.SetAutomation(true, true); component.SetLootAutomation(!baseline);
                     component.SetEquipmentAutomation(true);
+                    if (GenCommandLine.CommandLineArgPassed("autonomousrimplanonly"))
+                    {
+                        component.PreviewBase();
+                        ValidateNewPlan(component);
+                        foreach (var task in component.BaseProjects.First(p => p.Kind == "Freezer").Shell.Where(t => t.Def.defName == "Cooler"))
+                            task.TargetTemperature = -4; // An unconfigured older-plan thermostat, not a built/adjusted cooler.
+                        component.SetBaseAutomation(true);
+                        if (component.BaseProjects.First(p => p.Kind == "Freezer").Shell.Where(t => t.Def.defName == "Cooler").Any(t => t.TargetTemperature != -2))
+                            throw new InvalidOperationException("Pending older freezer plans did not adopt -2 Celsius.");
+                        var stock = component.BaseProjects.First(p => p.Kind == "Estoque").Stockpile.GetStoreSettings();
+                        var freezer = component.BaseProjects.First(p => p.Kind == "Freezer").Stockpile.GetStoreSettings();
+                        foreach (var food in new[] { ThingDefOf.MealSimple, DefDatabase<ThingDef>.GetNamed("Kibble"), DefDatabase<ThingDef>.GetNamed("Hay") })
+                            if (stock.filter.Allows(food) || !freezer.filter.Allows(food)) throw new InvalidOperationException("Food category storage failed: " + food.defName);
+                        if (freezer.Priority <= stock.Priority) throw new InvalidOperationException("Freezer priority does not exceed general storage.");
+                        finished = true;
+                        Log.Message("[AutonomousRim.NormalTests] PASS: fresh compact plan and native storage zones; placement/reserved footprints, medical/workshop lights, human/animal food filters, two entrance heaters and freezer setpoints. Bounded blueprints only, no completed structures.");
+                        return;
+                    }
                     if (baseline) component.PreviewBase(); else component.SetBaseAutomation(true);
                     Log.Message("[AutonomousRim.NormalTests] INITIAL ITEMS: " + string.Join(",", map.listerThings.AllThings.Where(t => t.def.category == ThingCategory.Item && t.Spawned).GroupBy(t => t.def).Select(g => g.Key.defName + "=" + g.Sum(t => t.stackCount))));
                 }
@@ -191,7 +225,10 @@ namespace AutonomousRim.RuntimeChecks
                             "; roof=" + freezerProject.Interior.CenterCell.Roofed(map));
                 }
                 var required = component.BaseProjects.Where(p => p.Kind == "Estoque" || p.Kind == "Quarto" || p.Kind == "Cozinha" || p.Kind == "Freezer" || p.Kind == "Corredor" || p.Kind == "Energia e climatização").ToList();
-                var basic = required.Where(p => p.Kind != "Corredor" && p.Kind != "Energia e climatização").ToList();
+                bool skilled = GenCommandLine.CommandLineArgPassed("autonomousrimskilledfixture");
+                if (skilled) required.AddRange(component.BaseProjects.Where(p => p.Kind == "Hospital" || p.Kind == "Oficina" || p.Kind == "Armas" ||
+                    p.Kind == "Despejo" || p.Kind == "Medicamentos" || p.Kind == "Prateleiras"));
+                var basic = required.Where(p => p.Kind == "Estoque" || p.Kind == "Quarto" || p.Kind == "Cozinha" || p.Kind == "Freezer").ToList();
                 if (!initialRecorded && basic.All(p => p.Completed) && basic.Any(p => p.Kind == "Freezer"))
                 {
                     RoomProject freezer = basic.First(p => p.Kind == "Freezer");
@@ -215,6 +252,7 @@ namespace AutonomousRim.RuntimeChecks
                     bool powered = freezer.Shell.Where(t => t.Def.defName == "Cooler").All(t => t.Position.GetThingList(map).OfType<ThingWithComps>().Single(b => b.def == t.Def).TryGetComp<CompPowerTrader>().PowerOn);
                     if (powered)
                     {
+                        if (skilled) ValidatePreferences(component);
                         int elapsed = ticks - startTick;
                         var result = (baseline ? "baseline" : "new") + "; elapsedTicks=" + elapsed + "; completed=" + completed + "; freezer=" + freezer.Interior.CenterCell.GetTemperature(map).ToString("0.0");
                         File.WriteAllText(Path.Combine(GenFilePaths.SaveDataFolderPath, baseline ? "baseline-result.txt" : "new-result.txt"), result);
@@ -238,6 +276,58 @@ namespace AutonomousRim.RuntimeChecks
                 catch (Exception saveError) { Log.Warning("[AutonomousRim.NormalTests] Could not preserve failure snapshot: " + saveError.Message); }
                 Log.Error("[AutonomousRim.NormalTests] FAIL: " + detail);
             }
+        }
+
+        private void ValidatePreferences(AutonomousRimMapComponent component)
+        {
+            var stock = component.BaseProjects.First(p => p.Kind == "Estoque").Stockpile.GetStoreSettings();
+            var freezer = component.BaseProjects.First(p => p.Kind == "Freezer").Stockpile.GetStoreSettings();
+            if (stock.filter.Allows(ThingDefOf.MealSimple) || !freezer.filter.Allows(ThingDefOf.MealSimple) ||
+                freezer.filter.Allows(ThingDefOf.Steel) || freezer.Priority <= stock.Priority)
+                throw new InvalidOperationException("Food storage filters/priority are incorrect.");
+            var medicine = component.BaseProjects.First(p => p.Kind == "Medicamentos").Stockpile;
+            if (medicine.Cells.Count() != 3 || medicine.GetStoreSettings().Priority != StoragePriority.Critical ||
+                !medicine.GetStoreSettings().filter.AllowedThingDefs.All(d => d.IsMedicine))
+                throw new InvalidOperationException("Medicine storage is not three critical slots.");
+            var dump = component.BaseProjects.First(p => p.Kind == "Despejo").Stockpile.GetStoreSettings().filter;
+            if (!dump.Allows(DefDatabase<ThingDef>.GetNamed("ChunkGranite")) || !dump.Allows(DefDatabase<ThingDef>.GetNamed("Hare").race.corpseDef) ||
+                dump.Allows(ThingDefOf.Human.race.corpseDef) || dump.Allows(ThingDefOf.Steel))
+                throw new InvalidOperationException("Dump does not restrict itself to stone chunks and animal corpses.");
+            var hospital = component.BaseProjects.First(p => p.Kind == "Hospital");
+            if (hospital.Furniture.Where(t => t.MedicalBed).Any(t => !t.Position.GetThingList(map).OfType<Building_Bed>().Any(b => b.Medical && b.def == ThingDefOf.Bed)))
+                throw new InvalidOperationException("Hospital lacks its ordinary medical beds.");
+            foreach (var t in component.BaseProjects.SelectMany(BaseConstructionManager.Tasks).Where(t => t.StorageKind != null))
+            {
+                var settings = t.Position.GetThingList(map).OfType<Building_Storage>().Single(b => b.Position == t.Position).GetStoreSettings();
+                if (settings.filter.Allows(ThingDefOf.MealSimple) != (t.StorageKind == "Freezer"))
+                    throw new InvalidOperationException("Shelf filters disagree with their sector.");
+                if (settings.Priority <= (t.StorageKind == "Estoque" ? stock.Priority : freezer.Priority))
+                    throw new InvalidOperationException("Shelves do not outrank floor storage.");
+            }
+            foreach (var t in component.BaseProjects.First(p => p.Kind == "Freezer").Shell.Where(t => t.Def.defName == "Cooler"))
+                if (t.Position.GetThingList(map).OfType<ThingWithComps>().Single(b => b.def == t.Def).TryGetComp<CompTempControl>().TargetTemperature != -2f)
+                    throw new InvalidOperationException("Freezer thermostat is not -2 Celsius.");
+            var bills = map.listerBuildings.AllBuildingsColonistOfClass<Building_WorkTable>().SelectMany(t => t.BillStack.Bills).OfType<Bill_Production>().ToList();
+            if (!bills.Any(b => b.recipe.defName == "CookMealSimpleBulk" || b.recipe.defName == "CookMealFineBulk") ||
+                !bills.Any(b => b.recipe.products?.Any(p => p.thingDef.defName == "Apparel_Pants") == true && b.targetCount == 3 && b.unpauseWhenYouHave == 3))
+                throw new InvalidOperationException("Native food/clothing production bills are missing.");
+            Log.Message("[AutonomousRim.NormalTests] PREFERENCES PASS: -2C freezer, food-only shelves/priority, animal/stone dump, two medical beds, three critical medicine slots, weapons room, native bulk meals and clothing 3/3.");
+        }
+
+        private void ValidateNewPlan(AutonomousRimMapComponent component)
+        {
+            var projects = component.BaseProjects;
+            if (!projects.Any(p => p.Kind == "Corredor") || !projects.Any(p => p.Kind == "Hospital") || !projects.Any(p => p.Kind == "Oficina") ||
+                !projects.Any(p => p.Kind == "Medicamentos" && p.StorageCells.Count == 3) || !projects.Any(p => p.Kind == "Despejo"))
+                throw new InvalidOperationException("Missing compact modules: " + component.BaseStatus);
+            var occupied = new HashSet<IntVec3>();
+            foreach (var task in projects.SelectMany(BaseConstructionManager.Tasks).Where(t => t.Def is ThingDef && t.Def.defName != "PowerConduit")
+                .GroupBy(t => new { t.Def, t.Stuff, t.Position, t.Rotation }).Select(g => g.First()))
+                foreach (var cell in GenAdj.OccupiedRect(task.Position, task.Rotation, task.Def.Size))
+                    if (!occupied.Add(cell)) throw new InvalidOperationException("Planned furniture/module overlap at " + cell + ": " + task.Def.defName);
+            if (projects.SelectMany(BaseConstructionManager.Tasks).Count(t => t.Def.defName == "Heater") != 2 ||
+                projects.First(p => p.Kind == "Freezer").Shell.Where(t => t.Def.defName == "Cooler").Any(t => t.TargetTemperature != -2))
+                throw new InvalidOperationException("Initial thermal plan differs from requested preferences.");
         }
     }
 }

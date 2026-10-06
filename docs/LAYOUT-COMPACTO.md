@@ -66,7 +66,7 @@ Quando **Eletricidade, Ar-condicionado e Móveis complexos já estão pesquisado
 
 - Uma ventilação direta entre cada sala e o corredor, em parede simples. Cada lado dá para células internas livres; não existe uma segunda parede bloqueando o ar.
 - Um resfriador em cada extremidade do corredor. O lado frio aponta para dentro e o ar quente para o exterior livre e sem teto. As saídas para pedestres continuam ao lado deles.
-- Aquecedores distribuídos pelo corredor, com alvo de **20 °C**, e resfriadores com alvo de **24 °C**. Essa faixa evita que aquecimento e resfriamento disputem a mesma temperatura.
+- Dois aquecedores perto das entradas opostas, com alvo de **20 °C**, e resfriadores do corredor com alvo de **24 °C**. O freezer usa **−2 °C**. Essa faixa evita que aquecimento e resfriamento disputem a mesma temperatura.
 - Luz elétrica em cada sala e cabos conectando todos os consumidores.
 - Geradores a lenha em área externa. A quantidade é calculada usando os consumos máximos reais dos equipamentos e uma margem elétrica de 20%; cabos não são sobrepostos aos geradores.
 
@@ -76,7 +76,21 @@ Se essas pesquisas faltarem, o bloco básico continua disponível sem climatiza�
 
 **Evitar:** mandar calor para dentro da base, cobrir o escape do resfriador, usar ventiladores em paredes duplas, conectar o freezer ao corredor aquecido, depender de gerador sem abastecimento e manter portas externas abertas. Ventiladores equilibram temperatura; não são um sistema de oxigênio.
 
-Freezer deve ser isolado do circuito de conforto, com termostato abaixo de zero e, quando necessário, isolamento e antecâmara próprios. Freezer, hospital, agricultura, produção de roupas e defesas continuam nas etapas futuras descritas no plano geral.
+Freezer fica isolado do circuito de conforto, com termostato −2 °C. Antecâmaras, isolamento adicional e expansão automática da capacidade térmica continuam pendentes; dois aquecedores são uma configuração inicial, sem garantia de temperatura em extremos climáticos.
+
+## Setores e produção de 6 de outubro
+
+O desenho enviado pelo jogador orienta a separação dos setores. Mantemos o corredor modular de duas células e duas saídas, com cozinha e oficina próximas, em vez de reproduzir todos os cômodos de uma base muito maior. A oficina oferece corte de pedras e costura manual conforme as pesquisas existentes. Hospital, oficina e sala de armas aguardam quartos, cozinha, estoque e freezer concluídos.
+
+O estoque geral tem prioridade Normal e não aceita comida. Freezer aceita somente alimentos e usa Important. Despejo externo de 3×3 próximo ao açougue/oficina aceita somente pedaços de pedra e cadáveres animais, com Preferred; não aceita corpos humanos nem escória metálica. A posição respeita obras, zonas e acesso; se nenhum local servir, o planejador não força a zona. Criar uma zona não libera automaticamente itens proibidos.
+
+Hospital 5×5 inclui duas camas comuns marcadas Medical e três células somente para medicina com prioridade Critical. Sala de armas 4×4 aceita apenas armas com Important. Prateleiras pequenas de madeira nos estoques/freezer/armas exigem Móveis complexos e são uma melhoria de prioridade baixa. Filtros são configurados somente ao criar cada zona/prateleira; mudanças posteriores do jogador são preservadas.
+
+As prateleiras têm prioridade maior que o chão do setor, para que haja transporte efetivo até elas. Luzes de hospital e oficina ficam fora das reservas de camas/bancadas; o plano valida também colisões entre módulos ainda não construídos. Consulte os [resultados do teste com habilidade 20](TESTE-PREFERENCIAS-BASE.md), incluindo limites e saves exportados.
+
+O controle **Comida / roupas** mantém receitas nativas em 20/20 para comida, de quatro em quatro. Prefere refeições finas com carne/proteína e vegetais quando houver ingredientes, dieta compatível e cozinheiro de nível 6; usa refeições simples x4 como alternativa. O limite compartilhado considera refeições existentes ao trocar a receita, com possível sobra de até três devido ao lote nativo. Calças, camisa e parka abaixo de 10 °C ou duster em temperaturas mais altas recebem ordens de três peças de reserva, em 3/3. Receitas não criam tecido, couro ou ingredientes: a bancada, pesquisa, matérias-primas e trabalho continuam necessários.
+
+Allow pode liberar até oito pilhas necessárias por ciclo de pelo menos 600 ticks. Corte de árvores maduras e mineração de aço/componentes usam marcações nativas limitadas; após essenciais, a coleta também atende às melhorias e à margem de material destas. Sem fonte acessível, a IA indica a falta.
 
 ## Verificação
 

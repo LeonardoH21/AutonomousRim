@@ -76,7 +76,8 @@ namespace AutonomousRim.RuntimeChecks
             hunter.equipment.AddEquipment((ThingWithComps)gun);
             component.SetAutomation(true, true);
             Check(Find.PlaySettings.useWorkPriorities, "Numeric priorities were not activated.");
-            Check(stove.BillStack.Bills.Any(b => b.recipe.defName == "CookMealSimple"), "Simple-meal bill missing.");
+            var mealBill = stove.BillStack.Bills.OfType<Bill_Production>().FirstOrDefault(b => b.recipe.defName == "CookMealSimpleBulk" || b.recipe.defName == "CookMealFineBulk");
+            Check(mealBill != null && mealBill.targetCount == 20 && mealBill.pauseWhenSatisfied && mealBill.unpauseWhenYouHave == 20, "Native bulk-meal 20/20 bill missing.");
             Check(butcher.BillStack.Bills.Any(b => b.recipe.defName == "ButcherCorpseFlesh"), "Butchering bill missing.");
             Check(WorkPriorityManager.CanHunt(hunter), "Prepared ranged hunter is not eligible.");
             Pawn prey = PawnGenerator.GeneratePawn(DefDatabase<PawnKindDef>.GetNamed("Hare"));

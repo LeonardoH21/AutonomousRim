@@ -20,6 +20,9 @@ namespace AutonomousRim.Planning
         public bool CancelledByPlayer;
         public float TargetTemperature = -999f;
         public bool TemperatureConfigured;
+        public bool MedicalBed;
+        public string StorageKind;
+        public bool SettingsConfigured;
         public int RetryAfter;
         public int FailedJobs;
         public string LastFailure;
@@ -38,6 +41,9 @@ namespace AutonomousRim.Planning
             Scribe_Values.Look(ref WasCompleted, "wasCompleted");
             Scribe_Values.Look(ref TargetTemperature, "targetTemperature", -999f);
             Scribe_Values.Look(ref TemperatureConfigured, "temperatureConfigured");
+            Scribe_Values.Look(ref MedicalBed, "medicalBed");
+            Scribe_Values.Look(ref StorageKind, "storageKind");
+            Scribe_Values.Look(ref SettingsConfigured, "settingsConfigured");
             Scribe_Values.Look(ref RetryAfter, "retryAfter");
             Scribe_Values.Look(ref FailedJobs, "failedJobs");
             Scribe_Values.Look(ref LastFailure, "lastFailure");
@@ -59,6 +65,7 @@ namespace AutonomousRim.Planning
         public List<ConstructionTask> Furniture = new List<ConstructionTask>();
         public List<IntVec3> RoofOrders = new List<IntVec3>();
         public Zone_Stockpile Stockpile;
+        public List<IntVec3> StorageCells = new List<IntVec3>();
         public bool Started;
         public bool Completed;
         public ConstructionState State;
@@ -83,6 +90,7 @@ namespace AutonomousRim.Planning
             Scribe_Collections.Look(ref Furniture, "furniture", LookMode.Deep);
             Scribe_Collections.Look(ref RoofOrders, "roofOrders", LookMode.Value);
             Scribe_References.Look(ref Stockpile, "stockpile");
+            Scribe_Collections.Look(ref StorageCells, "storageCells", LookMode.Value);
             Scribe_Values.Look(ref Started, "started"); Scribe_Values.Look(ref Completed, "completed");
             Scribe_Values.Look(ref State, "state"); Scribe_Values.Look(ref Priority, "priority", ConstructionPriority.High);
             Scribe_Values.Look(ref BlockReason, "blockReason");
@@ -92,6 +100,7 @@ namespace AutonomousRim.Planning
             {
                 Shell = Shell ?? new List<ConstructionTask>(); Furniture = Furniture ?? new List<ConstructionTask>();
                 RoofOrders = RoofOrders ?? new List<IntVec3>();
+                StorageCells = StorageCells ?? new List<IntVec3>();
             }
         }
     }

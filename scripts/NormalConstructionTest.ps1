@@ -5,18 +5,24 @@ param(
     [switch]$LoadStart,
     [switch]$LoadCheckpoint,
     [switch]$Peaceful,
+    [switch]$SkilledFixture,
+    [switch]$PlanOnly,
+    [switch]$CraftOnly,
     [switch]$RuntimeChecks = $true,
     [switch]$Visible
 )
 $ErrorActionPreference = 'Stop'
 if ($LoadCheckpoint -and ($Baseline -or $LoadStart)) { throw 'LoadCheckpoint cannot be combined with Baseline or LoadStart.' }
+if ($SkilledFixture -and $Baseline) { throw 'SkilledFixture is a functional fixture, not the ordinary-skill baseline benchmark.' }
+if ($PlanOnly -and ($Baseline -or $LoadCheckpoint)) { throw 'PlanOnly validates a new plan, not a baseline or recovery checkpoint.' }
+if ($CraftOnly -and (!$SkilledFixture -or $PlanOnly -or $Baseline -or $LoadStart -or $LoadCheckpoint)) { throw 'CraftOnly requires only SkilledFixture and its exported completed save.' }
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $gameRoot = (Resolve-Path -LiteralPath $RimWorldDir).Path
 $gameExe = Join-Path $gameRoot 'RimWorldWin64.exe'
 if (!(Test-Path -LiteralPath $gameExe)) { throw 'RimWorld executable not found.' }
 if (Get-Process RimWorldWin64 -ErrorAction SilentlyContinue) { throw 'Close RimWorld before running this isolated test.' }
 if (!(Test-Path -LiteralPath (Join-Path $gameRoot 'Mods\AutonomousRim\1.6\Assemblies\AutonomousRim.dll'))) { throw 'Install the mod before testing.' }
-$profile = Join-Path $projectRoot '.tools\normal-construction'
+$profile = Join-Path $projectRoot $(if ($SkilledFixture) { '.tools\skilled-construction' } else { '.tools\normal-construction' })
 $configFolder = Join-Path $profile 'Config'
 New-Item -ItemType Directory -Path $configFolder -Force | Out-Null
 [xml]$config = '<ModsConfigData><version>1.6.4633</version><activeMods><li>brrainz.harmony</li><li>ludeon.rimworld</li></activeMods><knownExpansions /></ModsConfigData>'
@@ -59,6 +65,9 @@ try {
         if ($LoadStart) { $gameArgs += '-autonomousrimloadstart' }
         if ($LoadCheckpoint) { $gameArgs += '-autonomousrimloadcheckpoint' }
         if ($Peaceful) { $gameArgs += '-autonomousrimpeaceful' }
+        if ($SkilledFixture) { $gameArgs += '-autonomousrimskilledfixture' }
+        if ($PlanOnly) { $gameArgs += '-autonomousrimplanonly' }
+        if ($CraftOnly) { $gameArgs += '-autonomousrimcrafttest' }
         
     }
     $windowStyle = if ($Visible) { 'Normal' } else { 'Hidden' }
@@ -71,7 +80,15 @@ try {
             if ($logText.Contains('[AutonomousRim.NormalTests] FAIL:')) { throw "Native construction failed. Inspect $logFile" }
             if ($logText -match 'Exception|Error while|XML error|Config error|Attempted to calculate value for disabled stat|Two power nets on the same cell') { throw "Game reported an error. Inspect $logFile" }
             if ($logText.Contains('[AutonomousRim.NormalTests] PASS:')) {
-                Write-Output "PASS: native construction completed. Log: $logFile"
+                if ($SkilledFixture -and $CraftOnly) {
+                    & (Join-Path $PSScriptRoot 'ExportSkilledFixture.ps1') -SourceSave ConstructionFinishedUpdated
+                }
+                elseif ($SkilledFixture -and !$PlanOnly) {
+                    & (Join-Path $PSScriptRoot 'ExportSkilledFixture.ps1') -SourceSave ConstructionStart
+                    & (Join-Path $PSScriptRoot 'ExportSkilledFixture.ps1') -SourceSave ConstructionFinished
+                }
+                $checked = if ($PlanOnly) { 'compact planning/storage checks' } elseif ($CraftOnly) { 'production/save/load checks' } else { 'native construction' }
+                Write-Output "PASS: $checked completed. Log: $logFile"
                 return
             }
         }

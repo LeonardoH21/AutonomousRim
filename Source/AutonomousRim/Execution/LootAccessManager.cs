@@ -11,11 +11,12 @@ namespace AutonomousRim.Execution
 {
     public static class LootAccessManager
     {
-        public const int MaxStacksPerCycle = 2;
+        public const int MaxStacksPerCycle = 8;
         private sealed class Candidate { public Thing Item; public int Priority; public string Reason; }
 
         public static string Apply(Map map, ColonyState state, bool building, IReadOnlyList<RoomProject> projects,
-            List<ManagedApparel> apparel, Func<Pawn, bool> equipmentAllowed, List<Thing> releasedHistory, out int released)
+            List<ManagedApparel> apparel, Func<Pawn, bool> equipmentAllowed, List<Thing> releasedHistory, out int released,
+            IReadOnlyList<ManagedFoodBill> productionBills = null)
         {
             released = 0;
             releasedHistory.RemoveAll(t => t == null || t.Destroyed);
@@ -43,8 +44,9 @@ namespace AutonomousRim.Execution
             var materials = new Dictionary<ThingDef, int>();
             if (building)
             {
+                bool essentialsPending = projects.Any(p => !p.Completed && p.Priority <= ConstructionPriority.High && p.State != ConstructionState.Paused);
                 var requested = projects.Where(p => !p.Completed && p.State != ConstructionState.Paused && p.State != ConstructionState.Blocked &&
-                    (p.Priority <= ConstructionPriority.High || BaseConstructionManager.CanContinueExistingWork(p)) &&
+                    (p.Priority <= ConstructionPriority.High || !essentialsPending || BaseConstructionManager.CanContinueExistingWork(p)) &&
                     !BaseConstructionManager.Tasks(p).Any(t => t.CancelledByPlayer)).ToList();
                 if (requested.Count > 0)
                 {
@@ -69,12 +71,27 @@ namespace AutonomousRim.Execution
             }
             var gear = EquipmentPlanner.Plan(map, apparel, true).Where(d => equipmentAllowed(d.Pawn)).GroupBy(d => d.Pawn)
                 .Select(g => g.OrderByDescending(d => d.Gain).First()).Select(d => d.Item).ToHashSet();
+            var textileDefs = new HashSet<ThingDef>();
+            int textileNeed = 0;
+            foreach (var order in (productionBills ?? new List<ManagedFoodBill>()).Where(o => o.Matches && !o.Bill.suspended &&
+                o.Bill.repeatMode == BillRepeatModeDefOf.TargetCount && o.Bill.recipe.products?.Any(p => p.thingDef.IsApparel) == true))
+            {
+                int missing = Math.Max(0, order.Bill.targetCount - order.Bill.recipe.WorkerCounter.CountProducts(order.Bill));
+                if (missing == 0) continue;
+                foreach (var ingredient in order.Bill.recipe.ingredients)
+                {
+                    textileNeed += (int)Math.Ceiling(ingredient.GetBaseCount() * missing);
+                    foreach (ThingDef def in ingredient.filter.AllowedThingDefs.Where(d => order.Bill.ingredientFilter.Allows(d))) textileDefs.Add(def);
+                }
+            }
+            textileNeed = Math.Max(0, textileNeed - ground.Where(t => textileDefs.Contains(t.def) && !t.IsForbidden(Faction.OfPlayer)).Sum(t => t.stackCount));
             var candidates = ground.Where(t => t.IsForbidden(Faction.OfPlayer) && !releasedHistory.Contains(t)).Select(t =>
             {
                 if (medicineNeeded > 0 && t.def.IsMedicine) return new Candidate { Item = t, Priority = 0, Reason = "reserva de remédios" };
                 if (foodNeeded > 0f && edible(t)) return new Candidate { Item = t, Priority = 1, Reason = "reserva de comida" };
                 if (materials.TryGetValue(t.def, out int needed) && needed > 0) return new Candidate { Item = t, Priority = 2, Reason = "material/combustível necessário" };
                 if (gear.Contains(t)) return new Candidate { Item = t, Priority = 3, Reason = "equipamento adequado a um colono" };
+                if (textileNeed > 0 && textileDefs.Contains(t.def)) return new Candidate { Item = t, Priority = 4, Reason = "material de costura necessário" };
                 return null;
             }).Where(c => c != null).OrderBy(c => c.Priority).ThenBy(c => pawns.Count == 0 ? float.MaxValue : pawns.Min(p => p.Position.DistanceTo(c.Item.Position)))
                 .ThenBy(c => c.Item.thingIDNumber).ToList();
@@ -83,16 +100,17 @@ namespace AutonomousRim.Execution
                 if (released >= MaxStacksPerCycle) break;
                 Thing item = candidate.Item;
                 if ((candidate.Priority == 0 && medicineNeeded <= 0) || (candidate.Priority == 1 && foodNeeded <= 0f) ||
-                    (candidate.Priority == 2 && materials[item.def] <= 0)) continue;
+                    (candidate.Priority == 2 && materials[item.def] <= 0) || (candidate.Priority == 4 && textileNeed <= 0)) continue;
                 if (!pawns.Any(p => p.Position.DistanceTo(item.Position) <= 60f && p.CanReserveAndReach(item, PathEndMode.Touch, Danger.None))) continue;
                 item.SetForbidden(false, false);
                 releasedHistory.Add(item); released++;
                 if (candidate.Priority == 0) medicineNeeded -= item.stackCount;
                 if (candidate.Priority == 1) foodNeeded -= item.GetStatValue(StatDefOf.Nutrition) * item.stackCount;
+                if (textileDefs.Contains(item.def)) textileNeed -= item.stackCount;
                 if (materials.ContainsKey(item.def)) materials[item.def] -= item.stackCount;
                 Log.Message($"[AutonomousRim] Allow: {item.LabelCap} — {candidate.Reason}.");
             }
-            return $"Allow gradual: {released} pilhas liberadas neste ciclo (máximo 2/10 s de jogo). Reproibições manuais são respeitadas; itens já liberados permanecem disponíveis ao desligar.";
+            return $"Allow gradual: {released} pilhas liberadas neste ciclo (máximo {MaxStacksPerCycle}/10 s de jogo). Reproibições manuais são respeitadas; itens já liberados permanecem disponíveis ao desligar.";
         }
     }
 }

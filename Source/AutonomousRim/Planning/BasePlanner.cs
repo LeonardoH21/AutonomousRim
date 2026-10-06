@@ -21,8 +21,67 @@ namespace AutonomousRim.Planning
             if (support.Furniture.Count > 0) rooms.Insert(0, support);
         }
         public static string LastRoomFailure { get; private set; }
+        private static bool Researched(string name) => DefDatabase<ResearchProjectDef>.GetNamed(name).IsFinished;
+
+        private static void AddUtilityModules(Map map, List<RoomProject> rooms, List<RoomProject> existing)
+        {
+            if (rooms.Count == 0) return;
+            var hospital = rooms.FirstOrDefault(p => p.Kind == "Hospital");
+            if (hospital != null)
+            {
+                var medicine = new RoomProject { Kind = "Medicamentos", Origin = hospital.Origin,
+                    InteriorSize = 1, RequiresRoof = false, Priority = ConstructionPriority.Normal };
+                for (int x = 2; x <= 4; x++) medicine.StorageCells.Add(hospital.Origin + new IntVec3(x, 0, 1));
+                rooms.Add(medicine);
+            }
+            if (Researched("ComplexFurniture"))
+            {
+                var shelves = new RoomProject { Kind = "Prateleiras", Origin = rooms[0].Origin,
+                    InteriorSize = 1, RequiresRoof = false, Priority = ConstructionPriority.Low };
+                foreach (var room in rooms.Where(p => p.Kind == "Estoque" || p.Kind == "Freezer" || p.Kind == "Armas"))
+                    foreach (int x in new[] { 1, 3, 5 }.Where(x => x <= room.InteriorSize))
+                        shelves.Furniture.Add(new ConstructionTask { Def = DefDatabase<ThingDef>.GetNamed("ShelfSmall"), Stuff = ThingDefOf.WoodLog,
+                            Position = room.Origin + new IntVec3(x, 0, room.InteriorSize - 1), StorageKind = room.Kind });
+                if (shelves.Furniture.Count > 0) rooms.Add(shelves);
+            }
+            var kitchen = rooms.Concat(existing).FirstOrDefault(p => p.Kind == "Cozinha");
+            if (kitchen == null || existing.Any(p => p.Kind == "Despejo")) return;
+            var workshop = rooms.Concat(existing).FirstOrDefault(p => p.Kind == "Oficina");
+            var obstacles = rooms.Concat(existing).ToList();
+            foreach (IntVec3 cell in GenRadial.RadialCellsAround(kitchen.Origin, 24, true)
+                .OrderBy(c => c.DistanceTo(kitchen.Origin) + (workshop == null ? 0 : c.DistanceTo(workshop.Origin))))
+            {
+                var rect = new CellRect(cell.x, cell.z, 3, 3);
+                // A dump may contain existing haulable chunks/items. It creates a
+                // zone only; it neither destroys nor unforbids those things.
+                if (obstacles.Any(p => p.Footprint.ExpandedBy(1).Overlaps(rect)) || rect.Cells.Any(c => !c.InBounds(map) || c.CloseToEdge(map, 10) ||
+                    c.Fogged(map) || c.Roofed(map) || c.GetZone(map) != null || !c.GetTerrain(map).affordances.Contains(TerrainAffordanceDefOf.Heavy) ||
+                    c.GetThingList(map).Any(t => !(t is Pawn) && !(t is Plant) && !(t is Filth) && !(t.def.category == ThingCategory.Item && t.def.EverHaulable))) ||
+                    !map.mapPawns.FreeColonistsSpawned.Any(p => p.CanReach(cell, PathEndMode.OnCell, Danger.None))) continue;
+                rooms.Add(new RoomProject { Kind = "Despejo", Origin = cell - new IntVec3(1, 0, 1), InteriorSize = 3,
+                    RequiresRoof = false, Priority = ConstructionPriority.High, StorageCells = rect.Cells.ToList() });
+                break;
+            }
+        }
         public static void RepairUnissuedKitchenConflicts(Map map, IReadOnlyList<RoomProject> projects)
         {
+            foreach (var room in projects.Where(p => (p.Kind == "Hospital" || p.Kind == "Oficina") && p.State != ConstructionState.Paused))
+                foreach (var task in room.Furniture.Where(t => t.MedicalBed || t.Def.defName == "HandTailoringBench"))
+                {
+                    if (task.Issued || task.Pending != null || task.CancelledByPlayer || task.Complete(map) ||
+                        GenConstruct.CanPlaceBlueprintAt(task.Def, task.Position, task.Rotation, map, stuffDef: task.Stuff)) continue;
+                    var candidates = task.MedicalBed ? new[] { room.Origin + new IntVec3(2, 0, 5), room.Origin + new IntVec3(3, 0, 5) } :
+                        new[] { room.Origin + new IntVec3(3, 0, 4) };
+                    foreach (var cell in candidates)
+                    {
+                        var rect = GenAdj.OccupiedRect(cell, task.Rotation, task.Def.Size);
+                        if (!rect.Cells.All(c => room.Interior.Contains(c)) || room.Furniture.Any(t => t != task &&
+                            GenAdj.OccupiedRect(t.Position, t.Rotation, t.Def.Size).Overlaps(rect)) ||
+                            !GenConstruct.CanPlaceBlueprintAt(task.Def, cell, task.Rotation, map, stuffDef: task.Stuff)) continue;
+                        Log.Message("[AutonomousRim] Recovery: móvel ainda não emitido reposicionado em " + room.Kind + ": " + task.Def.defName + " " + task.Position + " -> " + cell);
+                        task.Position = cell; break;
+                    }
+                }
             // Migrate the former kitchen layout only before a table has been ordered.
             // Existing furniture, invested frames and player cancellations stay intact.
             foreach (var room in projects.Where(p => p.Kind == "Cozinha" && p.State != ConstructionState.Paused))
@@ -88,6 +147,21 @@ namespace AutonomousRim.Planning
                 project.Furniture.Add(new ConstructionTask { Def = DefDatabase<ThingDef>.GetNamed("ChessTable"), Stuff = material, Position = origin + new IntVec3(5, 0, 5) });
                 project.Furniture.Add(new ConstructionTask { Def = ThingDefOf.Stool, Stuff = material, Position = origin + new IntVec3(5, 0, 4) });
             }
+            if (kind == "Hospital")
+            {
+                project.Priority = ConstructionPriority.Normal;
+                foreach (int x in new[] { 1, 4 })
+                    project.Furniture.Add(new ConstructionTask { Def = ThingDefOf.Bed, Stuff = material,
+                        Position = origin + new IntVec3(x, 0, 5), Rotation = Rot4.South, MedicalBed = true });
+            }
+            if (kind == "Armas" || kind == "Oficina") project.Priority = ConstructionPriority.Normal;
+            if (kind == "Oficina")
+            {
+                if (Researched("Stonecutting")) project.Furniture.Add(new ConstructionTask { Def = DefDatabase<ThingDef>.GetNamed("TableStonecutter"),
+                    Stuff = material, Position = origin + new IntVec3(3, 0, 1), Rotation = Rot4.South });
+                if (Researched("ComplexClothing")) project.Furniture.Add(new ConstructionTask { Def = DefDatabase<ThingDef>.GetNamed("HandTailoringBench"),
+                    Stuff = material, Position = origin + new IntVec3(3, 0, 5) });
+            }
             var occupied = new HashSet<IntVec3>();
             foreach (ConstructionTask task in project.Shell.Concat(project.Furniture))
             {
@@ -116,7 +190,8 @@ namespace AutonomousRim.Planning
             int missing = System.Math.Max(0, map.mapPawns.FreeColonistsSpawnedCount - existingBedrooms - projects.Count(p => p.Kind == "Quarto" && !p.Completed));
             var requests = new List<KeyValuePair<string, int>>();
             for (int i = 0; i < System.Math.Min(missing, 12); i++) requests.Add(new KeyValuePair<string, int>("Quarto", 5));
-            if (!map.zoneManager.AllZones.OfType<Zone_Stockpile>().Any() && !projects.Any(p => p.Kind == "Estoque"))
+            if (!map.zoneManager.AllZones.OfType<Zone_Stockpile>().Any(z => z.GetStoreSettings().AllowedToAccept(ThingDefOf.WoodLog) &&
+                z.GetStoreSettings().AllowedToAccept(ThingDefOf.Steel)) && !projects.Any(p => p.Kind == "Estoque"))
                 requests.Add(new KeyValuePair<string, int>("Estoque", 6));
             bool stove = map.listerBuildings.AllBuildingsColonistOfClass<Building_WorkTable>().Any(b => b.def.AllRecipes.Any(r => r.defName == "CookMealSimple"));
             bool butcher = map.listerBuildings.AllBuildingsColonistOfClass<Building_WorkTable>().Any(b => b.def.AllRecipes.Any(r => r.defName == "ButcherCorpseFlesh"));
@@ -126,12 +201,21 @@ namespace AutonomousRim.Planning
                 requests.Add(new KeyValuePair<string, int>("Freezer", 6));
             if (!projects.Any(p => p.Kind == "Sala social") && !map.listerBuildings.AllBuildingsColonistOfClass<Building>().Any(b => b.GetRoom()?.Role?.defName == "RecRoom"))
                 requests.Add(new KeyValuePair<string, int>("Sala social", 6));
-            requests = requests.OrderBy(r => r.Key == "Estoque" ? 0 : r.Key == "Cozinha" ? 1 : r.Key == "Freezer" ? 2 : r.Key == "Sala social" ? 3 : 4).ToList();
+            if (!projects.Any(p => p.Kind == "Hospital") && !map.listerBuildings.AllBuildingsColonistOfClass<Building_Bed>().Any(b => b.Medical))
+                requests.Add(new KeyValuePair<string, int>("Hospital", 5));
+            if (!projects.Any(p => p.Kind == "Oficina") && (Researched("ComplexClothing") || Researched("Stonecutting")) &&
+                !map.listerBuildings.AllBuildingsColonistOfClass<Building_WorkTable>().Any(b => b.def.defName == "HandTailoringBench" || b.def.defName == "ElectricTailoringBench"))
+                requests.Add(new KeyValuePair<string, int>("Oficina", 5));
+            if (!projects.Any(p => p.Kind == "Armas") && !map.zoneManager.AllZones.OfType<Zone_Stockpile>().Any(z =>
+                z.GetStoreSettings().filter.AllowedThingDefs.Any() && z.GetStoreSettings().filter.AllowedThingDefs.All(d => d.IsWeapon)))
+                requests.Add(new KeyValuePair<string, int>("Armas", 4));
+            requests = requests.OrderBy(r => r.Key == "Cozinha" ? 0 : r.Key == "Oficina" ? 1 : r.Key == "Estoque" ? 2 : r.Key == "Freezer" ? 3 : r.Key == "Quarto" ? 4 : 5).ToList();
             if (requests.Count > 0)
             {
                 List<RoomProject> compact = CompactBasePlanner.Find(map, projects, anchorPawn.Position, requests);
                 if (compact != null)
                 {
+                    AddUtilityModules(map, compact, projects);
                     AddInitialSupport(map, compact, projects);
                     projects.AddRange(compact);
                     return $"Plano compacto: {compact.Count} módulos novos, corredor de 2 células e duas saídas. {CompactBasePlanner.ClimateSummary(map)}";
@@ -150,7 +234,7 @@ namespace AutonomousRim.Planning
                         if (freezer)
                         {
                             foreach (var wall in room.Shell.Where(t => t.Position.x == cell.x && (t.Position.z == cell.z + 3 || t.Position.z == cell.z + 4)))
-                            { wall.Def = DefDatabase<ThingDef>.GetNamed("Cooler"); wall.Stuff = null; wall.Rotation = Rot4.West; wall.TargetTemperature = -4; }
+                            { wall.Def = DefDatabase<ThingDef>.GetNamed("Cooler"); wall.Stuff = null; wall.Rotation = Rot4.West; wall.TargetTemperature = -2; }
                             var supply = new RoomProject { Kind = "Energia e climatização", Origin = cell + new IntVec3(-6, 0, 2), InteriorSize = 2, InteriorHeight = 2, RequiresRoof = false };
                             supply.Furniture.Add(new ConstructionTask { Def = DefDatabase<ThingDef>.GetNamed("WoodFiredGenerator"), Position = cell + new IntVec3(-4, 0, 4) });
                             for (int x = -2; x <= 0; x++) supply.Furniture.Add(new ConstructionTask { Def = DefDatabase<ThingDef>.GetNamed("PowerConduit"), Position = cell + new IntVec3(x, 0, 4) });
@@ -160,6 +244,9 @@ namespace AutonomousRim.Planning
                     }
                 }
                 var supportOnly = new List<RoomProject>(independent);
+                var utilities = new List<RoomProject>(independent);
+                AddUtilityModules(map, utilities, projects.Except(independent).ToList());
+                projects.AddRange(utilities.Except(independent));
                 AddInitialSupport(map, supportOnly, projects);
                 if (supportOnly.FirstOrDefault()?.Kind == "Apoio inicial") projects.Insert(0, supportOnly[0]);
                 return projects.Count > 0 ? "Plano por salas independentes: terreno não comporta bloco compacto; módulos básicos preservam acessos." :
