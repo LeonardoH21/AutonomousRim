@@ -1,6 +1,6 @@
 # Plano de base autônoma
 
-Especificação de prioridades definida em 05/10/2026. Este documento orienta a próxima implementação; construção, plantio, energia e fabricação de roupas ainda não são executados automaticamente nesta versão. Refeições/abate em bancadas existentes e autoequipamento já estão implementados.
+Especificação de prioridades definida em 05/10/2026. Este documento orienta a próxima implementação; a construção inicial de quartos, estoque e cozinha foi implementada após esta especificação; plantio, energia e fabricação de roupas ainda não são executados automaticamente nesta versão. Refeições/abate em bancadas existentes e autoequipamento já estão implementados.
 
 ## Dimensões e organização
 
@@ -99,3 +99,8 @@ A automação será opcional por mapa. O painel deve exibir fila e motivos das e
 - [Estruturas defensivas](https://rimworldwiki.com/wiki/Defense_structures): certos ataques ignoram killboxes.
 
 Os limiares de orçamento, tamanho do freezer e quantidade de camas médicas são parâmetros iniciais de projeto, sujeitos a medição em testes.
+
+
+## Implementação inicial e controles
+
+A HUD Rim AI possui botões fixos para base automática, itens/autoequipamento, alimentação e prioridades, além de prévia do plano e desligamento geral. A primeira implementação constrói módulos de quartos/estoque/cozinha por projetos nativos, em lotes limitados e com orçamento de material. Cobertura e zona de estoque seguem a conclusão real. Demais módulos da especificação continuam pendentes; a ordem completa de agricultura/energia/defesa ainda não é executada. Os materiais iniciais são madeira e aço/componentes; falta seleção dinâmica de material e obtenção automática de recursos.

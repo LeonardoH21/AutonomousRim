@@ -36,10 +36,15 @@ namespace AutonomousRim.Perception
 
         public static string DerivedStats(Pawn pawn)
         {
-            return $"Precisão: {pawn.GetStatValue(StatDefOf.ShootingAccuracyPawn):P0}; tempo de mira: ×{pawn.GetStatValue(StatDefOf.AimingDelayFactor):0.00}; " +
-                $"acerto corpo a corpo: {pawn.GetStatValue(StatDefOf.MeleeHitChance):P0}; esquiva: {pawn.GetStatValue(StatDefOf.MeleeDodgeChance):P0}; " +
-                $"dano recebido: ×{pawn.GetStatValue(StatDefOf.IncomingDamageFactor):0.00}; movimento: {pawn.GetStatValue(StatDefOf.MoveSpeed):0.00}; " +
-                $"trabalho: ×{pawn.GetStatValue(StatDefOf.WorkSpeedGlobal):0.00}. Valores do jogo já incluem modificadores ativos.";
+            return $"Precisão: {StatText(pawn, StatDefOf.ShootingAccuracyPawn, "P0")}; tempo de mira: {StatText(pawn, StatDefOf.AimingDelayFactor, "0.00", "×")}; " +
+                $"acerto corpo a corpo: {StatText(pawn, StatDefOf.MeleeHitChance, "P0")}; esquiva: {StatText(pawn, StatDefOf.MeleeDodgeChance, "P0")}; " +
+                $"dano recebido: {StatText(pawn, StatDefOf.IncomingDamageFactor, "0.00", "×")}; movimento: {StatText(pawn, StatDefOf.MoveSpeed, "0.00")}; " +
+                $"trabalho: {StatText(pawn, StatDefOf.WorkSpeedGlobal, "0.00", "×")}. Valores do jogo já incluem modificadores ativos.";
+        }
+
+        private static string StatText(Pawn pawn, StatDef stat, string format, string prefix = "")
+        {
+            return stat.Worker.IsDisabledFor(pawn) ? "indisponível" : prefix + pawn.GetStatValue(stat).ToString(format);
         }
     }
 }

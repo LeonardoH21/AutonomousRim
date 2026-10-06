@@ -44,8 +44,8 @@
 - [ ] Map terrain analysis
 - [ ] Chokepoint detection
 - [ ] Base-site scoring
-- [ ] Functional room graph
-- [ ] Blueprint generation
+- [ ] Full functional room graph (initial separated room modules and furniture/interaction footprints implemented)
+- [x] Initial bounded native blueprint generation for bedrooms, stockroom and kitchen (other modules pending)
 - [ ] Defense layout planning
 - [ ] Power planning
 
@@ -72,3 +72,10 @@
 - [ ] Decision logging
 - [ ] Replayable benchmarks
 - [ ] Survival metrics and regression tests
+
+## Initial construction controls
+- Fixed Rim AI buttons: base construction, item autoequipment, food, work priorities, plan preview and disable-all.
+- Bedroom 5×5, stockroom 6×6 and kitchen 4×4 interiors, with material gating, queue caps and player cancellation preservation.
+- Agriculture, power/freezer, hospital, apparel crafting and perimeter/killbox executors remain pending.
+
+- In-game native construction completed a full 5×5 bedroom with bed/roof; stockroom/kitchen fixture transitions and toggle cleanup passed. Visible HUD rendered and screenshot layout was verified; 21 scans completed without exceptions.

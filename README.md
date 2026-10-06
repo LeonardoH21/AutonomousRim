@@ -21,6 +21,8 @@ The long-term goal is a full autonomous player capable of perceiving the map, ev
 - Weapon/apparel recommendations and optional automatic native equip/wear jobs
 - Trait-aware weapon roles, effective aiming/accuracy and audited active trait modifiers
 - Optional automatic hunting, butchering/meal bills and skill/passion-based work priorities
+- Initial optional construction of 5×5 bedrooms, 6×6 stockroom and 4×4 kitchen, using native blueprints
+- Fixed HUD buttons for base, equipment, food, work priorities, plan preview and disable-all
 - Hostile composition, heuristic risk and presence transitions checked every 120 ticks
 - Structured project layout for future AI systems
 
@@ -93,7 +95,7 @@ The smoke test starts a temporary colony using the game's `-quicktest` option, u
 3. Check the observed colonists, resources and equipment. The snapshot refreshes every 600 game ticks (10 seconds at normal speed); pausing also pauses refreshes.
 4. Enable developer mode to see `[AutonomousRim] Scan:` entries in `Player.log`.
 
-Observation runs by default. Enable food automation and/or work management in **Rim AI** for each map; these settings persist in saves. Food management maintains a three-day simple-meal target when an appropriate colony cooking station exists, and adds a butchering order when a suitable station exists. Existing player bills are respected. AI bills exclude humanlike corpses/meat. Bill counts follow colonist demand while the AI bill remains unedited. When reserves are low, it designates up to two pending hunts for accessible wild, non-predatory animals with zero species retaliation chance, within 60 cells of an equipped hunter. It requires a butchering station and an enabled, capable ranged hunter. Hostile presence stops new hunting and removes AI hunting designations; native jobs already running remain under RimWorld's job system. Direct combat control is not implemented.
+Observation runs by default. Use the fixed controls in **Rim AI** to enable food, work, equipment and/or initial base construction for each map; these settings persist in saves. Food management maintains a three-day simple-meal target when an appropriate colony cooking station exists, and adds a butchering order when a suitable station exists. Existing player bills are respected. AI bills exclude humanlike corpses/meat. Bill counts follow colonist demand while the AI bill remains unedited. When reserves are low, it designates up to two pending hunts for accessible wild, non-predatory animals with zero species retaliation chance, within 60 cells of an equipped hunter. It requires a butchering station and an enabled, capable ranged hunter. Hostile presence stops new hunting and removes AI hunting designations; native jobs already running remain under RimWorld's job system. Direct combat control is not implemented.
 
 Work management enables numerical priorities, prioritizes emergency tasks and medicine, selects specialists by skill/passion/health, and penalizes accumulating several specialties on one pawn. Cooking/growing gain urgency when food is low. Disabled work, drafted/downed pawns and mental states are respected. Manual priority changes are retained; disabling automation restores untouched AI priority changes. The global numerical-priority mode remains enabled unless the player turns it off; turning it off pauses automatic updates. Disabling food automation removes AI hunting designations and unedited AI production bills, preserving existing player bills.
 
@@ -124,4 +126,16 @@ The test add-on is installed temporarily and removed when the smoke test ends. I
 
 ## Status
 
-Early development. Optional food/work/equipment management is available; combat control and base construction remain on the roadmap.
+Early development. Optional food/work/equipment management and initial bedroom/stockroom/kitchen construction are available. Agriculture, power/freezer, hospital, apparel crafting, perimeter/killbox and combat control remain on the roadmap.
+
+## Initial base construction
+
+Use **Planejar base** to preview modules without opening construction work. **Base automática** enables execution. All automations default to off. The six controls stay at the top of Rim AI while the inspector scrolls; **Desligar todas** stops all four functions. Item control currently means weapon/apparel autoequipment, not a separate general hauling manager.
+
+Rooms use interior dimensions excluding walls: bedrooms 5×5 (bed), stockroom 6×6 (stockpile created after completion), kitchen 4×4 (fueled stove and butcher table with valid furniture/interaction footprints). Existing qualifying bedrooms, stockpiles and cooking/butchering infrastructure are considered. The initial material policy uses wood for room shells/beds/butcher tables, steel/components for the fueled stove. It does not automatically harvest/mine materials or select alternative room materials yet.
+
+The planner searches visible accessible clear sites near colonists, keeps gaps between rooms and does not replace existing buildings/zones. It finances the remaining room before issuing work, subtracts outstanding player/AI construction material needs, opens at most six blueprints per cycle and limits active AI works to twelve. Colonists build through RimWorld's normal construction jobs; capable workers with Construction enabled are required. Roof orders follow completion of walls/door; completion requires actual buildings/furniture and roofing. Food production remains a separate toggle.
+
+Player-cancelled works pause their room instead of being recreated. Disabling cancels the tracked AI blueprints and pending AI roof orders, preserving player blueprints, completed structures, stockpiles and frames with materials already invested. Frames can still finish under native work settings. Construction emits no new work under hostile presence. The initial layout is not a complete strategic base-site analysis, seasonal survival system or guaranteed construction-time estimate.
+
+Runtime checks also cover preview/duplicate prevention, material gating, blueprint limits, a real pawn completing a wall and a full bedroom with bed/roof, room/bench footprints, completion detection, stockpile creation, cancellation and toggle cleanup. Kitchen/stockroom prerequisites are accelerated in test fixtures to validate module transitions. The separate native bedroom trial uses a skilled builder, provided materials, maintained food/rest and faster game speed; it is not a long-term survival trial of the entire colony. Request visual rendering/screenshot checks with `-RuntimeChecks -Visible -TimeoutSeconds 300`; normal runtime checks stay hidden.

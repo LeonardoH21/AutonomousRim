@@ -24,22 +24,29 @@ namespace AutonomousRim.UI
             }
 
             Widgets.Label(new Rect(inRect.x, inRect.y, inRect.width, 32f), "AutonomousRim — Colônia, equipamentos e automação");
-            Rect viewport = new Rect(inRect.x, inRect.y + 36f, inRect.width, inRect.height - 36f);
+            var component = map.GetComponent<AutonomousRimMapComponent>();
+            float half = (inRect.width - 8f) / 2f;
+            if (Widgets.ButtonText(new Rect(inRect.x, inRect.y + 36f, half, 30f), $"Base automática: {(component.BaseAutomation ? "LIGADA" : "DESLIGADA")}"))
+                component.SetBaseAutomation(!component.BaseAutomation);
+            if (Widgets.ButtonText(new Rect(inRect.x + half + 8f, inRect.y + 36f, half, 30f), $"Itens / autoequipar: {(component.EquipmentAutomation ? "LIGADO" : "DESLIGADO")}"))
+                component.SetEquipmentAutomation(!component.EquipmentAutomation);
+            if (Widgets.ButtonText(new Rect(inRect.x, inRect.y + 70f, half, 30f), $"Alimentação: {(component.FoodAutomation ? "LIGADA" : "DESLIGADA")}"))
+                component.SetAutomation(!component.FoodAutomation, component.WorkAutomation);
+            if (Widgets.ButtonText(new Rect(inRect.x + half + 8f, inRect.y + 70f, half, 30f), $"Prioridades: {(component.WorkAutomation ? "LIGADAS" : "DESLIGADAS")}"))
+                component.SetAutomation(component.FoodAutomation, !component.WorkAutomation);
+            if (Widgets.ButtonText(new Rect(inRect.x, inRect.y + 104f, half, 30f), "Planejar base (sem iniciar obras)")) component.PreviewBase();
+            if (Widgets.ButtonText(new Rect(inRect.x + half + 8f, inRect.y + 104f, half, 30f), "Desligar todas as automações")) component.DisableAll();
+            state = component.CurrentState;
+            Rect viewport = new Rect(inRect.x, inRect.y + 142f, inRect.width, inRect.height - 142f);
             Rect content = new Rect(0f, 0f, viewport.width - 20f, contentHeight);
             Widgets.BeginScrollView(viewport, ref scrollPosition, content);
             var listing = new Listing_Standard();
             listing.Begin(content);
             listing.Label(state.ToString());
-            var component = map.GetComponent<AutonomousRimMapComponent>();
-            bool foodAutomation = component.FoodAutomation;
-            bool workAutomation = component.WorkAutomation;
-            bool equipmentAutomation = component.EquipmentAutomation;
-            listing.CheckboxLabeled("Alimentação automática: caça, abate e refeições", ref foodAutomation);
-            listing.CheckboxLabeled("Gerenciar prioridades de trabalho dos colonos", ref workAutomation);
-            listing.CheckboxLabeled("Autoequipar armas e roupas dos colonos", ref equipmentAutomation);
-            if (foodAutomation != component.FoodAutomation || workAutomation != component.WorkAutomation)
-                component.SetAutomation(foodAutomation, workAutomation);
-            if (equipmentAutomation != component.EquipmentAutomation) component.SetEquipmentAutomation(equipmentAutomation);
+            listing.Label(component.BaseStatus);
+            listing.Label("Construção inicial: quartos 5×5, estoque 6×6 e cozinha 4×4 internos. Requer madeira, aço e construtores; os demais módulos estão em desenvolvimento.");
+            foreach (var project in component.BaseProjects)
+                listing.Label($"{project.Kind} {project.InteriorSize}×{project.InteriorSize} em {project.Origin}: {(project.Completed ? "concluído" : project.Started ? "em construção" : "planejado")}");
             listing.Label(component.ManagementStatus);
             listing.Label(component.EquipmentStatus);
             listing.Label("Autoequipamento usa tarefas do jogo e respeita peças forçadas pelo jogador. Ao desligar, libera as fixações da IA e mantém os equipamentos atuais.");

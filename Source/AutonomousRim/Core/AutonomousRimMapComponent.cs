@@ -3,6 +3,7 @@ using Verse;
 using System.Collections.Generic;
 using AutonomousRim.Execution;
 using RimWorld;
+using AutonomousRim.Planning;
 
 namespace AutonomousRim.Core
 {
@@ -15,6 +16,11 @@ namespace AutonomousRim.Core
         private bool foodAutomation;
         private bool workAutomation;
         private bool equipmentAutomation;
+        private bool baseAutomation;
+        private List<RoomProject> baseProjects = new List<RoomProject>();
+        public bool BaseAutomation => baseAutomation;
+        public IReadOnlyList<RoomProject> BaseProjects => baseProjects;
+        public string BaseStatus { get; private set; } = "Base automática desativada. Gere um plano para ver os módulos iniciais.";
         private List<EquipmentOrder> equipmentOrders = new List<EquipmentOrder>();
         private List<ManagedApparel> managedApparel = new List<ManagedApparel>();
         private List<Pawn> equipmentExcluded = new List<Pawn>();
@@ -34,6 +40,8 @@ namespace AutonomousRim.Core
             Scribe_Values.Look(ref foodAutomation, "foodAutomation");
             Scribe_Values.Look(ref workAutomation, "workAutomation");
             Scribe_Values.Look(ref equipmentAutomation, "equipmentAutomation");
+            Scribe_Values.Look(ref baseAutomation, "baseAutomation");
+            Scribe_Collections.Look(ref baseProjects, "baseProjects", LookMode.Deep);
             Scribe_Collections.Look(ref equipmentOrders, "equipmentOrders", LookMode.Deep);
             Scribe_Collections.Look(ref managedApparel, "managedApparel", LookMode.Deep);
             Scribe_Collections.Look(ref equipmentExcluded, "equipmentExcluded", LookMode.Reference);
@@ -52,7 +60,32 @@ namespace AutonomousRim.Core
                 equipmentOrders.RemoveAll(o => o.Pawn == null);
                 managedApparel.RemoveAll(o => o.Pawn == null || o.Apparel == null);
                 equipmentExcluded.RemoveAll(p => p == null);
+                baseProjects = baseProjects ?? new List<RoomProject>();
             }
+        }
+
+        public void PreviewBase()
+        {
+            BaseStatus = BasePlanner.Plan(map, baseProjects);
+        }
+
+        public void SetBaseAutomation(bool enabled)
+        {
+            if (!enabled) BaseConstructionManager.Stop(map, baseProjects);
+            baseAutomation = enabled;
+            if (enabled)
+            {
+                PreviewBase();
+                if (baseProjects.Count > 0) BaseStatus = BaseConstructionManager.Apply(map, baseProjects);
+            }
+            else BaseStatus = "Base automática desligada. Projetos pendentes da IA cancelados; estruturas e obras com materiais mantidas.";
+        }
+
+        public void DisableAll()
+        {
+            SetBaseAutomation(false);
+            SetEquipmentAutomation(false);
+            SetAutomation(false, false);
         }
 
         public void SetEquipmentAutomation(bool enabled)
@@ -136,6 +169,11 @@ namespace AutonomousRim.Core
                 ? " Prioridades ativas; alterações manuais do jogador são preservadas."
                 : " Prioridades pausadas: o modo numérico de trabalho foi desligado pelo jogador.";
             if (equipmentAutomation) EquipmentStatus = EquipmentManager.Apply(map, CurrentState, equipmentOrders, managedApparel, equipmentExcluded);
+            if (baseAutomation)
+            {
+                BaseStatus = BasePlanner.Plan(map, baseProjects);
+                if (baseProjects.Count > 0) BaseStatus = BaseConstructionManager.Apply(map, baseProjects);
+            }
         }
 
         private void RefreshThreat(int ticks)

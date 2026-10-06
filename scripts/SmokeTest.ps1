@@ -1,7 +1,8 @@
 param(
     [Parameter(Mandatory = $true)][string]$RimWorldDir,
     [ValidateRange(30, 600)][int]$TimeoutSeconds = 180,
-    [switch]$RuntimeChecks
+    [switch]$RuntimeChecks,
+    [switch]$Visible
 )
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
@@ -29,8 +30,12 @@ $logFile = Join-Path $profile ('Player-' + [DateTime]::UtcNow.ToString('yyyyMMdd
 $testProcess = $null
 $runtimeMod = $null
 try {
-    $gameArgs = @('-batchmode', '-quicktest', '-screen-width', '1280', '-screen-height', '720', ('-savedatafolder="' + $profile + '"'), '-logFile', ('"' + $logFile + '"'))
+    $gameArgs = @('-quicktest', '-screen-width', '1280', '-screen-height', '720', ('-savedatafolder="' + $profile + '"'), '-logFile', ('"' + $logFile + '"'))
+    # Unity batch mode skips OnGUI; runtime checks include real HUD rendering.
+    if (!$Visible) { $gameArgs = @('-batchmode') + $gameArgs }
     if ($RuntimeChecks) {
+        $hudCapture = Join-Path $profile 'AutonomousRim-HUD.png'
+        if (Test-Path -LiteralPath $hudCapture) { Remove-Item -LiteralPath $hudCapture }
         $checkDll = Join-Path $projectRoot '.tools\runtime-checks\Assemblies\AutonomousRim.RuntimeChecks.dll'
         if (!(Test-Path -LiteralPath $checkDll)) { throw 'Build Tests/AutonomousRim.RuntimeChecks before requesting runtime checks.' }
         $checkDestination = Join-Path $gameRoot 'Mods\AutonomousRim.RuntimeChecks'
@@ -43,17 +48,19 @@ try {
         $config.ModsConfigData.activeMods.AppendChild($modNode) | Out-Null
         $config.Save((Join-Path $configFolder 'ModsConfig.xml'))
         $gameArgs += '-autonomousrimtest'
+        if ($Visible) { $gameArgs += '-autonomousrimvisualtest' }
     }
-    $testProcess = Start-Process -FilePath $gameExe -ArgumentList $gameArgs -WindowStyle Hidden -PassThru
+    $windowStyle = if ($Visible) { 'Normal' } else { 'Hidden' }
+    $testProcess = Start-Process -FilePath $gameExe -ArgumentList $gameArgs -WindowStyle $windowStyle -PassThru
     $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
     while ([DateTime]::UtcNow -lt $deadline) {
         if ($testProcess.HasExited) { throw 'RimWorld exited before the colony test completed.' }
         if (Test-Path -LiteralPath $logFile) {
             $logText = Get-Content -LiteralPath $logFile -Raw
-            if ($logText -match 'Exception|Error while|XML error|Config error') { throw "Game reported an error. Inspect $logFile" }
+            if ($logText -match 'Exception|Error while|XML error|Config error|Attempted to calculate value for disabled stat') { throw "Game reported an error. Inspect $logFile" }
             $scanCount = ([regex]::Matches($logText, '\[AutonomousRim\] Scan:')).Count
             if ($scanCount -ge 2 -and $logText.Contains('[AutonomousRim] Loaded successfully.') -and
-                (!$RuntimeChecks -or ($logText.Contains('[AutonomousRim.Tests] PASS:') -and $logText.Contains('[AutonomousRim.EquipmentTests] PASS:')))) {
+                (!$RuntimeChecks -or ($logText.Contains('[AutonomousRim.Tests] PASS:') -and $logText.Contains('[AutonomousRim.EquipmentTests] PASS:') -and $logText.Contains('[AutonomousRim.ConstructionTests] PASS:') -and (!$Visible -or $logText.Contains('[AutonomousRim.HudTests] PASS:'))))) {
                 Write-Output "PASS: mod loaded and $scanCount colony scans completed without exceptions. Log: $logFile"
                 return
             }

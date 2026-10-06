@@ -11,5 +11,7 @@
     <Reference Include="AutonomousRim"><HintPath>../../1.6/Assemblies/AutonomousRim.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Assembly-CSharp"><HintPath>$(RimWorldDir)/RimWorldWin64_Data/Managed/Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.CoreModule"><HintPath>$(RimWorldDir)/RimWorldWin64_Data/Managed/UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.ScreenCaptureModule"><HintPath>$(RimWorldDir)/RimWorldWin64_Data/Managed/UnityEngine.ScreenCaptureModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="0Harmony"><HintPath>$(RimWorldDir)/Mods/2009463077/Current/Assemblies/0Harmony.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
 </Project>
