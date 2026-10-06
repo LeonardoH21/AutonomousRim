@@ -56,3 +56,11 @@ Quando pesquisas liberam bancadas, o sistema tenta incorporá-las aos setores ex
 Work Priorities são revistas durante a partida. Skills, paixões, função, saúde, humor, descanso, urgência, trabalho pendente, comida, recursos, incêndios e feridos alteram temporariamente a escolha. O executor preserva uma alteração manual quando detecta que o jogador mudou a prioridade aplicada pela IA.
 
 A agenda usa Sleep, Work, Recreation, Anything e Meditation quando o colono possui suporte para meditar. Hostis, incêndios e colonos incapacitados entram em modo de emergência; ao terminar, a IA mantém um período de recuperação para sono, recreação e necessidades básicas. A agenda manual por horário também é preservada, e o botão da HUD restaura a agenda anterior quando a automação é desligada.
+
+## Análise de falha e checkpoints
+
+O diagnóstico monitora fome, agricultura, Cooking, armazenamento, energia, medicina, equipamentos, armas, armaduras, número de colonos, prioridades, agenda, pesquisa, construção, defesa, combate, recursos e velocidade de progressão. Ele acumula evidência por avaliações sucessivas para não declarar derrota por um único evento ruim. Enquanto houver recuperação plausível, o status fica em plano de emergência; a execução só recebe um relatório completo após colapso terminal ou risco crítico persistente.
+
+O relatório salvo classifica cada sinal como pequeno, moderado, grave ou crítico e separa as categorias. Ele registra evento observado, decisão esperada, resultado real, comparação esperada/real, cadeia de causas e ajustes concretos. Os ajustes são evidências acumuladas, com confiança limitada, e não regras absolutas aplicadas a qualquer mapa ou storyteller.
+
+Quando uma nova presença hostil é detectada, a IA registra um snapshot de força amiga/inimiga, composição ranged/melee, risco, feridos e comida e cria um save separado `AutonomousRim_Raid_*`. Até doze snapshots ficam no histórico do save da colônia para futuras comparações. O checkpoint não sobrescreve o save do jogador e não reinicia a partida. A análise não treina um modelo externo: preserva evidências estruturadas para decisões táticas futuras.

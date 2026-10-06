@@ -10,11 +10,12 @@ param(
     [switch]$CraftOnly,
     [switch]$RingPlanOnly,
     [switch]$StrategyOnly,
+    [switch]$FailureOnly,
     [switch]$RuntimeChecks = $true,
     [switch]$Visible
 )
 $ErrorActionPreference = 'Stop'
-if ($StrategyOnly -and ($RingPlanOnly -or $Baseline -or $LoadStart -or $LoadCheckpoint -or $PlanOnly -or $CraftOnly -or $SkilledFixture)) { throw 'StrategyOnly is a separate strategy/state fixture.' }
+if (($StrategyOnly -or $FailureOnly) -and ($RingPlanOnly -or $Baseline -or $LoadStart -or $LoadCheckpoint -or $PlanOnly -or $CraftOnly -or $SkilledFixture -or ($StrategyOnly -and $FailureOnly))) { throw 'StrategyOnly/FailureOnly are separate strategy/state fixtures.' }
 if ($RingPlanOnly -and ($Baseline -or $LoadStart -or $LoadCheckpoint -or $PlanOnly -or $CraftOnly -or $SkilledFixture)) { throw 'RingPlanOnly is a separate geometry/state fixture; do not combine it with other trial modes.' }
 if ($LoadCheckpoint -and ($Baseline -or $LoadStart)) { throw 'LoadCheckpoint cannot be combined with Baseline or LoadStart.' }
 if ($SkilledFixture -and $Baseline) { throw 'SkilledFixture is a functional fixture, not the ordinary-skill baseline benchmark.' }
@@ -64,7 +65,7 @@ try {
         $modNode = $config.CreateElement('li'); $modNode.InnerText = 'leonardoh21.autonomousrim.runtimechecks'
         $config.ModsConfigData.activeMods.AppendChild($modNode) | Out-Null
         $config.Save((Join-Path $configFolder 'ModsConfig.xml'))
-        $gameArgs += $(if ($StrategyOnly) { '-autonomousrimstrategytest' } elseif ($RingPlanOnly) { '-autonomousrimringtest' } else { '-autonomousrimnormaltest' })
+        $gameArgs += $(if ($FailureOnly) { '-autonomousrimfailuretest' } elseif ($StrategyOnly) { '-autonomousrimstrategytest' } elseif ($RingPlanOnly) { '-autonomousrimringtest' } else { '-autonomousrimnormaltest' })
         if ($Baseline) { $gameArgs += '-autonomousrimbaseline' }
         if ($LoadStart) { $gameArgs += '-autonomousrimloadstart' }
         if ($LoadCheckpoint) { $gameArgs += '-autonomousrimloadcheckpoint' }
@@ -83,6 +84,8 @@ try {
             $logText = Get-Content -LiteralPath $logFile -Raw
             if ($logText.Contains('[AutonomousRim.StrategyTests] FAIL:')) { throw "Strategy test failed. Inspect $logFile" }
             if ($logText.Contains('[AutonomousRim.StrategyTests] PASS:')) { Write-Output "PASS: native strategic planning, research ownership, upgrades, initial allow and save/load. Log: $logFile"; return }
+            if ($logText.Contains('[AutonomousRim.FailureTests] FAIL:')) { throw "Failure analysis test failed. Inspect $logFile" }
+            if ($logText.Contains('[AutonomousRim.FailureTests] PASS:')) { Write-Output "PASS: failure detection, causal report, learning, raid checkpoint and native save/load. Log: $logFile"; return }
             if ($logText.Contains('[AutonomousRim.NormalTests] FAIL:') -or $logText.Contains('[AutonomousRim.RingTests] FAIL:')) { throw "Native construction failed. Inspect $logFile" }
             if ($logText -match 'Exception|Error while|XML error|Config error|Attempted to calculate value for disabled stat|Two power nets on the same cell') { throw "Game reported an error. Inspect $logFile" }
             if ($logText.Contains('[AutonomousRim.RingTests] PASS:')) { Write-Output "PASS: ring geometry, priorities, zones and native save/load. Log: $logFile"; return }

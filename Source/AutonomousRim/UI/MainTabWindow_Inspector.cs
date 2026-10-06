@@ -44,6 +44,7 @@ namespace AutonomousRim.UI
             if (Widgets.ButtonText(new Rect(inRect.x + half + 8f, inRect.y + 172f, half, 30f), "Reavaliar metas estratégicas")) component.EvaluateStrategy();
             if (Widgets.ButtonText(new Rect(inRect.x, inRect.y + 206f, half, 30f), $"Agenda dinâmica: {(component.ScheduleAutomation ? "LIGADA" : "DESLIGADA")}"))
                 component.SetScheduleAutomation(!component.ScheduleAutomation);
+            if (Widgets.ButtonText(new Rect(inRect.x + half + 8f, inRect.y + 206f, half, 30f), "Analisar risco/falha agora")) component.EvaluateFailure();
             Rect viewport = new Rect(inRect.x, inRect.y + 244f, inRect.width, inRect.height - 244f);
             Rect content = new Rect(0f, 0f, viewport.width - 20f, contentHeight);
             Widgets.BeginScrollView(viewport, ref scrollPosition, content);
@@ -56,6 +57,15 @@ namespace AutonomousRim.UI
             listing.Label(component.Strategy.ResearchStatus);
             listing.Label(component.Strategy.TerrainStatus);
             listing.Label(component.ScheduleStatus);
+            listing.Label("Diagnóstico de colapso: " + component.FailureStatus);
+            if (component.FailureMemory.Latest != null)
+            {
+                var report=component.FailureMemory.Latest;
+                listing.Label("Último relatório: " + report.PrimaryCause);
+                listing.Label("Cadeia: " + string.Join(" → ", report.CausalChain.Take(4)));
+                foreach(var improvement in report.Improvements.Take(4)) listing.Label("Ajuste aprendido: " + improvement);
+            }
+            listing.Label("Checkpoints de combate preservados: " + component.FailureMemory.Raids.Count + "; evidências de falhas: " + component.FailureMemory.Reports.Count);
             listing.Label("A agenda usa Sleep, Work, Recreation, Anything e Meditation quando disponível. Incêndios, hostis e feridos entram em emergência; depois há recuperação de descanso e recreação. Mudanças manuais de horários são preservadas.");
             foreach (var goal in component.Strategy.Goals)
                 listing.Label($"{goal.Horizon} — {goal.Description}: {goal.Status}");

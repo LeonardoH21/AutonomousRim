@@ -21,8 +21,11 @@ namespace AutonomousRim.Core
         private bool baseAutomation = true;
         private bool strategyAutomation = true;
         private StrategicPlan strategicPlan = new StrategicPlan();
+        private FailureMemory failureMemory = new FailureMemory();
         public bool StrategyAutomation => strategyAutomation;
         public StrategicPlan Strategy => strategicPlan;
+        public FailureMemory FailureMemory => failureMemory;
+        public string FailureStatus => failureMemory?.Status ?? "Análise de falha indisponível.";
         private int lastPlanTick = -3600;
         private int lastConstructionTick = -120;
         private int plannedPawnCount;
@@ -65,6 +68,7 @@ namespace AutonomousRim.Core
             Scribe_Values.Look(ref baseAutomation, "baseAutomation");
             Scribe_Values.Look(ref strategyAutomation, "strategyAutomation");
             Scribe_Deep.Look(ref strategicPlan, "strategicPlan");
+            Scribe_Deep.Look(ref failureMemory, "failureMemory");
             Scribe_Values.Look(ref lastPlanTick, "lastPlanTick", -3600);
             Scribe_Values.Look(ref plannedPawnCount, "plannedPawnCount");
             Scribe_Values.Look(ref plannedClimateResearch, "plannedClimateResearch");
@@ -84,6 +88,7 @@ namespace AutonomousRim.Core
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
             {
                 strategicPlan = strategicPlan ?? new StrategicPlan();
+                failureMemory = failureMemory ?? new FailureMemory();
                 ownedHunts = ownedHunts ?? new List<Pawn>();
                 ownedBills = ownedBills ?? new List<ManagedFoodBill>();
                 workChanges = workChanges ?? new List<WorkPriorityChange>();
@@ -173,6 +178,12 @@ namespace AutonomousRim.Core
             if (strategyAutomation && baseAutomation && StrategicInfrastructure.Add(map, baseProjects)) PreviewBase();
         }
 
+        public void EvaluateFailure()
+        {
+            CurrentState = CurrentState ?? ColonyStateScanner.Scan(map);
+            FailureAnalyzer.Evaluate(map, CurrentState, failureMemory);
+        }
+
         public void SetLootAutomation(bool enabled)
         {
             lootAutomation = enabled;
@@ -233,6 +244,7 @@ namespace AutonomousRim.Core
 
             int ticks = Find.TickManager?.TicksGame ?? 0;
             if (ticks > 0 && ticks - strategicPlan.LastEvaluation >= 600) EvaluateStrategy();
+            if (ticks > 0 && ticks - failureMemory.LastEvaluationTick >= 600) EvaluateFailure();
             if (baseAutomation && ticks > 0 && ticks % BaseConstructionManager.ExecutionInterval == 0) ExecuteConstruction(ticks);
             if (CurrentState != null && ticks > 0 && ticks % ThreatIntervalTicks == 0)
             {
@@ -313,6 +325,8 @@ namespace AutonomousRim.Core
             }
             CurrentState.Threat = next;
             CurrentState.HostilePawnCount = next.ActiveCount;
+            if (previous.ActiveCount == 0 && next.ActiveCount > 0) FailureAnalyzer.RecordRaidStart(map, CurrentState, failureMemory);
+            if (previous.ActiveCount > 0 && next.ActiveCount == 0) FailureAnalyzer.RecordRaidEnd(CurrentState, failureMemory);
             if (foodAutomation && next.ActiveCount > 0) FoodManager.CancelHunts(map, ownedHunts);
             if (equipmentAutomation && next.ActiveCount > 0) EquipmentManager.CancelPending(equipmentOrders);
         }

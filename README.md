@@ -24,14 +24,15 @@ The long-term goal is a full autonomous player capable of perceiving the map, ev
 - Dynamic Work Priorities using skills, passions, role fit, urgency, pending workload, health, mood, rest, food and resource reserves; manual edits are preserved
 - Dynamic colonist schedule using Sleep, Work, Recreation, Anything and Meditation when available, with emergency and post-emergency recovery modes
 - Strategic research route with real prerequisite and hidden-prerequisite ordering, unlock auditing, short/medium/long-term goals and a saved victory route
+- Failure analysis with recoverable-risk detection, categorized causal reports, expected/actual/improvement comparisons, learned adjustments and persisted raid checkpoints
 - Additive incorporation of researched benches/equipment into the approved base after geometry validation
 - Landing-area gradual Allow with a per-cycle cap and expanding radius; manual re-forbids remain protected
 - Approved ring layout with 12×11 storage, separate 4×4 kitchen/butchery, dining, 5×5 bedrooms sized to population, crop corners, power yard and perimeter, using bounded native construction
-- HUD buttons for base, equipment, food, work priorities, schedule, strategic planning, ground-item allow, plan preview and disable-all
+- HUD buttons for base, equipment, food, work priorities, schedule, strategic planning, failure diagnosis, ground-item allow, plan preview and disable-all
 - Hostile composition, heuristic risk and presence transitions checked every 120 ticks
 - Structured project layout for future AI systems
 
-New colonies start with base construction, strategic planning, schedule and landing-area Allow enabled; explicit saved toggles and invested layouts remain respected. The approved drawing and priorities are saved in [BASE-ANEL.md](docs/BASE-ANEL.md) and [the floor plan](docs/base-anel.html). Strategic, priority, schedule, upgrade, zone and save-load checks pass; full native construction of the expanded ring base still needs a longer trial.
+New colonies start with base construction, strategic planning, schedule and landing-area Allow enabled; explicit saved toggles and invested layouts remain respected. The approved drawing and priorities are saved in [BASE-ANEL.md](docs/BASE-ANEL.md) and [the floor plan](docs/base-anel.html). Strategic, priority, schedule, failure, upgrade, zone and save-load checks pass; full native construction of the expanded ring base still needs a longer trial.
 
 ## Planned architecture
 
