@@ -54,8 +54,13 @@ namespace AutonomousRim.UI
             listing.Label(component.BaseStatus);
             listing.Label("Plano em anel: estoque e alimentação primeiro; quartos 5×5 por colono, cozinha e abate 4×4 separados; expansão reservada, energia e perímetro. Planos antigos são preservados.");
             listing.Label("Rota final: " + component.Strategy.VictoryRoute);
+            listing.Label($"Horizonte: {component.Strategy.HorizonDays} dias | Dia atual: {component.Strategy.LastKnownDay} | Restantes: {component.Strategy.EstimatedDaysRemaining}");
+            listing.Label(component.Strategy.StabilityStatus);
+            listing.Label("Foco atual: " + component.Strategy.CurrentFocus);
+            listing.Label("Próximo foco: " + component.Strategy.NextFocus);
             listing.Label(component.Strategy.ResearchStatus);
             listing.Label(component.Strategy.TerrainStatus);
+            listing.Label(component.Strategy.MountainPlanStatus);
             listing.Label(component.ScheduleStatus);
             listing.Label("Diagnóstico de colapso: " + component.FailureStatus);
             if (component.FailureMemory.Latest != null)

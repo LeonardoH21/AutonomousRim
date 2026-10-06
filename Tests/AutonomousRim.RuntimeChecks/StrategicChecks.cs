@@ -26,6 +26,9 @@ namespace AutonomousRim.RuntimeChecks
                 {
                     Check(!ai.BaseAutomation && !ai.StrategyAutomation && ai.ScheduleAutomation,"Saved automation toggles changed on load.");
                     Check(ai.Strategy.Landing.IsValid && ai.Strategy.Route.Count>0,"Strategic anchor/route missing on load.");
+                    Check(ai.Strategy.HorizonDays==StrategicPlan.DefaultHorizonDays && ai.Strategy.EstimatedDaysRemaining>=0,"500-day planning horizon missing on load.");
+                    Check(!string.IsNullOrEmpty(ai.Strategy.StabilityStatus) && !string.IsNullOrEmpty(ai.Strategy.CurrentFocus),"Stability/focus state missing on load.");
+                    Check(!string.IsNullOrEmpty(ai.Strategy.MountainPlanStatus),"Mountain planning status missing on load.");
                     Check(ai.Strategy.ResearchOverride,"Manual research override missing on load.");
                     Check(ai.Strategy.Goals.Any(g=>g.Id=="ship-launch" && g.Status.Contains("Pendente")),"Unimplemented ending reported as achieved.");
                     Check(ai.BaseProjects.SelectMany(BaseConstructionManager.Tasks).Any(t=>t.Def.defName=="HiTechResearchBench"),"Advanced upgrade missing on load.");
@@ -74,6 +77,10 @@ namespace AutonomousRim.RuntimeChecks
                 Check(route.Distinct().Count()==route.Count,"Duplicate route nodes.");
                 foreach(var r in route)foreach(var dep in StrategicPlanner.Dependencies(r))Check(dep.IsFinished || route.IndexOf(dep)<route.IndexOf(r),"Dependency placed after project: "+r.defName);
                 ai.SetStrategyAutomation(true);
+                Check(ai.Strategy.HorizonDays==StrategicPlan.DefaultHorizonDays && ai.Strategy.EstimatedDaysRemaining>=0,"Planner did not initialize the 500-day horizon.");
+                Check(!string.IsNullOrEmpty(ai.Strategy.StabilityStatus) && !string.IsNullOrEmpty(ai.Strategy.CurrentFocus) && !string.IsNullOrEmpty(ai.Strategy.NextFocus),"Planner did not publish dynamic focus and stability state.");
+                Check(ai.Strategy.Goals.Any(g=>g.Id=="stability" && !string.IsNullOrEmpty(g.ResourceNeed) && !string.IsNullOrEmpty(g.Risk)),"Stability goal is missing resource/risk context.");
+                Check(!string.IsNullOrEmpty(ai.Strategy.MountainPlanStatus),"Planner did not publish the mountain assessment.");
                 var selected=Find.ResearchManager.GetProject();
                 Check(selected!=null && selected.CanStartNow,"No native available research selected: "+ai.Strategy.ResearchStatus);
                 Check(Find.ResearchManager.GetProgress(selected)==0,"Planner granted free research progress.");

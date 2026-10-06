@@ -63,4 +63,12 @@ O diagnóstico monitora fome, agricultura, Cooking, armazenamento, energia, medi
 
 O relatório salvo classifica cada sinal como pequeno, moderado, grave ou crítico e separa as categorias. Ele registra evento observado, decisão esperada, resultado real, comparação esperada/real, cadeia de causas e ajustes concretos. Os ajustes são evidências acumuladas, com confiança limitada, e não regras absolutas aplicadas a qualquer mapa ou storyteller.
 
+### Horizonte sustentável de 500 dias
+
+O plano estratégico acompanha um horizonte aproximado de **500 dias de jogo** e recalcula a cada avaliação o dia atual, os dias restantes, o objetivo em foco e o próximo objetivo. A lista de metas é separada em curto, médio e longo prazo. Cada meta grava se foi atendida, o bloqueador atual, os recursos necessários e o risco que ela pretende evitar.
+
+Antes de acelerar pesquisa tecnológica ou a rota da nave, o planejador calcula uma estabilidade de 0 a 100 usando reserva de comida, hostis, colonos incapacitados, saúde, humor, descanso, capacidade de combate, infraestrutura essencial, aço e componentes. Fome grave, feridos, hostis ou estabilidade baixa mantêm o foco em recuperação, defesa, comida, medicina, energia e abrigo. A pesquisa manual continua soberana; quando a IA possui a pesquisa de longo prazo e a colônia entra em instabilidade, ela pode trocar temporariamente para uma pesquisa de recuperação sem apagar o progresso da nave.
+
+A avaliação de terreno registra teto espesso, espaço livre e bordas conectadas de uma possível área montanhosa. Uma montanha candidata recebe um plano de análise para entradas, duas fugas, corredores, portas, chokepoints, melee block, linhas de tiro, temperatura, infestação e expansão por etapas. Esse registro não autoriza escavação automática: o anel externo continua sendo a opção segura até que os riscos sejam validados no mapa.
+
 Quando uma nova presença hostil é detectada, a IA registra um snapshot de força amiga/inimiga, composição ranged/melee, risco, feridos e comida e cria um save separado `AutonomousRim_Raid_*`. Até doze snapshots ficam no histórico do save da colônia para futuras comparações. O checkpoint não sobrescreve o save do jogador e não reinicia a partida. A análise não treina um modelo externo: preserva evidências estruturadas para decisões táticas futuras.

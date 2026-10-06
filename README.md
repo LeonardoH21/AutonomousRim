@@ -24,6 +24,8 @@ The long-term goal is a full autonomous player capable of perceiving the map, ev
 - Dynamic Work Priorities using skills, passions, role fit, urgency, pending workload, health, mood, rest, food and resource reserves; manual edits are preserved
 - Dynamic colonist schedule using Sleep, Work, Recreation, Anything and Meditation when available, with emergency and post-emergency recovery modes
 - Strategic research route with real prerequisite and hidden-prerequisite ordering, unlock auditing, short/medium/long-term goals and a saved victory route
+- Adaptive 500-day strategic horizon with stability scoring, current/next focus, resource/risk context and a no-rush gate for long-term/victory research
+- Mountain-site assessment that records thick-roof/open-space/entrance evidence and keeps major excavation locked until escape routes, chokepoints, temperature and infestation risks are validated
 - Failure analysis with recoverable-risk detection, categorized causal reports, expected/actual/improvement comparisons, learned adjustments and persisted raid checkpoints
 - Additive incorporation of researched benches/equipment into the approved base after geometry validation
 - Landing-area gradual Allow with a per-cycle cap and expanding radius; manual re-forbids remain protected
