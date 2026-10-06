@@ -28,13 +28,15 @@ namespace AutonomousRim.RuntimeChecks
         private Dictionary<Pawn, bool> drafts = new Dictionary<Pawn, bool>();
         private static int draws;
         private bool captureRequested;
+        private RoomProject corridor;
+        private float thermalStart;
         public ConstructionChecks(Map map) : base(map) { }
         public static void InspectorDrawn() { draws++; }
         private void Finish()
         {
             foreach (var entry in drafts) entry.Key.drafter.Drafted = entry.Value;
             stage = 99;
-            Log.Message("[AutonomousRim.ConstructionTests] PASS: preview, budget gate, valid room sizes/footprints/interactions, bounded native blueprints, real pawn wall and full bedroom construction including bed/roof, module completion/stockpile, duplicate prevention, player cancellation and toggle cleanup.");
+            Log.Message("[AutonomousRim.ConstructionTests] PASS: compact connected layout, shared boundaries, two exits, working vents/power/heating/cooling, comfort facilities, preview, budget gate, bounded blueprints, real pawn full bedroom, stockpile, cancellation and toggle cleanup.");
         }
         private static void Check(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
 
@@ -57,8 +59,16 @@ namespace AutonomousRim.RuntimeChecks
         {
             // Accelerated fixture prerequisites only; the full native room trial
             // lets actual work givers clear vegetation and deliver materials.
-            foreach (IntVec3 cell in GenAdj.OccupiedRect(task.Position, task.Rotation, task.Def.size))
+            foreach (IntVec3 cell in GenAdj.OccupiedRect(task.Position, task.Rotation, task.Def is ThingDef thingDef ? thingDef.size : IntVec2.One))
+            {
                 foreach (Plant plant in cell.GetThingList(map).OfType<Plant>().ToList()) plant.Destroy();
+                foreach (Thing item in cell.GetThingList(map).Where(t => t.def.category == ThingCategory.Item).ToList())
+                {
+                    Check(!item.IsForbidden(Faction.OfPlayer), "Accelerated fixture would move a forbidden item.");
+                    IntVec3 destination = EmptyCell(); item.DeSpawn(); GenSpawn.Spawn(item, destination, map);
+                }
+                foreach (Pawn pawn in cell.GetThingList(map).OfType<Pawn>().ToList()) pawn.Position = EmptyCell();
+            }
             var bp = task.Pending as Blueprint_Build ?? GenConstruct.PlaceBlueprintForBuild(task.Def, task.Position, map, task.Rotation, Faction.OfPlayer, task.Stuff);
             Check(bp.TryReplaceWithSolidThing(worker, out Thing solid, out bool failed), "Native blueprint-to-frame transition failed: " + task.Def.defName);
             Frame frame = solid as Frame;
@@ -71,6 +81,26 @@ namespace AutonomousRim.RuntimeChecks
             task.Pending = frame; task.Issued = true;
             return frame;
         }
+
+        private void PrepareBuildableSite()
+        {
+            // Quicktest can generate a heavily mountainous map. Keep production's refusal
+            // intact, then prepare terrain only in this disposable fixture to test execution.
+            IntVec3 origin = worker.Position + new IntVec3(-42, 0, -30);
+            var area = new CellRect(origin.x - 1, origin.z - 1, 24, 38);
+            var cells = new HashSet<IntVec3>(area.Cells);
+            for (int x = origin.x + 8; x <= worker.Position.x; x++)
+                for (int z = worker.Position.z - 1; z <= worker.Position.z + 1; z++) cells.Add(new IntVec3(x, 0, z));
+            for (int z = origin.z - 2; z <= worker.Position.z; z++)
+                for (int x = origin.x + 7; x <= origin.x + 9; x++) cells.Add(new IntVec3(x, 0, z));
+            foreach (IntVec3 cell in cells.Where(c => c.InBounds(map)))
+            {
+                foreach (Thing rock in cell.GetThingList(map).Where(t => t.def.building?.isNaturalRock == true).ToList()) rock.Destroy();
+                if (cell.GetRoof(map)?.isNatural == true) map.roofGrid.SetRoof(cell, null);
+                map.terrainGrid.SetTerrain(cell, TerrainDefOf.Soil);
+                map.fogGrid.Unfog(cell);
+            }
+        }
         private void CompleteFixture(RoomProject project)
         {
             // Accelerates prerequisites only; the first wall is separately completed by a real pawn job.
@@ -79,7 +109,7 @@ namespace AutonomousRim.RuntimeChecks
                 {
                     PrepareFrame(task).CompleteConstruction(worker);
                 }
-            foreach (IntVec3 cell in project.Interior) map.roofGrid.SetRoof(cell, RoofDefOf.RoofConstructed);
+            if (project.RequiresRoof) foreach (IntVec3 cell in project.Interior) map.roofGrid.SetRoof(cell, RoofDefOf.RoofConstructed);
         }
 
         public override void MapComponentTick()
@@ -113,10 +143,25 @@ namespace AutonomousRim.RuntimeChecks
                         // Keep the trial about construction, rather than unrelated meal/rest shortages.
                         worker.needs.food.CurLevel = worker.needs.food.MaxLevel; worker.needs.rest.CurLevel = 1f;
                         string progress = BaseConstructionManager.Apply(map, new List<RoomProject> { trialRoom });
-                        Log.Message("[AutonomousRim.ConstructionTests] Native room: " + progress);
+                        Log.Message("[AutonomousRim.ConstructionTests] Native room: " + progress + "; job=" + worker.CurJob?.def.defName);
                     }
                     if (trialRoom.Completed)
                     {
+                        VerifyCompact();
+                        started = ticks;
+                        stage = 4;
+                    }
+                }
+                else if (stage == 4 && ticks - started >= 400)
+                {
+                    VerifyHeat();
+                    started = ticks;
+                    stage = 5;
+                }
+                else if (stage == 5 && ticks - started >= 400)
+                {
+                        Check(corridor.Interior.CenterCell.GetTemperature(map) < thermalStart, "Powered coolers did not lower corridor temperature.");
+                        Log.Message("[AutonomousRim.LayoutTests] PASS: compact corridor enclosed, vents connected, generator powers all thermostats; native heating/cooling and comfort links verified.");
                         if (!GenCommandLine.CommandLineArgPassed("autonomousrimvisualtest"))
                         {
                             Find.TickManager.CurTimeSpeed = previousSpeed;
@@ -131,7 +176,6 @@ namespace AutonomousRim.RuntimeChecks
                             if (!(window is MainTabWindow_Inspector)) Find.WindowStack.TryRemove(window, false);
                         Find.MainTabsRoot.SetCurrentTab(DefDatabase<MainButtonDef>.GetNamed("AutonomousRimInspector"), false);
                         stage = 3;
-                    }
                 }
                 else if (stage == 3 && draws >= 3 && !captureRequested)
                 {
@@ -160,11 +204,30 @@ namespace AutonomousRim.RuntimeChecks
             worker.skills.GetSkill(SkillDefOf.Construction).Level = 20;
             worker.workSettings.EnableAndInitializeIfNotAlreadyInitialized(); worker.workSettings.SetPriority(WorkTypeDefOf.Construction, 1);
             worker.jobs.ClearQueuedJobs(true); worker.jobs.EndCurrentJob(JobCondition.InterruptForced, false);
+            foreach (string research in new[] { "ComplexFurniture", "Electricity", "AirConditioning" })
+                Find.ResearchManager.FinishProject(DefDatabase<ResearchProjectDef>.GetNamed(research), false, null, false);
             component.PreviewBase();
+            if (component.BaseProjects.Count == 0)
+            {
+                Check(component.BaseStatus.Contains("Sem terreno") && !map.listerThings.AllThings.OfType<Blueprint_Build>().Any(), "Blocked terrain should preserve the colony and emit no work.");
+                PrepareBuildableSite();
+                component.PreviewBase();
+            }
             Check(component.BaseProjects.Count > 0, "No initial base modules planned: " + component.BaseStatus);
             int count = component.BaseProjects.Count; component.PreviewBase();
             Check(component.BaseProjects.Count == count, "Preview duplicated base modules.");
             Check(component.BaseProjects.Where(p => p.Kind == "Quarto").All(p => p.InteriorSize == 5 && p.Shell.Count == 24), "Bedroom must have 5x5 interior and 24 perimeter cells.");
+            corridor = component.BaseProjects.Single(p => p.Kind == "Corredor");
+            Check(corridor.InteriorSize == 2 && corridor.Shell.Count(t => t.Def == ThingDefOf.Door && t.Rotation == Rot4.North) == 2, "Corridor requires width two and two exterior exits.");
+            foreach (RoomProject room in component.BaseProjects.Where(p => p.RequiresRoof && p != corridor))
+            {
+                ConstructionTask door = room.Shell.Single(t => t.Def == ThingDefOf.Door);
+                Check(corridor.Interior.Contains(door.Position + IntVec3.East) || corridor.Interior.Contains(door.Position + IntVec3.West), "A room doorway does not meet the corridor.");
+                Check(!room.Interior.Overlaps(corridor.Interior), "Room/corridor interiors overlap.");
+                ConstructionTask vent = room.Shell.Single(t => t.Def.defName == "Vent");
+                Check((room.Interior.Contains(vent.Position + IntVec3.East) && corridor.Interior.Contains(vent.Position + IntVec3.West)) ||
+                    (room.Interior.Contains(vent.Position + IntVec3.West) && corridor.Interior.Contains(vent.Position + IntVec3.East)), "Vent blocked by a double wall.");
+            }
             Check(component.BaseProjects.All(p => p.Shell.Concat(p.Furniture).All(t => t.Pending == null)), "Preview unexpectedly emitted blueprints.");
             var flags = map.listerThings.AllThings.Where(t => t.def == ThingDefOf.WoodLog).ToDictionary(t => t, t => t.IsForbidden(Faction.OfPlayer));
             foreach (Thing item in flags.Keys) item.SetForbidden(true, false);
@@ -223,6 +286,58 @@ namespace AutonomousRim.RuntimeChecks
             component.DisableAll();
             Check(!component.BaseAutomation && !component.EquipmentAutomation && !component.FoodAutomation && !component.WorkAutomation, "Disable-all did not switch every function off.");
             Check(playerBlueprint.Spawned && wall.Complete(map), "Disable-all affected player blueprint/completed construction.");
+        }
+
+        private void VerifyCompact()
+        {
+            foreach (RoomProject project in component.BaseProjects.Where(p => p.RequiresRoof && p != corridor)) CompleteFixture(project);
+            CompleteFixture(corridor);
+            RoomProject power = component.BaseProjects.Single(p => p.Kind == "Energia e climatização");
+            CompleteFixture(power);
+            foreach (ConstructionTask task in power.Furniture.Where(t => t.Def.defName == "WoodFiredGenerator"))
+                task.Position.GetThingList(map).OfType<ThingWithComps>().Single(t => t.def == task.Def).TryGetComp<CompRefuelable>().Refuel(75f);
+            RoomProject comfort = component.BaseProjects.Single(p => p.Kind == "Conforto dos quartos");
+            CompleteFixture(comfort);
+            RoomProject floors = component.BaseProjects.Single(p => p.Kind == "Pisos e acabamento");
+            CompleteFixture(floors);
+            Check(floors.Furniture.All(t => t.Complete(map)), "Native floor frame completion did not install the planned flooring.");
+            BaseConstructionManager.Apply(map, new List<RoomProject> { corridor, power, comfort });
+            Check(!power.Interior.Any(c => map.areaManager.BuildRoof[c]), "Outdoor generator was accidentally roofed.");
+            foreach (ConstructionTask cooler in corridor.Shell.Where(t => t.Def.defName == "Cooler"))
+            {
+                IntVec3 hot = cooler.Position + IntVec3.North.RotatedBy(cooler.Rotation);
+                IntVec3 cold = cooler.Position + IntVec3.South.RotatedBy(cooler.Rotation);
+                Check(!hot.Roofed(map) && !hot.Impassable(map) && corridor.Interior.Contains(cold), "Cooler exhaust or cold outlet points into a wall/roof.");
+            }
+            foreach (RoomProject room in component.BaseProjects.Where(p => p.RequiresRoof))
+                room.Interior.CenterCell.GetRoom(map).Temperature = 5f;
+            thermalStart = corridor.Interior.CenterCell.GetTemperature(map);
+        }
+
+        private void VerifyHeat()
+        {
+            Check(!corridor.Interior.CenterCell.GetRoom(map).UsesOutdoorTemperature, "Corridor is not an enclosed temperature-controlled room.");
+            Check(corridor.Interior.CenterCell.GetTemperature(map) > thermalStart, "Powered heaters did not increase corridor temperature.");
+            foreach (ConstructionTask task in component.BaseProjects.SelectMany(p => p.Shell.Concat(p.Furniture)).Where(t => t.TargetTemperature > -999f))
+            {
+                ThingWithComps building = task.Position.GetThingList(map).OfType<ThingWithComps>().Single(t => t.def == task.Def);
+                Check(building.TryGetComp<CompPowerTrader>().PowerOn, "Thermostat is disconnected/unpowered: " + task.Def.defName);
+                Check(building.TryGetComp<CompTempControl>().TargetTemperature == task.TargetTemperature, "Thermostat setpoint incorrect.");
+            }
+            foreach (ConstructionTask task in component.BaseProjects.SelectMany(p => p.Furniture).Where(t => t.Def.defName == "StandingLamp"))
+            {
+                ThingWithComps lamp = task.Position.GetThingList(map).OfType<ThingWithComps>().Single(t => t.def == task.Def);
+                CompPowerTrader electricity = lamp.TryGetComp<CompPowerTrader>();
+                Check(electricity.PowerOn, $"A room lamp is off at {task.Position}: net={electricity.PowerNet != null}, connection={electricity.connectParent?.parent.Position}, flick={lamp.TryGetComp<CompFlickable>()?.SwitchIsOn}.");
+            }
+            foreach (RoomProject room in component.BaseProjects.Where(p => p.Kind == "Quarto"))
+            {
+                var bed = room.Furniture.Single(t => t.Def == ThingDefOf.Bed).Position.GetThingList(map).OfType<Building_Bed>().Single();
+                Check(bed.TryGetComp<CompAffectedByFacilities>().LinkedFacilitiesListForReading.Any(t => t.def.defName == "EndTable") &&
+                    bed.TryGetComp<CompAffectedByFacilities>().LinkedFacilitiesListForReading.Any(t => t.def.defName == "Dresser"), "Comfort furniture failed to link to a bed.");
+            }
+            foreach (RoomProject room in component.BaseProjects.Where(p => p.RequiresRoof)) room.Interior.CenterCell.GetRoom(map).Temperature = 40f;
+            thermalStart = corridor.Interior.CenterCell.GetTemperature(map);
         }
     }
 }

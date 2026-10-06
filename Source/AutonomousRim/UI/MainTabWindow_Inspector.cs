@@ -44,9 +44,10 @@ namespace AutonomousRim.UI
             listing.Begin(content);
             listing.Label(state.ToString());
             listing.Label(component.BaseStatus);
-            listing.Label("Construção inicial: quartos 5×5, estoque 6×6 e cozinha 4×4 internos. Requer madeira, aço e construtores; os demais módulos estão em desenvolvimento.");
+            listing.Label("Blocos compactos: quartos 5×5, cozinha 4×4, estoque e sala social 6×6; corredor coberto de 2 células e duas saídas. Planos antigos são preservados.");
+            listing.Label(AutonomousRim.Planning.CompactBasePlanner.ClimateSummary(map));
             foreach (var project in component.BaseProjects)
-                listing.Label($"{project.Kind} {project.InteriorSize}×{project.InteriorSize} em {project.Origin}: {(project.Completed ? "concluído" : project.Started ? "em construção" : "planejado")}");
+                listing.Label($"{project.Kind} {(project.RequiresRoof ? $"{project.InteriorSize}×{project.Height}" : "instalações")} em {project.Origin}: {(project.Completed ? "concluído" : project.Started ? "em construção" : "planejado")}");
             listing.Label(component.ManagementStatus);
             listing.Label(component.EquipmentStatus);
             listing.Label("Autoequipamento usa tarefas do jogo e respeita peças forçadas pelo jogador. Ao desligar, libera as fixações da IA e mantém os equipamentos atuais.");

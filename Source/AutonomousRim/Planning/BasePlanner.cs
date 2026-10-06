@@ -8,6 +8,7 @@ namespace AutonomousRim.Planning
 {
     public static class BasePlanner
     {
+        public static string LastRoomFailure { get; private set; }
         public static bool ClearSite(Map map, CellRect rect, IEnumerable<RoomProject> projects)
         {
             if (projects.Any(p => p.Footprint.ExpandedBy(2).Overlaps(rect))) return false;
@@ -15,20 +16,22 @@ namespace AutonomousRim.Planning
             {
                 if (!cell.InBounds(map) || cell.CloseToEdge(map, 10) || cell.Fogged(map) || !cell.GetTerrain(map).affordances.Contains(TerrainAffordanceDefOf.Heavy) ||
                     cell.GetZone(map) != null || map.areaManager.NoRoof[cell] || cell.Roofed(map)) return false;
-                // Native construction workers clear vegetation. Preserve buildings,
-                // items, existing plans and player zones rather than clearing them.
-                if (cell.GetThingList(map).Any(t => !(t is Pawn) && !(t is Plant))) return false;
+                // Native workers clear plants and haul permitted items aside without destroying them.
+                // Forbidden items, buildings, existing plans and player zones remain obstacles.
+                if (cell.GetThingList(map).Any(t => !(t is Pawn) && !(t is Plant) &&
+                    !(t.def.category == ThingCategory.Item && t.def.EverHaulable && !t.IsForbidden(Faction.OfPlayer)))) return false;
             }
             return true;
         }
 
-        public static RoomProject CreateRoom(Map map, IntVec3 origin, int interior, string kind, ThingDef material)
+        public static RoomProject CreateRoom(Map map, IntVec3 origin, int interior, string kind, ThingDef material, bool westDoor = false)
         {
+            LastRoomFailure = null;
             var project = new RoomProject { Origin = origin, InteriorSize = interior, Kind = kind };
             int edge = interior + 1;
             foreach (IntVec3 cell in project.Footprint.EdgeCells)
             {
-                bool door = cell.x == origin.x + edge && cell.z == origin.z + 2;
+                bool door = cell.x == origin.x + (westDoor ? 0 : edge) && cell.z == origin.z + 2;
                 project.Shell.Add(new ConstructionTask { Def = door ? ThingDefOf.Door : ThingDefOf.Wall,
                     Stuff = material, Position = cell, Rotation = door ? Rot4.East : Rot4.North });
             }
@@ -41,42 +44,32 @@ namespace AutonomousRim.Planning
                 project.Furniture.Add(new ConstructionTask { Def = DefDatabase<ThingDef>.GetNamed("TableButcher"),
                     Position = origin + new IntVec3(2, 0, 1), Stuff = material, Rotation = Rot4.South });
             }
+            if (kind == "Sala social")
+            {
+                project.Furniture.Add(new ConstructionTask { Def = DefDatabase<ThingDef>.GetNamed("Table2x2c"), Stuff = material, Position = origin + new IntVec3(2, 0, 2) });
+                foreach (int z in new[] { 2, 3 })
+                    project.Furniture.Add(new ConstructionTask { Def = ThingDefOf.Stool, Stuff = material, Position = origin + new IntVec3(1, 0, z), Rotation = Rot4.East });
+                project.Furniture.Add(new ConstructionTask { Def = DefDatabase<ThingDef>.GetNamed("ChessTable"), Stuff = material, Position = origin + new IntVec3(5, 0, 5) });
+                project.Furniture.Add(new ConstructionTask { Def = ThingDefOf.Stool, Stuff = material, Position = origin + new IntVec3(5, 0, 4) });
+            }
             var occupied = new HashSet<IntVec3>();
             foreach (ConstructionTask task in project.Shell.Concat(project.Furniture))
             {
                 if (!task.Def.MadeFromStuff) task.Stuff = null;
-                if (!GenConstruct.CanPlaceBlueprintAt(task.Def, task.Position, task.Rotation, map, stuffDef: task.Stuff)) return null;
-                foreach (IntVec3 cell in GenAdj.OccupiedRect(task.Position, task.Rotation, task.Def.size))
-                    if (!occupied.Add(cell) || !project.Footprint.Contains(cell)) return null;
+                AcceptanceReport report = GenConstruct.CanPlaceBlueprintAt(task.Def, task.Position, task.Rotation, map, stuffDef: task.Stuff);
+                if (!report) { LastRoomFailure = kind + ": " + task.Def.defName + " " + report.Reason; return null; }
+                foreach (IntVec3 cell in GenAdj.OccupiedRect(task.Position, task.Rotation, ((ThingDef)task.Def).size))
+                    if (!occupied.Add(cell) || !project.Footprint.Contains(cell)) { LastRoomFailure = kind + ": footprint " + task.Def.defName; return null; }
             }
-            foreach (ConstructionTask task in project.Furniture.Where(t => t.Def.hasInteractionCell))
-                if (occupied.Contains(task.Position + task.Def.interactionCellOffset.RotatedBy(task.Rotation))) return null;
+            foreach (ConstructionTask task in project.Furniture.Where(t => t.Def is ThingDef thing && thing.hasInteractionCell))
+                if (occupied.Contains(task.Position + ((ThingDef)task.Def).interactionCellOffset.RotatedBy(task.Rotation))) { LastRoomFailure = kind + ": interaction " + task.Def.defName; return null; }
             return project;
-        }
-
-        private static RoomProject FindRoom(Map map, List<RoomProject> projects, IntVec3 anchor, int size, string kind, ThingDef material)
-        {
-            // Search bounded, deterministic candidates; leave two cells between room footprints.
-            for (int radius = 8; radius <= 50; radius += 3)
-                foreach (IntVec3 offset in GenRadial.RadialCellsAround(IntVec3.Zero, radius, false)
-                    .Where(c => c.x % 3 == 0 && c.z % 3 == 0 && c.LengthHorizontal >= radius - 3))
-                {
-                    IntVec3 origin = anchor + offset;
-                    var rect = new CellRect(origin.x, origin.z, size + 2, size + 2);
-                    if (!ClearSite(map, rect, projects)) continue;
-                    IntVec3 entrance = origin + new IntVec3(size + 2, 0, 2);
-                    if (!map.mapPawns.FreeColonistsSpawned.Any(p => p.CanReach(entrance, PathEndMode.OnCell, Danger.None))) continue;
-                    RoomProject project = CreateRoom(map, origin, size, kind, material);
-                    if (project != null) return project;
-                }
-            return null;
         }
 
         public static string Plan(Map map, List<RoomProject> projects)
         {
             Pawn anchorPawn = map.mapPawns.FreeColonistsSpawned.FirstOrDefault();
             if (anchorPawn == null) return "Sem colonos neste mapa.";
-            // Start with readily available wood; stone/steel room materials are a later policy.
             int existingBedrooms = map.listerBuildings.AllBuildingsColonistOfClass<Building_Bed>()
                 .Where(b => !b.Medical && !b.ForPrisoners && b.GetRoom()?.Role == RoomRoleDefOf.Bedroom && b.GetRoom().CellCount >= 25)
                 .Select(b => b.GetRoom()).Distinct().Count();
@@ -88,14 +81,19 @@ namespace AutonomousRim.Planning
             bool stove = map.listerBuildings.AllBuildingsColonistOfClass<Building_WorkTable>().Any(b => b.def.AllRecipes.Any(r => r.defName == "CookMealSimple"));
             bool butcher = map.listerBuildings.AllBuildingsColonistOfClass<Building_WorkTable>().Any(b => b.def.AllRecipes.Any(r => r.defName == "ButcherCorpseFlesh"));
             if ((!stove || !butcher) && !projects.Any(p => p.Kind == "Cozinha")) requests.Add(new KeyValuePair<string, int>("Cozinha", 4));
-            int added = 0;
-            foreach (var request in requests)
+            if (!projects.Any(p => p.Kind == "Sala social") && !map.listerBuildings.AllBuildingsColonistOfClass<Building>().Any(b => b.GetRoom()?.Role?.defName == "RecRoom"))
+                requests.Add(new KeyValuePair<string, int>("Sala social", 6));
+            if (requests.Count > 0)
             {
-                RoomProject room = FindRoom(map, projects, anchorPawn.Position, request.Value, request.Key, ThingDefOf.WoodLog);
-                if (room == null) return $"Plano: {added} novos módulos. Sem terreno livre/acessível para {request.Key}; construções existentes preservadas.";
-                projects.Add(room); added++;
+                List<RoomProject> compact = CompactBasePlanner.Find(map, projects, anchorPawn.Position, requests);
+                if (compact != null)
+                {
+                    projects.AddRange(compact);
+                    return $"Plano compacto: {compact.Count} módulos novos, corredor de 2 células e duas saídas. {CompactBasePlanner.ClimateSummary(map)}";
+                }
+                return "Sem terreno contínuo livre/acessível para o bloco compacto; plano existente preservado. Remova obstáculos manualmente ou escolha outro local.";
             }
-            return $"Plano: {projects.Count} módulos; {added} novos. Quartos 5×5, estoque 6×6 e cozinha 4×4 internos.";
+            return $"Plano: {projects.Count} módulos. {CompactBasePlanner.ClimateSummary(map)}";
         }
     }
 }

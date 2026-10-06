@@ -21,6 +21,8 @@ namespace AutonomousRim.Execution
 
         private static void Track(Map map, ConstructionTask task)
         {
+            if (task.Def is TerrainDef && task.OriginalTerrain != null && !task.Complete(map) && task.Position.GetTerrain(map) != task.OriginalTerrain)
+                task.CancelledByPlayer = true;
             if (task.Complete(map) || !task.Issued) return;
             if (task.Pending?.Spawned == true)
             {
@@ -57,12 +59,22 @@ namespace AutonomousRim.Execution
                 p.workSettings?.Initialized == true && p.workSettings.GetPriority(WorkTypeDefOf.Construction) > 0))
                 return "Construção aguardando um colono apto com trabalho Construção habilitado.";
             foreach (RoomProject room in projects)
-                foreach (ConstructionTask task in room.Shell.Concat(room.Furniture)) Track(map, task);
+                foreach (ConstructionTask task in room.Shell.Concat(room.Furniture))
+                {
+                    Track(map, task);
+                    if (!task.TemperatureConfigured && task.TargetTemperature > -999f && task.Complete(map))
+                    {
+                        ThingWithComps building = task.Position.GetThingList(map).OfType<ThingWithComps>().First(t => t.def == task.Def);
+                        CompTempControl thermostat = building.TryGetComp<CompTempControl>();
+                        if (thermostat != null) thermostat.TargetTemperature = task.TargetTemperature;
+                        task.TemperatureConfigured = true; // Player changes afterwards remain untouched.
+                    }
+                }
             RoomProject project = projects.FirstOrDefault(p => !p.Completed);
-            if (project == null) return "Módulos iniciais concluídos. Plantações, energia/freezer, hospital, craft e defesas ainda não são construídos por esta versão.";
+            if (project == null) return "Módulos concluídos. " + CompactBasePlanner.ClimateSummary(map) + " Freezer, plantações, hospital, craft e defesas ainda aguardam implementação.";
             if (project.Shell.Concat(project.Furniture).Any(t => t.CancelledByPlayer)) return $"{project.Kind}: projeto pausado após cancelamento/alteração de uma obra.";
             bool shellReady = project.Shell.All(t => t.Complete(map));
-            if (shellReady)
+            if (shellReady && project.RequiresRoof)
             {
                 foreach (IntVec3 cell in project.Interior)
                 {
@@ -73,7 +85,7 @@ namespace AutonomousRim.Execution
                     }
                 }
             }
-            if (shellReady && project.Furniture.All(t => t.Complete(map)) && project.Interior.All(c => c.Roofed(map)))
+            if (shellReady && project.Furniture.All(t => t.Complete(map)) && (!project.RequiresRoof || project.Interior.All(c => c.Roofed(map))))
             {
                 if (project.Kind == "Estoque" && project.Stockpile == null)
                 {

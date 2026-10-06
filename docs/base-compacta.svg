@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 640" role="img" aria-labelledby="title desc">
+  <title id="title">AutonomousRim — esquema da base compacta</title>
+  <desc id="desc">Três quartos, estoque, cozinha e sala social conectados por corredor de duas células. Duas saídas e escapes de resfriadores para o exterior. Esquema orientativo, sem escala.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0 0L7 3.5L0 7" fill="#e07843"/></marker>
+    <style>text{font-family:Segoe UI,Arial,sans-serif;fill:#203047}.room{stroke:#64748b;stroke-width:8}.label{font-size:17px;font-weight:600;text-anchor:middle}.size{font-size:13px;text-anchor:middle;fill:#52657c}.vent{stroke:#3ca4b3;stroke-width:7}.door{stroke:#aa8250;stroke-width:9}</style>
+  </defs>
+  <rect width="760" height="640" rx="20" fill="#f3f5f8"/>
+  <text x="40" y="48" font-size="26" font-weight="700">Base compacta</text>
+  <text x="40" y="75" font-size="14" fill="#52657c">Esquema orientativo para três colonos • sem escala</text>
+  <rect x="55" y="151" width="180" height="124" rx="4" fill="#eee5d9" class="room"/>
+  <rect x="281" y="151" width="180" height="124" rx="4" fill="#eee5d9" class="room"/>
+  <rect x="55" y="275" width="180" height="124" rx="4" fill="#eee5d9" class="room"/>
+  <rect x="281" y="275" width="180" height="124" rx="4" fill="#dce9ee" class="room"/>
+  <rect x="55" y="399" width="180" height="124" rx="4" fill="#e5eddb" class="room"/>
+  <rect x="281" y="399" width="180" height="124" rx="4" fill="#f0e4cb" class="room"/>
+  <rect x="239" y="155" width="38" height="364" fill="#e1e5eb"/>
+  <path d="M235 151H281M235 523H281" stroke="#64748b" stroke-width="8"/>
+  <text x="145" y="205" class="label">Quarto 1</text><text x="145" y="229" class="size">5×5 internos</text>
+  <text x="371" y="205" class="label">Quarto 2</text><text x="371" y="229" class="size">5×5 internos</text>
+  <text x="145" y="329" class="label">Quarto 3</text><text x="145" y="353" class="size">5×5 internos</text>
+  <text x="371" y="329" class="label">Estoque</text><text x="371" y="353" class="size">6×6 internos</text>
+  <text x="145" y="453" class="label">Cozinha</text><text x="145" y="477" class="size">4×4 • fogão + açougue</text>
+  <text x="371" y="453" class="label">Sala social</text><text x="371" y="477" class="size">6×6 • mesa + xadrez</text>
+  <path d="M235 180V200M281 180V200M235 304V324M281 304V324M235 428V448M281 428V448M246 151H259M246 523H259" class="door"/>
+  <path d="M235 239V253M281 239V253M235 363V377M281 363V377M235 487V501M281 487V501" class="vent"/>
+  <path d="M259 151H273M259 523H273" stroke="#4ba1ce" stroke-width="9"/>
+  <path d="M269 137V112M269 537V562" stroke="#e07843" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="112" y="129" font-size="13">Saída + escape externo</text>
+  <text x="112" y="581" font-size="13">Saída + escape externo</text>
+  <text transform="translate(263 356) rotate(-90)" font-size="12" text-anchor="middle">CORREDOR • 2 CÉLULAS</text>
+  <text x="500" y="180" font-size="18" font-weight="700">Circulação e conforto</text>
+  <text x="500" y="211" font-size="14">Portas voltadas ao corredor</text>
+  <text x="500" y="237" font-size="14">Ventilação em parede simples</text>
+  <text x="500" y="263" font-size="14">Cobertura dos ambientes</text>
+  <text x="500" y="289" font-size="14">Cabeceira e cômoda nos quartos</text>
+  <text x="500" y="315" font-size="14">Pisos e luzes após o abrigo</text>
+  <text x="500" y="364" font-size="18" font-weight="700">Circuito térmico</text>
+  <text x="500" y="395" font-size="14">Aquecimento: 20 °C</text>
+  <text x="500" y="421" font-size="14">Resfriamento: 24 °C</text>
+  <text x="500" y="447" font-size="14">Geradores a lenha no exterior</text>
+  <text x="500" y="473" font-size="14">Pesquisa e combustível necessários</text>
+  <text x="500" y="499" font-size="14">Escape sem teto e sem obstáculos</text>
+  <text x="40" y="620" font-size="12" fill="#52657c">As fachadas reais têm recuos conforme o tamanho das salas. Planos antigos são preservados.</text>
+</svg>

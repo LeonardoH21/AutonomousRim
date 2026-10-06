@@ -57,7 +57,7 @@ try {
         if ($testProcess.HasExited) { throw 'RimWorld exited before the colony test completed.' }
         if (Test-Path -LiteralPath $logFile) {
             $logText = Get-Content -LiteralPath $logFile -Raw
-            if ($logText -match 'Exception|Error while|XML error|Config error|Attempted to calculate value for disabled stat') { throw "Game reported an error. Inspect $logFile" }
+            if ($logText -match 'Exception|Error while|XML error|Config error|Attempted to calculate value for disabled stat|Two power nets on the same cell') { throw "Game reported an error. Inspect $logFile" }
             $scanCount = ([regex]::Matches($logText, '\[AutonomousRim\] Scan:')).Count
             if ($scanCount -ge 2 -and $logText.Contains('[AutonomousRim] Loaded successfully.') -and
                 (!$RuntimeChecks -or ($logText.Contains('[AutonomousRim.Tests] PASS:') -and $logText.Contains('[AutonomousRim.EquipmentTests] PASS:') -and $logText.Contains('[AutonomousRim.ConstructionTests] PASS:') -and (!$Visible -or $logText.Contains('[AutonomousRim.HudTests] PASS:'))))) {
