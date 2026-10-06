@@ -29,4 +29,8 @@ O Hospitality instalado apresenta um erro ao aplicar seu patch em `Pawn_MindStat
 
 ## Resultado
 
-Teste de 20 dias em andamento. O resultado final e o save exportado serão registrados após o término.
+Em 6/10/2026, o jogador pediu para interromper o acompanhamento e receber o save para visualizar a base. A segunda execução foi encerrada após o checkpoint do tick 240.000: aproximadamente quatro dias desde a chegada inicial, com os cinco colonos originais vivos, móveis e sem desnutrição. Havia 27 projetos, dos quais 15 concluídos; a base ainda estava em construção. O log dessa execução não registrou exceções de MapComponent/ticks nem avisos de referências não resolvidas.
+
+Save exportado para a pasta normal do jogo: `AutonomousRim - Base para visualizar.rws`. A exportação remove apenas componentes e metadados do observador de teste. A configuração normal de mods e o arquivo original `TESTE DO MOD.rws` foram preservados; o hash original permanece igual. Os logs e a evidência estruturada ficam em `.tools/saved-colony` localmente.
+
+**O requisito de 20 dias não foi concluído.** A primeira execução de 15,8 dias foi interrompida sem salvamento final, e a segunda foi encerrada a pedido do jogador no quarto dia. Nenhuma dessas execuções comprova a conclusão de todos os corredores/pisos ou a sobrevivência por 20 dias completos.
