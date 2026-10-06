@@ -225,7 +225,19 @@ namespace AutonomousRim.RuntimeChecks
                 if (ticks - lastProgressTick > 90000 || ticks - startTick > 1200000) throw new InvalidOperationException("Native initial infrastructure stalled/incomplete: " + component.BaseStatus);
                 if (initialColonists.Any(p => p == null || p.Dead)) throw new InvalidOperationException("Colonist died during native construction run.");
             }
-            catch (Exception e) { finished = true; Log.Error("[AutonomousRim.NormalTests] FAIL: " + e); }
+            catch (Exception e)
+            {
+                finished = true;
+                string detail = "elapsedTicks=" + (ticks - startTick) + "; completed=" + completed + "; status=" +
+                    (baseline ? baselineStatus : component.BaseStatus) + "; " + e;
+                try
+                {
+                    File.WriteAllText(Path.Combine(GenFilePaths.SaveDataFolderPath, baseline ? "baseline-failure.txt" : "new-failure.txt"), detail);
+                    GameDataSaveLoader.SaveGame(baseline ? "ConstructionBaselineFailed" : "ConstructionFailed");
+                }
+                catch (Exception saveError) { Log.Warning("[AutonomousRim.NormalTests] Could not preserve failure snapshot: " + saveError.Message); }
+                Log.Error("[AutonomousRim.NormalTests] FAIL: " + detail);
+            }
         }
     }
 }

@@ -43,11 +43,19 @@ namespace AutonomousRim.Execution
             var materials = new Dictionary<ThingDef, int>();
             if (building)
             {
-                RoomProject next = projects.FirstOrDefault(p => !p.Completed);
-                if (next != null && !next.Shell.Concat(next.Furniture).Any(t => t.CancelledByPlayer))
+                var requested = projects.Where(p => !p.Completed && p.State != ConstructionState.Paused && p.State != ConstructionState.Blocked &&
+                    (p.Priority <= ConstructionPriority.High || BaseConstructionManager.CanContinueExistingWork(p)) &&
+                    !BaseConstructionManager.Tasks(p).Any(t => t.CancelledByPlayer)).ToList();
+                if (requested.Count > 0)
                 {
                     Dictionary<ThingDef, int> available = BaseConstructionManager.Available(map);
-                    foreach (var cost in next.Shell.Concat(next.Furniture).Where(t => !t.Complete(map) && t.Pending?.Spawned != true)
+                    // Essential approved modules may need different resources. Limiting
+                    // allow to the first room kept generators' starter components forbidden
+                    // even when climate/power had become critical. This releases items;
+                    // blueprint slots, reserves and native material costs still limit use.
+                    foreach (var cost in requested.SelectMany(p => BaseConstructionManager.CurrentStage(map, p))
+                        .Where(t => !t.Complete(map) && t.Pending?.Spawned != true && t.Def.IsResearchFinished)
+                        .GroupBy(t => new { t.Position, t.Def, t.Stuff, t.Rotation }).Select(g => g.First())
                         .SelectMany(t => CostListCalculator.CostListAdjusted(t.Def, t.Stuff)).GroupBy(c => c.thingDef))
                     { available.TryGetValue(cost.Key, out int amount); materials[cost.Key] = Math.Max(0, cost.Sum(c => c.count) - amount); }
                     foreach (var deficit in available.Where(p => p.Value < 0))
