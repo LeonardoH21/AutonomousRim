@@ -143,7 +143,13 @@ The test add-on is installed temporarily and removed when the smoke test ends. I
 
 ## Status
 
-Early development. Optional food/work/equipment management and compact base construction include bedrooms, stockroom, kitchen, social room, corridors, comfort/floors, medical beds/medicine storage, workshop, weapons storage and researched electric climate/power/lighting. Native food/clothing bills, researched freezers and construction resource gathering are included. Agriculture, perimeter/killbox and combat control remain on the roadmap.
+Early development. Optional food/work/equipment management and compact base construction include bedrooms, stockroom, kitchen, social room, corridors, comfort/floors, medical beds/medicine storage, workshop, weapons storage and researched electric climate/power/lighting. Native food/clothing bills, researched freezers and construction resource gathering are included. Optional cooperative combat includes cover, melee interception and protected withdrawal. Agriculture and perimeter/killbox remain on the roadmap.
+
+## Cooperative combat
+
+Enable **Rim AI → Combate cooperativo: LIGADO**. Armed capable colonists form a defensive group, using native attack and movement jobs. Ranged fighters evaluate cover, weapon range, line of sight and approaching melee threats; melee fighters protect nearby allies and guard narrow passages. Injuries and unfavorable local odds trigger withdrawal, favoring reachable enclosed shelters. Existing manual drafts/orders are preserved. The toggle starts disabled and **Desligar todas** releases AI-owned drafts.
+
+Three isolated native combat scenarios passed on 06/10/2026: interception (3 against 1), ranged cover (3 against 2), and withdrawal into a closed-door shelter (3 against 9, including an injured defender). No participating colonist died or was downed. The last scenario tests escape for 1,800 ticks, not elimination of the larger force. See [behavior, measured results and limitations](docs/COMBATE-COOPERATIVO.md). Run `scripts/CombatTest.ps1` after building/installing the mod and runtime checks; it uses a private profile and never loads the player's save. Explosives, special abilities, other combat mods, planned ambushes and broad battle/save-load coverage remain unvalidated.
 
 ## Initial base construction
 

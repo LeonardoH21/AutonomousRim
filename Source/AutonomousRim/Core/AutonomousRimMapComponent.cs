@@ -18,6 +18,12 @@ namespace AutonomousRim.Core
         private bool workAutomation;
         private bool scheduleAutomation = true;
         private bool equipmentAutomation;
+        private bool combatAutomation;
+        private List<CombatOrder> combatOrders = new List<CombatOrder>();
+        private List<Pawn> combatExcluded = new List<Pawn>();
+        public bool CombatAutomation => combatAutomation;
+        public string CombatStatus { get; private set; } = "Combate cooperativo desligado.";
+        public IReadOnlyList<CombatOrder> CombatOrders => combatOrders;
         private bool baseAutomation = true;
         private bool strategyAutomation = true;
         private StrategicPlan strategicPlan = new StrategicPlan();
@@ -66,6 +72,9 @@ namespace AutonomousRim.Core
             Scribe_Values.Look(ref workAutomation, "workAutomation");
             Scribe_Values.Look(ref scheduleAutomation, "scheduleAutomation", true);
             Scribe_Values.Look(ref equipmentAutomation, "equipmentAutomation");
+            Scribe_Values.Look(ref combatAutomation, "combatAutomation");
+            Scribe_Collections.Look(ref combatOrders, "combatOrders", LookMode.Deep);
+            Scribe_Collections.Look(ref combatExcluded, "combatExcluded", LookMode.Reference);
             Scribe_Values.Look(ref baseAutomation, "baseAutomation");
             Scribe_Values.Look(ref strategyAutomation, "strategyAutomation");
             Scribe_Deep.Look(ref strategicPlan, "strategicPlan");
@@ -98,6 +107,10 @@ namespace AutonomousRim.Core
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
             {
                 strategicPlan = strategicPlan ?? new StrategicPlan();
+                combatOrders = combatOrders ?? new List<CombatOrder>();
+                combatExcluded = combatExcluded ?? new List<Pawn>();
+                combatOrders.RemoveAll(o => o.Pawn == null);
+                combatExcluded.RemoveAll(p => p == null);
                 failureMemory = failureMemory ?? new FailureMemory();
                 ownedHunts = ownedHunts ?? new List<Pawn>();
                 ownedBills = ownedBills ?? new List<ManagedFoodBill>();
@@ -148,12 +161,20 @@ namespace AutonomousRim.Core
 
         public void DisableAll()
         {
+            SetCombatAutomation(false);
             SetStrategyAutomation(false);
             SetLootAutomation(false);
             SetBaseAutomation(false);
             SetEquipmentAutomation(false);
             SetAutomation(false, false);
             SetScheduleAutomation(false);
+        }
+
+        public void SetCombatAutomation(bool enabled)
+        {
+            combatAutomation = enabled;
+            if (!enabled) { CombatManager.Stop(combatOrders); combatExcluded.Clear(); }
+            CombatStatus = enabled ? CombatManager.Apply(map, combatOrders, combatExcluded) : "Combate cooperativo desligado; controle da IA liberado.";
         }
 
         public void SetScheduleAutomation(bool enabled)
@@ -256,6 +277,8 @@ namespace AutonomousRim.Core
             base.MapComponentTick();
 
             int ticks = Find.TickManager?.TicksGame ?? 0;
+            if (combatAutomation && ticks > 0 && ticks % CombatManager.Interval == 0)
+                CombatStatus = CombatManager.Apply(map, combatOrders, combatExcluded);
             if (ticks > 0 && ticks - strategicPlan.LastEvaluation >= 600) EvaluateStrategy();
             if (ticks > 0 && ticks - failureMemory.LastEvaluationTick >= 600) EvaluateFailure();
             if (baseAutomation && ticks > 0 && ticks % BaseConstructionManager.ExecutionInterval == 0) ExecuteConstruction(ticks);

@@ -45,13 +45,17 @@ namespace AutonomousRim.UI
             if (Widgets.ButtonText(new Rect(inRect.x, inRect.y + 206f, half, 30f), $"Agenda dinâmica: {(component.ScheduleAutomation ? "LIGADA" : "DESLIGADA")}"))
                 component.SetScheduleAutomation(!component.ScheduleAutomation);
             if (Widgets.ButtonText(new Rect(inRect.x + half + 8f, inRect.y + 206f, half, 30f), "Analisar risco/falha agora")) component.EvaluateFailure();
-            Rect viewport = new Rect(inRect.x, inRect.y + 244f, inRect.width, inRect.height - 244f);
+            if (Widgets.ButtonText(new Rect(inRect.x, inRect.y + 240f, inRect.width, 30f), $"Combate cooperativo: {(component.CombatAutomation ? "LIGADO" : "DESLIGADO")}"))
+                component.SetCombatAutomation(!component.CombatAutomation);
+            Rect viewport = new Rect(inRect.x, inRect.y + 278f, inRect.width, inRect.height - 278f);
             Rect content = new Rect(0f, 0f, viewport.width - 20f, contentHeight);
             Widgets.BeginScrollView(viewport, ref scrollPosition, content);
             var listing = new Listing_Standard();
             listing.Begin(content);
             listing.Label(state.ToString());
             listing.Label(component.BaseStatus);
+            listing.Label(component.CombatStatus);
+            foreach (var order in component.CombatOrders) listing.Label($"{order.Pawn?.LabelShort}: {order.Role}");
             listing.Label("Plano em anel: estoque e alimentação primeiro; quartos 5×5 por colono, cozinha e abate 4×4 separados; expansão reservada, energia e perímetro. Planos antigos são preservados.");
             listing.Label("Rota final: " + component.Strategy.VictoryRoute);
             listing.Label($"Horizonte: {component.Strategy.HorizonDays} dias | Dia atual: {component.Strategy.LastKnownDay} | Restantes: {component.Strategy.EstimatedDaysRemaining}");
