@@ -66,6 +66,16 @@ namespace AutonomousRim.Planning
         public List<IntVec3> RoofOrders = new List<IntVec3>();
         public Zone_Stockpile Stockpile;
         public List<IntVec3> StorageCells = new List<IntVec3>();
+        public string LayoutSlot;
+        public IntVec3 LayoutAnchor;
+        public List<IntVec3> RoofCells = new List<IntVec3>();
+        public IEnumerable<IntVec3> RoofArea => RoofCells.Count > 0 ? RoofCells : Interior.Cells;
+        public List<IntVec3> MineCells = new List<IntVec3>();
+        public List<IntVec3> OwnedMineCells = new List<IntVec3>();
+        public List<IntVec3> ClearCells = new List<IntVec3>();
+        public List<IntVec3> OwnedClearCells = new List<IntVec3>();
+        public ThingDef Crop;
+        public Zone_Growing GrowingZone;
         public bool Started;
         public bool Completed;
         public ConstructionState State;
@@ -91,6 +101,15 @@ namespace AutonomousRim.Planning
             Scribe_Collections.Look(ref RoofOrders, "roofOrders", LookMode.Value);
             Scribe_References.Look(ref Stockpile, "stockpile");
             Scribe_Collections.Look(ref StorageCells, "storageCells", LookMode.Value);
+            Scribe_Values.Look(ref LayoutSlot, "layoutSlot");
+            Scribe_Values.Look(ref LayoutAnchor, "layoutAnchor");
+            Scribe_Collections.Look(ref RoofCells, "roofCells", LookMode.Value);
+            Scribe_Collections.Look(ref MineCells, "mineCells", LookMode.Value);
+            Scribe_Collections.Look(ref OwnedMineCells, "ownedMineCells", LookMode.Value);
+            Scribe_Collections.Look(ref ClearCells, "clearCells", LookMode.Value);
+            Scribe_Collections.Look(ref OwnedClearCells, "ownedClearCells", LookMode.Value);
+            Scribe_Defs.Look(ref Crop, "crop");
+            Scribe_References.Look(ref GrowingZone, "growingZone");
             Scribe_Values.Look(ref Started, "started"); Scribe_Values.Look(ref Completed, "completed");
             Scribe_Values.Look(ref State, "state"); Scribe_Values.Look(ref Priority, "priority", ConstructionPriority.High);
             Scribe_Values.Look(ref BlockReason, "blockReason");
@@ -101,6 +120,11 @@ namespace AutonomousRim.Planning
                 Shell = Shell ?? new List<ConstructionTask>(); Furniture = Furniture ?? new List<ConstructionTask>();
                 RoofOrders = RoofOrders ?? new List<IntVec3>();
                 StorageCells = StorageCells ?? new List<IntVec3>();
+                RoofCells = RoofCells ?? new List<IntVec3>();
+                MineCells = MineCells ?? new List<IntVec3>();
+                OwnedMineCells = OwnedMineCells ?? new List<IntVec3>();
+                ClearCells = ClearCells ?? new List<IntVec3>();
+                OwnedClearCells = OwnedClearCells ?? new List<IntVec3>();
             }
         }
     }

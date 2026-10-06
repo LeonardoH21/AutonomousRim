@@ -182,6 +182,8 @@ namespace AutonomousRim.Planning
 
         public static string Plan(Map map, List<RoomProject> projects)
         {
+            if (projects.Count == 0 || projects.Any(p => p.Kind == RingBasePlanner.ReservationKind))
+                return RingBasePlanner.Plan(map, projects);
             Pawn anchorPawn = map.mapPawns.FreeColonistsSpawned.FirstOrDefault();
             if (anchorPawn == null) return "Sem colonos neste mapa.";
             int existingBedrooms = map.listerBuildings.AllBuildingsColonistOfClass<Building_Bed>()

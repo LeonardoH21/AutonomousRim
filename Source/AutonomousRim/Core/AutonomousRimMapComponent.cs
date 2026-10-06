@@ -17,7 +17,7 @@ namespace AutonomousRim.Core
         private bool foodAutomation;
         private bool workAutomation;
         private bool equipmentAutomation;
-        private bool baseAutomation;
+        private bool baseAutomation = true;
         private int lastPlanTick = -3600;
         private int lastConstructionTick = -120;
         private int plannedPawnCount;
@@ -236,7 +236,8 @@ namespace AutonomousRim.Core
             if (lastConstructionTick == ticks) return;
             lastConstructionTick = ticks;
             bool climate = DefDatabase<ResearchProjectDef>.GetNamed("AirConditioning").IsFinished;
-            if (baseProjects.Count == 0 && ticks - lastPlanTick >= 1200 || plannedPawnCount != map.mapPawns.FreeColonistsSpawnedCount || plannedClimateResearch != climate)
+            if (baseProjects.Count == 0 && ticks - lastPlanTick >= 1200 || plannedPawnCount != map.mapPawns.FreeColonistsSpawnedCount || plannedClimateResearch != climate ||
+                baseProjects.Exists(p => p.Kind == RingBasePlanner.ReservationKind) && ticks - lastPlanTick >= 3600)
                 PreviewBase();
             if (baseProjects.Count == 0) return;
             BaseStatus = BaseConstructionManager.Apply(map, baseProjects);

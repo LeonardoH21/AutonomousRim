@@ -43,6 +43,9 @@ namespace AutonomousRim.Execution
         public static IEnumerable<ConstructionTask> CurrentStage(Map map, RoomProject p) => p.Shell.All(t => t.Complete(map)) ? p.Furniture : p.Shell;
         private static bool DependsOn(Map map, RoomProject p, List<RoomProject> all)
         {
+            if (p.Kind != "Preparação do terreno" && p.Kind != RingBasePlanner.ReservationKind && all.Any(r => r.Kind == "Preparação do terreno" && !r.Completed)) return true;
+            if (p.Crop != null || p.Kind == "Muro externo" || p.Kind == "Roupas" || p.Kind == "Baterias" || p.Kind == "Pesquisa" || p.Kind == "Fabricação" || p.Kind == "Multiuso")
+                return all.Any(r => !r.Completed && (r.Priority == ConstructionPriority.Critical || r.Kind == "Quarto"));
             if (p.Kind == "Corredor") return all.Where(r => r.RequiresRoof && r != p).Any(r => !r.Shell.All(t => t.Complete(map)));
             // Power is independent of enclosing every room; valid reserved cells can be built early.
             if (p.Kind == "Energia e climatização") return false;
@@ -54,7 +57,7 @@ namespace AutonomousRim.Execution
         }
         private static void Storage(Map map, RoomProject p)
         {
-            if (p.Kind != "Estoque" && p.Kind != "Freezer" && p.Kind != "Despejo" && p.Kind != "Medicamentos" && p.Kind != "Armas") return;
+            if (p.Kind != "Estoque" && p.Kind != "Freezer" && p.Kind != "Despejo" && p.Kind != "Medicamentos" && p.Kind != "Armas" && p.Kind != "Roupas") return;
             if (p.Stockpile != null) { p.FunctionalStorage = true; return; }
             // Storage works immediately. The shell/roof is still required for weather protection.
             var cells = p.StorageCells.Count > 0 ? p.StorageCells : p.Interior.ToList();
@@ -73,7 +76,7 @@ namespace AutonomousRim.Execution
                 if (t.Complete(map)) result += 10000;
                 else if (t.Pending is Frame f && f.Spawned) result += 100 + f.workDone + f.resourceContainer.Sum(i => i.stackCount);
                 else if (t.Pending?.Spawned == true) result += 1;
-            return result + (p.RequiresRoof ? p.Interior.Count(c => c.Roofed(map)) * 100 : 0);
+            return result + (p.RequiresRoof ? p.RoofArea.Count(c => c.Roofed(map)) * 100 : 0);
         }
         private static string PendingReason(Map map, RoomProject p, List<Pawn> builders)
         {
@@ -133,20 +136,60 @@ namespace AutonomousRim.Execution
                 if (Tasks(p).Any(t => t.CancelledByPlayer)) { p.State = ConstructionState.Paused; p.BlockReason = "Obra removida ou alterada (possível cancelamento); outras obras continuam."; continue; }
                 if (p.Completed) { p.State = ConstructionState.Completed; continue; }
                 if (danger) { p.State = ConstructionState.Paused; p.BlockReason = "Hostis no mapa."; continue; }
+                if (p.Kind == "Preparação do terreno")
+                {
+                    var rocks = p.MineCells.Select(c => c.GetEdifice(map)).Where(t => t is Mineable).ToList();
+                    var miners = map.mapPawns.FreeColonistsSpawned.Where(b => WorkPriorityManager.CanWork(b) && b.workSettings.Initialized &&
+                        !b.WorkTypeIsDisabled(WorkTypeDefOf.Mining) && b.workSettings.GetPriority(WorkTypeDefOf.Mining) > 0).ToList();
+                    int miningPending = rocks.Count(r => map.designationManager.DesignationAt(r.Position, DesignationDefOf.Mine) != null);
+                    foreach (var rock in rocks.Where(r => map.designationManager.DesignationAt(r.Position, DesignationDefOf.Mine) == null &&
+                        miners.Any(b => r.Position.IsInAllowedArea(b) && b.CanReach(r, PathEndMode.Touch, Danger.None)))
+                        .OrderBy(r => miners.Min(b => b.Position.DistanceToSquared(r.Position))).Take(Math.Max(0, 8 - miningPending)))
+                    { map.designationManager.AddDesignation(new Designation(rock.Position, DesignationDefOf.Mine)); p.OwnedMineCells.Add(rock.Position); }
+                    p.Completed = rocks.Count == 0; p.State = p.Completed ? ConstructionState.Completed : ConstructionState.Active;
+                    p.BlockReason = p.Completed ? null : "Escavação nativa necessária antes da construção; Mining precisa estar habilitado."; continue;
+                }
+                foreach (var c in p.ClearCells)
+                {
+                    if (p.Shell.Any(t => t.Position == c && t.Complete(map))) continue;
+                    var building = c.GetEdifice(map);
+                    if (building == null) continue;
+                    if (building.def != ThingDefOf.Wall || building.Faction != Faction.OfPlayer)
+                    { p.BlockReason = "Obstáculo alterado pelo jogador; abertura da porta suspensa."; break; }
+                    if (map.designationManager.DesignationOn(building, DesignationDefOf.Deconstruct) == null)
+                    { map.designationManager.AddDesignation(new Designation(building, DesignationDefOf.Deconstruct)); p.OwnedClearCells.Add(c); }
+                }
+                if (p.BlockReason != null) { p.State = ConstructionState.Blocked; continue; }
+                if (p.Kind == "Energia e climatização" && p.LayoutSlot == "power")
+                    foreach (var c in p.Footprint) map.areaManager.NoRoof[c] = true;
+                if (p.Crop != null)
+                {
+                    if (DependsOn(map, p, projects)) { p.State = ConstructionState.Blocked; p.BlockReason = "Aguardando estoque, alimentação e quartos."; continue; }
+                    if (p.GrowingZone == null)
+                    {
+                        if (p.StorageCells.Any(c => c.GetZone(map) != null)) { p.State = ConstructionState.Blocked; p.BlockReason = "Zona do jogador ocupa a plantação."; continue; }
+                        var cells = p.StorageCells.Where(c => c.GetTerrain(map).fertility >= p.Crop.plant.fertilityMin && c.GetEdifice(map) == null && !c.Roofed(map)).ToList();
+                        if (cells.Count == 0) { p.State = ConstructionState.Blocked; p.BlockReason = "Sem solo fértil descoberto para " + p.Crop.label; continue; }
+                        p.GrowingZone = new Zone_Growing(map.zoneManager); map.zoneManager.RegisterZone(p.GrowingZone);
+                        foreach (var c in cells) { p.GrowingZone.AddCell(c); map.areaManager.NoRoof[c] = true; }
+                        p.GrowingZone.SetPlantDefToGrow(p.Crop);
+                    }
+                    p.Completed = true; p.State = ConstructionState.Completed; continue;
+                }
                 if (builders.Count == 0) { p.State = ConstructionState.Blocked; p.BlockReason = "Nenhum construtor com Construction habilitado."; continue; }
                 Storage(map, p);
                 if (p.BlockReason != null) { p.State = ConstructionState.Blocked; continue; }
                 bool shell = p.Shell.All(t => t.Complete(map));
                 if (shell && p.RequiresRoof)
-                    foreach (var c in p.Interior)
+                    foreach (var c in p.RoofArea)
                     {
                         if (map.areaManager.NoRoof[c]) { p.BlockReason = "Área Sem teto do jogador impede cobertura."; break; }
                         if (!c.Roofed(map) && !map.areaManager.BuildRoof[c]) { map.areaManager.BuildRoof[c] = true; p.RoofOrders.Add(c); }
                     }
                 if (p.BlockReason != null) { p.State = ConstructionState.Blocked; continue; }
-                if (shell && p.Furniture.All(t => t.Complete(map)) && (!p.RequiresRoof || p.Interior.All(c => c.Roofed(map)))) { p.Completed = true; p.State = ConstructionState.Completed; continue; }
+                if (shell && p.Furniture.All(t => t.Complete(map)) && (!p.RequiresRoof || p.RoofArea.All(c => c.Roofed(map)))) { p.Completed = true; p.State = ConstructionState.Completed; continue; }
                 if (DependsOn(map, p, projects)) { p.State = ConstructionState.Blocked; p.BlockReason = "Aguardando estrutura de outros módulos."; continue; }
-                p.State = Tasks(p).Any(t => t.Pending?.Spawned == true) || shell && p.RequiresRoof && p.Interior.Any(c => !c.Roofed(map)) ? ConstructionState.Active : ConstructionState.Planned;
+                p.State = Tasks(p).Any(t => t.Pending?.Spawned == true) || shell && p.RequiresRoof && p.RoofArea.Any(c => !c.Roofed(map)) ? ConstructionState.Active : ConstructionState.Planned;
                 if (p.Stalled)
                 {
                     p.BlockReason = PendingReason(map, p, builders);
@@ -168,7 +211,7 @@ namespace AutonomousRim.Execution
             int pendingCount = projects.SelectMany(Tasks).Where(t => t.Pending?.Spawned == true).Select(t => t.Pending).Distinct().Count(), issued = 0, slots = 0;
             var priorityHold = new Dictionary<ThingDef, int>();
             foreach (var p in projects.Where(p => !p.Completed && p.State != ConstructionState.Paused && p.State != ConstructionState.Blocked).OrderBy(p => p.Priority)
-                .ThenBy(p => p.Kind == "Estoque" ? 0 : p.Kind == "Quarto" ? 1 : p.Kind == "Cozinha" ? 2 : p.Kind == "Freezer" ? 3 : 4))
+                .ThenBy(p => RingBasePlanner.Rank(p.Kind)))
             {
                 if (slots >= Math.Min(MaxActiveProjects, Math.Max(1, builders.Count + 1)))
                 { if (p.State == ConstructionState.Active) { p.State = ConstructionState.Planned; p.BlockReason = "Aguardando um dos três slots; investimento preservado."; } continue; }
@@ -220,6 +263,11 @@ namespace AutonomousRim.Execution
             foreach (var t in tasks.Where(t => cancelled.Contains(t.Pending))) { t.Pending = null; t.Issued = false; t.Owned = false; }
             foreach (var p in projects)
             {
+                foreach (var c in p.OwnedMineCells)
+                { var rock = c.GetEdifice(map); if (rock != null) map.designationManager.DesignationAt(c, DesignationDefOf.Mine)?.Delete(); }
+                foreach (var c in p.OwnedClearCells)
+                { var wall = c.GetEdifice(map); if (wall != null) map.designationManager.DesignationOn(wall, DesignationDefOf.Deconstruct)?.Delete(); }
+                p.OwnedMineCells.Clear(); p.OwnedClearCells.Clear();
                 foreach (var c in p.RoofOrders) if (!c.Roofed(map)) map.areaManager.BuildRoof[c] = false;
                 p.RoofOrders.Clear(); if (!p.Completed) p.State = ConstructionState.Paused;
             }

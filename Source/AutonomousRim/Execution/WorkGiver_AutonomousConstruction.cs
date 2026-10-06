@@ -30,6 +30,10 @@ namespace AutonomousRim.Execution
             var targets = pawn.Map.GetComponent<AutonomousRimMapComponent>().BaseProjects
                 .Where(BaseConstructionManager.CanContinueExistingWork).OrderBy(p => p.Priority).SelectMany(BaseConstructionManager.Tasks)
                 .Where(t => t.Pending?.Spawned == true && !t.Complete(pawn.Map) && t.RetryAfter <= Find.TickManager.TicksGame).Select(t => t.Pending);
+            if (def.workType == WorkTypeDefOf.Construction)
+                targets = targets.Concat(pawn.Map.GetComponent<AutonomousRimMapComponent>().BaseProjects.Where(p => p.State != ConstructionState.Paused)
+                    .SelectMany(p => p.OwnedClearCells).Select(c => c.GetEdifice(pawn.Map)).Where(t => t != null &&
+                        pawn.Map.designationManager.DesignationOn(t, DesignationDefOf.Deconstruct) != null));
             if (def.workType == WorkTypeDefOf.Hauling && FoodDeliveryNeeded(pawn))
                 targets = targets.Concat(pawn.Map.listerThings.ThingsInGroup(ThingRequestGroup.HaulableEver).Where(t => FoodTarget(pawn, t)));
             return targets.Distinct();
@@ -39,15 +43,19 @@ namespace AutonomousRim.Execution
         public override float GetPriority(Pawn pawn, TargetInfo target)
         {
             if (def.workType == WorkTypeDefOf.Hauling && FoodDeliveryNeeded(pawn) && FoodTarget(pawn, target.Thing)) return 5000;
-            var p = pawn.Map.GetComponent<AutonomousRimMapComponent>().BaseProjects.FirstOrDefault(r => BaseConstructionManager.Tasks(r).Any(t => t.Pending == target.Thing));
+            var p = pawn.Map.GetComponent<AutonomousRimMapComponent>().BaseProjects.FirstOrDefault(r => BaseConstructionManager.Tasks(r).Any(t => t.Pending == target.Thing) || r.OwnedClearCells.Contains(target.Cell));
             if (p == null) return 0;
-            return 4000 - (int)p.Priority * 1000 + (p.Kind == "Estoque" ? 400 : p.Kind == "Quarto" ? 300 : p.Kind == "Cozinha" ? 200 : p.Kind == "Freezer" ? 100 : 0);
+            return 4000 - (int)p.Priority * 1000 + 400 - RingBasePlanner.Rank(p.Kind) * 60;
         }
         public override Danger MaxPathDanger(Pawn pawn) => Danger.None;
         public override bool HasJobOnThing(Pawn pawn, Thing t, bool forced = false) => JobOnThing(pawn, t, false) != null;
         public override Job JobOnThing(Pawn pawn, Thing t, bool forced = false)
         {
             if (ShouldSkip(pawn, false) || t == null || !t.Spawned || !t.Position.IsInAllowedArea(pawn)) return null;
+            if (def.workType == WorkTypeDefOf.Construction && pawn.Map.GetComponent<AutonomousRimMapComponent>().BaseProjects
+                .Any(p => p.State != ConstructionState.Paused && p.OwnedClearCells.Contains(t.Position)) &&
+                pawn.Map.designationManager.DesignationOn(t, DesignationDefOf.Deconstruct) != null)
+                return ((WorkGiver_Scanner)DefDatabase<WorkGiverDef>.GetNamed("Deconstruct").Worker).JobOnThing(pawn, t, false);
             if (def.workType == WorkTypeDefOf.Hauling && FoodDeliveryNeeded(pawn) && FoodTarget(pawn, t))
                 return ((WorkGiver_Scanner)DefDatabase<WorkGiverDef>.GetNamed("HaulGeneral").Worker).JobOnThing(pawn, t, false);
             var ai = pawn.Map.GetComponent<AutonomousRimMapComponent>();

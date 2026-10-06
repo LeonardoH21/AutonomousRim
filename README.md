@@ -21,10 +21,12 @@ The long-term goal is a full autonomous player capable of perceiving the map, ev
 - Weapon/apparel recommendations and optional automatic native equip/wear jobs
 - Trait-aware weapon roles, effective aiming/accuracy and audited active trait modifiers
 - Optional automatic hunting, butchering/meal bills and skill/passion-based work priorities
-- Initial optional construction of 5×5 bedrooms, 6×6 stockroom and 4×4 kitchen, using native blueprints
+- Approved ring layout with 12×11 storage, separate 4×4 kitchen/butchery, dining, 5×5 bedrooms sized to population, crop corners, power yard and perimeter, using bounded native construction
 - Fixed HUD buttons for base, equipment, food, work priorities, ground-item allow, plan preview and disable-all
 - Hostile composition, heuristic risk and presence transitions checked every 120 ticks
 - Structured project layout for future AI systems
+
+New colonies start with base construction enabled; existing saves retain their saved toggle and invested layouts. The approved drawing and priorities are saved in [BASE-ANEL.md](docs/BASE-ANEL.md) and [the floor plan](docs/base-anel.html). Ring layout/priority/zone/save-load checks pass; full native construction of the expanded ring base still needs a longer trial.
 
 ## Planned architecture
 

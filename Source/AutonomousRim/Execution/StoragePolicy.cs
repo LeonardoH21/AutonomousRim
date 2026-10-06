@@ -25,6 +25,7 @@ namespace AutonomousRim.Execution
                 bool allow = kind == "Freezer" ? IsFood(def) && !def.IsCorpse && !humanMeats.Contains(def) :
                     kind == "Medicamentos" ? def.IsMedicine :
                     kind == "Armas" ? def.IsWeapon :
+                    kind == "Roupas" ? def.IsApparel :
                     kind == "Despejo" ? animalCorpse || def.thingCategories?.Contains(DefDatabase<ThingCategoryDef>.GetNamed("StoneChunks")) == true :
                     !IsFood(def) && !def.IsCorpse && def.defName != "Chemfuel" &&
                         def.thingCategories?.Contains(DefDatabase<ThingCategoryDef>.GetNamed("MortarShells")) != true;
