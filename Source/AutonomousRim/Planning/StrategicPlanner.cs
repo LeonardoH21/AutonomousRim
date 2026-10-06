@@ -32,7 +32,7 @@ namespace AutonomousRim.Planning
         {
             if (map == null || state == null || state.ColonistCount <= 0) return 0;
             int score = 0;
-            bool foodStable = state.DailyFoodNutrition <= 0f || state.EstimatedFoodDays >= ColonyPolicy.TargetFoodDays;
+            bool foodStable = state.DailyFoodNutrition <= 0f || state.EstimatedFoodDays >= state.TargetFoodDays;
             bool foodRecoverable = state.DailyFoodNutrition <= 0f || state.EstimatedFoodDays >= 1f;
             score += foodStable ? 25 : foodRecoverable ? 14 : 0;
             score += state.HostilePawnCount == 0 ? 15 : 0;
@@ -70,7 +70,7 @@ namespace AutonomousRim.Planning
             int beds=buildings.OfType<Building_Bed>().Count(b=>!b.Medical && !b.ForPrisoners);
             bool medical=buildings.OfType<Building_Bed>().Any(b=>b.Medical);
             int meds=items.Where(t=>t.def.IsMedicine).Sum(t=>t.stackCount);
-            bool foodLow=state.DailyFoodNutrition>0 && state.EstimatedFoodDays<ColonyPolicy.TargetFoodDays;
+            bool foodLow=state.DailyFoodNutrition>0 && state.EstimatedFoodDays<state.TargetFoodDays;
             bool energy=buildings.OfType<ThingWithComps>().Any(b=>b.TryGetComp<CompPowerTrader>()?.PowerOn==true);
             bool poorWeapons=colonists.Count(p=>p.equipment?.Primary==null)>0;
             int stability = CalculateStability(map, state, rooms);

@@ -182,8 +182,14 @@ namespace AutonomousRim.Planning
 
         public static string Plan(Map map, List<RoomProject> projects)
         {
-            if (projects.Count == 0 || projects.Any(p => p.Kind == RingBasePlanner.ReservationKind))
-                return RingBasePlanner.Plan(map, projects);
+            if (projects.Any(p => p.Kind == RingBasePlanner.ReservationKind)) return RingBasePlanner.Plan(map, projects);
+            if (projects.Count == 0)
+            {
+                string preferred = RingBasePlanner.Plan(map, projects);
+                if (projects.Count > 0) return preferred;
+                // A colony must not idle forever while searching for an enormous
+                // perfect clearing. Use the existing compact/individual-room planner.
+            }
             Pawn anchorPawn = map.mapPawns.FreeColonistsSpawned.FirstOrDefault();
             if (anchorPawn == null) return "Sem colonos neste mapa.";
             int existingBedrooms = map.listerBuildings.AllBuildingsColonistOfClass<Building_Bed>()
@@ -220,6 +226,7 @@ namespace AutonomousRim.Planning
                     AddUtilityModules(map, compact, projects);
                     AddInitialSupport(map, compact, projects);
                     projects.AddRange(compact);
+                    AddStarterCrops(map, projects, anchorPawn.Position);
                     return $"Plano compacto: {compact.Count} módulos novos, corredor de 2 células e duas saídas. {CompactBasePlanner.ClimateSummary(map)}";
                 }
                 // Do not make all basic storage depend on finding a large uninterrupted rectangle.
@@ -251,10 +258,30 @@ namespace AutonomousRim.Planning
                 projects.AddRange(utilities.Except(independent));
                 AddInitialSupport(map, supportOnly, projects);
                 if (supportOnly.FirstOrDefault()?.Kind == "Apoio inicial") projects.Insert(0, supportOnly[0]);
+                AddStarterCrops(map, projects, anchorPawn.Position);
                 return projects.Count > 0 ? "Plano por salas independentes: terreno não comporta bloco compacto; módulos básicos preservam acessos." :
                     "Sem terreno livre/acessível nem para sala inicial; limpar obstáculos pelo trabalho normal ou escolher outro local.";
             }
+            AddStarterCrops(map, projects, anchorPawn.Position);
             return $"Plano: {projects.Count} módulos. {CompactBasePlanner.ClimateSummary(map)}";
+        }
+
+        private static void AddStarterCrops(Map map, List<RoomProject> projects, IntVec3 center)
+        {
+            if (projects.Any(p => p.Crop != null && p.Kind != "Plantação inicial") ||
+                map.zoneManager.AllZones.OfType<Zone_Growing>().Any(z => !projects.Any(p => p.GrowingZone == z))) return;
+            int needed = System.Math.Max(1, (map.mapPawns.FreeColonistsSpawnedCount + 1) / 2) - projects.Count(p => p.Kind == "Plantação inicial");
+            if (needed <= 0) return;
+            foreach (var cell in GenRadial.RadialCellsAround(center, 45, true))
+            {
+                var rect = new CellRect(cell.x, cell.z, 6, 6);
+                if (projects.Any(p => p.Footprint.ExpandedBy(1).Overlaps(rect)) || rect.Cells.Any(c => !c.InBounds(map) || c.Fogged(map) ||
+                    c.CloseToEdge(map, 10) || c.GetZone(map) != null || c.Roofed(map) || c.GetTerrain(map).fertility < 0.7f ||
+                    c.GetEdifice(map) != null) || !map.mapPawns.FreeColonistsSpawned.Any(p => p.CanReach(cell, PathEndMode.OnCell, Danger.None))) continue;
+                projects.Add(new RoomProject { Kind = "Plantação inicial", Origin = cell - new IntVec3(1, 0, 1), InteriorSize = 6,
+                    RequiresRoof = false, Priority = ConstructionPriority.High, Crop = DefDatabase<ThingDef>.GetNamed("Plant_Rice"), StorageCells = rect.Cells.ToList() });
+                if (--needed <= 0) break;
+            }
         }
     }
 }

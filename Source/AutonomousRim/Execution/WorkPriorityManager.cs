@@ -40,7 +40,7 @@ namespace AutonomousRim.Execution
                 state.EstimatedFoodDays >= 1f ? pawns.Where(p => !p.WorkTypeIsDisabled(WorkTypeDefOf.Research) && (!skilledFrames || p != mainBuilder))
                 .OrderByDescending(p => Score(p, WorkTypeDefOf.Research, 0)).FirstOrDefault() : null;
             bool foodUrgent = state.DailyFoodNutrition > 0f && state.EstimatedFoodDays < 1f;
-            bool foodTight = state.DailyFoodNutrition > 0f && state.EstimatedFoodDays < ColonyPolicy.TargetFoodDays;
+            bool foodTight = state.DailyFoodNutrition > 0f && state.EstimatedFoodDays < state.TargetFoodDays;
             WorkTypeDef cookingWork = DefDatabase<WorkTypeDef>.GetNamedSilentFail("Cooking");
             bool medicalUrgent = state.DownedColonists > 0 || pawns.Any(p => p.health?.summaryHealth?.SummaryHealthPercent < 0.75f);
             bool fireUrgent = ScheduleManager.HasFire(map);
@@ -71,7 +71,7 @@ namespace AutonomousRim.Execution
                         (state.DailyFoodNutrition > 0f && state.EstimatedFoodDays < 1f ? 1 : 2) : 0) : 3;
                     if (pawn == specialist && work != WorkTypeDefOf.Hunting)
                         priority = work == WorkTypeDefOf.Doctor ||
-                            (state.DailyFoodNutrition > 0f && state.EstimatedFoodDays < ColonyPolicy.TargetFoodDays && (work.defName == "Cooking" || work == WorkTypeDefOf.Growing)) ? 1 : 2;
+                            (state.DailyFoodNutrition > 0f && state.EstimatedFoodDays < state.TargetFoodDays && (work.defName == "Cooking" || work == WorkTypeDefOf.Growing)) ? 1 : 2;
                     if (work.defName == "Firefighter" || work.defName == "Patient" || work.defName == "BedRest" || work.defName == "Basic") priority = 1;
                     // Equal top priority lets native constructors help on funded simple
                     // frames before unrelated hauling; skill checks still apply.
@@ -103,6 +103,26 @@ namespace AutonomousRim.Execution
             Raise(cookingWork,foodUrgent);Raise(WorkTypeDefOf.Growing,foodUrgent);
             Raise(WorkTypeDefOf.Doctor,medicalUrgent);Raise(DefDatabase<WorkTypeDef>.GetNamedSilentFail("Firefighter"),fireUrgent);
             Raise(DefDatabase<WorkTypeDef>.GetNamedSilentFail("Mining"),resourceUrgent);Raise(WorkTypeDefOf.PlantCutting,resourceUrgent);
+            // Construction wins native ties against Growing. Protect a food worker
+            // before the first harvest, rather than waiting for a starvation alarm.
+            bool cropPending = map.zoneManager.AllZones.OfType<Zone_Growing>().Any(z => z.allowSow && z.Cells.Any(c =>
+                c.GetPlant(map) == null || c.GetPlant(map).def != z.GetPlantDefToGrow() || c.GetPlant(map).HarvestableNow));
+            Pawn grower = cropPending ? pawns.Where(p => !p.WorkTypeIsDisabled(WorkTypeDefOf.Growing))
+                .OrderByDescending(p => Score(p, WorkTypeDefOf.Growing, 0)).FirstOrDefault() : null;
+            Pawn cook = cookingWork != null && state.StoredMealCount < Math.Max(10, state.ColonistCount * 3) ?
+                pawns.Where(p => !p.WorkTypeIsDisabled(cookingWork)).OrderByDescending(p => Score(p, cookingWork, 0)).FirstOrDefault() : null;
+            foreach (Pawn pawn in pawns.Where(p => p == grower || p == cook))
+            {
+                if (pawn == grower) SetManagedPriority(pawn, WorkTypeDefOf.Growing, 1, changes);
+                if (pawn == cook) SetManagedPriority(pawn, cookingWork, 1, changes);
+                if (construction && pawns.Count > 1)
+                {
+                    if (!pawn.WorkTypeIsDisabled(WorkTypeDefOf.Construction)) SetManagedPriority(pawn, WorkTypeDefOf.Construction, 2, changes);
+                    if (!pawn.WorkTypeIsDisabled(WorkTypeDefOf.Hauling)) SetManagedPriority(pawn, WorkTypeDefOf.Hauling, 2, changes);
+                    if (!pawn.WorkTypeIsDisabled(WorkTypeDefOf.Mining)) SetManagedPriority(pawn, WorkTypeDefOf.Mining, 2, changes);
+                    if (!pawn.WorkTypeIsDisabled(WorkTypeDefOf.PlantCutting)) SetManagedPriority(pawn, WorkTypeDefOf.PlantCutting, 2, changes);
+                }
+            }
         }
 
         private static float Score(Pawn pawn, WorkTypeDef work, int load)

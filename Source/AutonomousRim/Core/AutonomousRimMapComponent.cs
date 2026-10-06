@@ -32,6 +32,7 @@ namespace AutonomousRim.Core
         private bool plannedClimateResearch;
         private List<ConstructionOrder> constructionOrders = new List<ConstructionOrder>();
         private List<Thing> constructionGathering = new List<Thing>();
+        private List<IntVec3> gatheringMineCells = new List<IntVec3>();
         public string GatheringStatus { get; private set; } = "Coleta desativada.";
         private bool lootAutomation = true;
         private int lastLootTick = -600;
@@ -73,7 +74,16 @@ namespace AutonomousRim.Core
             Scribe_Values.Look(ref plannedPawnCount, "plannedPawnCount");
             Scribe_Values.Look(ref plannedClimateResearch, "plannedClimateResearch");
             Scribe_Collections.Look(ref constructionOrders, "constructionOrders", LookMode.Deep);
-            Scribe_Collections.Look(ref constructionGathering, "constructionGathering", LookMode.Reference);
+            // Native map compression does not preserve individual mineable IDs.
+            // Save their cells; keep ordinary plant references for wood gathering.
+            if (Scribe.mode == LoadSaveMode.Saving)
+            {
+                gatheringMineCells = constructionGathering.FindAll(t => t is Mineable && t.Spawned).ConvertAll(t => t.Position);
+                var plants = constructionGathering.FindAll(t => !(t is Mineable));
+                Scribe_Collections.Look(ref plants, "constructionGathering", LookMode.Reference);
+            }
+            else Scribe_Collections.Look(ref constructionGathering, "constructionGathering", LookMode.Reference);
+            Scribe_Collections.Look(ref gatheringMineCells, "gatheringMineCells", LookMode.Value);
             Scribe_Values.Look(ref lootAutomation, "lootAutomation");
             Scribe_Values.Look(ref lastLootTick, "lastLootTick", -600);
             Scribe_Collections.Look(ref releasedLoot, "releasedLoot", LookMode.Reference);
@@ -235,6 +245,9 @@ namespace AutonomousRim.Core
         public override void FinalizeInit()
         {
             base.FinalizeInit();
+            if (gatheringMineCells != null)
+                foreach (var cell in gatheringMineCells)
+                    if (cell.InBounds(map) && cell.GetEdifice(map) is Mineable rock && !constructionGathering.Contains(rock)) constructionGathering.Add(rock);
             CurrentState = ColonyStateScanner.Scan(map);
         }
 
@@ -283,7 +296,7 @@ namespace AutonomousRim.Core
             if (workAutomation && Find.PlaySettings.useWorkPriorities) WorkPriorityManager.Apply(map, CurrentState, workChanges,
                 baseAutomation && baseProjects.Exists(p => !p.Completed && p.Priority <= ConstructionPriority.High), constructionGathering.Count > 0, strategyAutomation && Find.ResearchManager.GetProject() != null);
             if (scheduleAutomation) ScheduleStatus = ScheduleManager.Apply(map, CurrentState, scheduleChanges, true);
-            ManagementStatus = foodAutomation ? FoodManager.Apply(map, CurrentState, ownedHunts, ownedBills) : "Comida / roupas automáticas desativadas.";
+            ManagementStatus = foodAutomation ? FoodManager.Apply(map, CurrentState, ownedHunts, ownedBills, baseProjects) : "Comida / roupas automáticas desativadas.";
             if (workAutomation) ManagementStatus += Find.PlaySettings.useWorkPriorities
                 ? " Prioridades ativas; alterações manuais do jogador são preservadas."
                 : " Prioridades pausadas: o modo numérico de trabalho foi desligado pelo jogador.";

@@ -93,7 +93,11 @@ namespace AutonomousRim.UI
             listing.Label(threat.LastTransition);
             listing.Label("Threat detection is based on hostile pawns, not raid incidents. Turrets, traps and special abilities are not modeled.");
             listing.Label($"Comida armazenada: {state.FoodNutrition:0.0} nutrição / ~{state.EstimatedFoodDays:0.0} dias | Consumo dos colonos: {state.DailyFoodNutrition:0.0}/dia");
-            listing.Label("Reserva estimada com fome e dietas dos colonos; visitantes, animais, acesso físico e deterioração futura não estão incluídos.");
+            listing.Label($"Reserva de comida: {state.FoodReserveLevel} — {state.FoodReserveStatus}");
+            listing.Label($"Cooking: {state.PreferredMeal} | alvo dinâmico {state.CookingTargetCount} refeições | reserva longa {state.StrategicMealTargetCount}");
+            listing.Label($"Perecíveis: {state.PerishableFoodNutrition:0.0} | longa duração: {state.LongLifeFoodNutrition:0.0} | próximos de estragar: {state.NearSpoilingNutrition:0.0}");
+            listing.Label($"Freezer: {state.FreezerUsedCells}/{state.FreezerCapacityCells} células ({state.FreezerFillRatio:P0}) | {state.FoodStorageStatus}");
+            listing.Label("Reserva em dias usa fome e dietas dos colonos, alimentos permitidos no mapa e risco de deterioração; visitantes, animais e produção futura são excluídos.");
             foreach (var resource in state.Resources)
                 listing.Label($"{resource.Key}: {resource.Value}");
             listing.GapLine();

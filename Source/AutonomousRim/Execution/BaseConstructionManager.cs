@@ -43,10 +43,13 @@ namespace AutonomousRim.Execution
         public static IEnumerable<ConstructionTask> CurrentStage(Map map, RoomProject p) => p.Shell.All(t => t.Complete(map)) ? p.Furniture : p.Shell;
         private static bool DependsOn(Map map, RoomProject p, List<RoomProject> all)
         {
+            if (p.Kind == "Plantação inicial") return false;
             if (p.Kind != "Preparação do terreno" && p.Kind != RingBasePlanner.ReservationKind && all.Any(r => r.Kind == "Preparação do terreno" && !r.Completed)) return true;
             if (p.Crop != null || p.Kind == "Muro externo" || p.Kind == "Roupas" || p.Kind == "Baterias" || p.Kind == "Pesquisa" || p.Kind == "Fabricação" || p.Kind == "Multiuso")
                 return all.Any(r => !r.Completed && (r.Priority == ConstructionPriority.Critical || r.Kind == "Quarto"));
-            if (p.Kind == "Corredor") return all.Where(r => r.RequiresRoof && r != p).Any(r => !r.Shell.All(t => t.Complete(map)));
+            // Population growth can add a second compact block. Its corridors
+            // must wait for rooms, never for one another (a dependency cycle).
+            if (p.Kind == "Corredor") return all.Where(r => r.RequiresRoof && r.Kind != "Corredor").Any(r => !r.Shell.All(t => t.Complete(map)));
             // Power is independent of enclosing every room; valid reserved cells can be built early.
             if (p.Kind == "Energia e climatização") return false;
             if (p.Kind == "Conforto dos quartos") return all.Where(r => r.Kind == "Quarto").Any(r => !r.Completed);

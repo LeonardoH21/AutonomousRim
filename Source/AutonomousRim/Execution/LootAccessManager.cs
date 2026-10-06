@@ -41,7 +41,7 @@ namespace AutonomousRim.Execution
                 (t.TryGetComp<CompRottable>() == null || t.TryGetComp<CompRottable>().Stage == RotStage.Fresh) &&
                 pawns.Any(p => p.needs?.food != null && FoodUtility.WillEat(p, t, p, true, false) &&
                     (p.foodRestriction?.CurrentFoodPolicy == null || p.foodRestriction.CurrentFoodPolicy.filter.Allows(t)));
-            float foodNeeded = Math.Max(0f, state.DailyFoodNutrition * ColonyPolicy.TargetFoodDays -
+            float foodNeeded = Math.Max(0f, state.DailyFoodNutrition * state.TargetFoodDays -
                 ground.Where(t => !t.IsForbidden(Faction.OfPlayer) && edible(t)).Sum(t => t.GetStatValue(StatDefOf.Nutrition) * t.stackCount));
             int medicineNeeded = Math.Max(0, state.ColonistCount * 2 - ground.Where(t => t.def.IsMedicine && !t.IsForbidden(Faction.OfPlayer)).Sum(t => t.stackCount));
             var materials = new Dictionary<ThingDef, int>();

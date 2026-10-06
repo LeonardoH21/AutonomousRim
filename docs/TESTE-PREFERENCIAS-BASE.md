@@ -8,7 +8,7 @@
 - Hospital 5×5: duas camas comuns marcadas Medical e três células somente para medicina, em Critical.
 - Oficina 5×5 com corte de pedras/costura manual conforme pesquisas; estoque de armas 4×4 posterior aos essenciais.
 - Prateleiras pequenas após as estruturas essenciais, com pesquisa de Móveis complexos. Usam filtros do setor e prioridade acima do chão. Configuração única preserva edições posteriores.
-- Comida x4 em 20/20: receita mista preferida quando houver ingredientes e Cooking 6, simples como alternativa. Limite compartilhado de refeições e exclusão de ingredientes humanos.
+- Comida x4 com alvo dinâmico por dias de reserva (mínimo operacional 20): receita Fine preferida quando houver ingredientes e Cooking 6, Simple na escassez e Lavish na abundância. Limite compartilhado de refeições e exclusão de ingredientes humanos.
 - Roupas em 3/3: calça, camisa e parka/duster conforme temperatura. Ordens nativas dependem de recursos e trabalhadores; allow também considera materiais de costura necessários.
 - Allow de até oito pilhas por ciclo, preservando acesso, ameaças, necessidade e reproibição manual.
 - Coleta nativa também atende aos módulos posteriores e às reservas de materiais das melhorias.

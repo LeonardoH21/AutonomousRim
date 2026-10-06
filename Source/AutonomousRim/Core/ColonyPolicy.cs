@@ -13,9 +13,15 @@ namespace AutonomousRim.Core
 
         public static int MealTarget(float dailyNutrition, float mealNutrition)
         {
-            if (dailyNutrition <= 0f || mealNutrition <= 0f) return 0;
-            return Math.Min(400, (int)Math.Ceiling(dailyNutrition * TargetFoodDays / mealNutrition));
+            return MealTarget(dailyNutrition, mealNutrition, TargetFoodDays);
         }
+
+        public static int MealTarget(float dailyNutrition, float mealNutrition, float targetDays)
+        {
+            if (dailyNutrition <= 0f || mealNutrition <= 0f) return 0;
+            return Math.Min(400, Math.Max(1, (int)Math.Ceiling(dailyNutrition * Math.Max(1f, targetDays) / mealNutrition)));
+        }
+
 
         public static float WorkScore(int level, int passion, int specialistLoad)
         {

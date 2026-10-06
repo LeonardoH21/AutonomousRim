@@ -1,7 +1,10 @@
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using RimWorld;
 using Verse;
+using AutonomousRim.Core;
+using AutonomousRim.Planning;
 
 namespace AutonomousRim.Execution
 {
@@ -30,6 +33,57 @@ namespace AutonomousRim.Execution
                     !IsFood(def) && !def.IsCorpse && def.defName != "Chemfuel" &&
                         def.thingCategories?.Contains(DefDatabase<ThingCategoryDef>.GetNamed("MortarShells")) != true;
                 if (allow) filter.SetAllow(def, true);
+            }
+        }
+
+        public static string ManageFoodStorage(Map map, ColonyState state, IReadOnlyList<RoomProject> projects)
+        {
+            if (map == null || state == null) return "Armazenamento de comida aguardando mapa.";
+            var freezer = projects?.FirstOrDefault(p => p.Kind == "Freezer");
+            var general = projects?.FirstOrDefault(p => p.Kind == "Estoque");
+            if (freezer?.Stockpile != null)
+            {
+                var settings = freezer.Stockpile.GetStoreSettings();
+                settings.Priority = state.FreezerNearFull ? StoragePriority.Critical : StoragePriority.Important;
+            }
+            if (general?.Stockpile != null)
+            {
+                var settings = general.Stockpile.GetStoreSettings();
+                settings.Priority = StoragePriority.Normal;
+            }
+            if (state.FreezerNearFull && freezer != null)
+                QueueFreezerShelves(map, freezer);
+
+            if (state.FreezerCapacityCells <= 0)
+                return "Sem freezer funcional; alimentos perecíveis aguardam refrigeração.";
+            if (state.FreezerNearFull)
+                return "Freezer quase cheio: prioridade Critical para entrada, produção excessiva pausada e prateleiras/expansão avaliadas.";
+            return $"Freezer organizado: {state.FreezerFillRatio:P0} ocupado; comida aceita no frio e estoque geral mantém filtro sem refeições.";
+        }
+
+        private static void QueueFreezerShelves(Map map, RoomProject freezer)
+        {
+            ThingDef shelf = DefDatabase<ThingDef>.GetNamedSilentFail("ShelfSmall");
+            if (shelf == null || !shelf.IsResearchFinished) return;
+            int existing = freezer.Furniture.Count(t => t.Def?.defName == shelf.defName);
+            int desired = Math.Min(4, Math.Max(2, existing + 1));
+            var occupied = new HashSet<IntVec3>(freezer.Shell.SelectMany(t => GenAdj.OccupiedRect(t.Position, t.Rotation, t.Def.Size)));
+            occupied.UnionWith(freezer.Furniture.Where(t => t.Def is ThingDef).SelectMany(t => GenAdj.OccupiedRect(t.Position, t.Rotation, t.Def.Size)));
+            while (existing < desired)
+            {
+                IntVec3 cell = freezer.Interior.Cells.FirstOrDefault(c => !occupied.Contains(c) &&
+                    c.GetEdifice(map) == null && (c.GetZone(map) == null || c.GetZone(map) == freezer.Stockpile));
+                if (!cell.IsValid) break;
+                var task = new ConstructionTask
+                {
+                    Def = shelf, Position = cell, Stuff = shelf.MadeFromStuff ? ThingDefOf.WoodLog : null,
+                    Rotation = Rot4.North, StorageKind = "Freezer"
+                };
+                freezer.Furniture.Add(task);
+                occupied.Add(cell);
+                existing++;
+                freezer.Completed = false;
+                freezer.Priority = ConstructionPriority.High;
             }
         }
     }

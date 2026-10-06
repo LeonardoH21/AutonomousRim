@@ -19,8 +19,12 @@ namespace AutonomousRim.Execution
                 pawn.WorkTypeIsDisabled(def.workType) || pawn.workSettings.GetPriority(def.workType) == 0 ||
                 pawn.Map.mapPawns.AllPawnsSpawned.Any(p => !p.Dead && !p.Downed && p.HostileTo(Faction.OfPlayer));
         }
-        private static bool FoodDeliveryNeeded(Pawn pawn) => pawn.Map.GetComponent<AutonomousRimMapComponent>().FoodAutomation &&
-            pawn.Map.GetComponent<AutonomousRimMapComponent>().CurrentState?.EstimatedFoodDays < ColonyPolicy.TargetFoodDays;
+        private static bool FoodDeliveryNeeded(Pawn pawn)
+        {
+            var ai = pawn.Map?.GetComponent<AutonomousRimMapComponent>();
+            var state = ai?.CurrentState;
+            return ai?.FoodAutomation == true && state != null && state.DailyFoodNutrition > 0f && state.EstimatedFoodDays < state.TargetFoodDays;
+        }
         private static bool FoodTarget(Pawn pawn, Thing t) => t?.Spawned == true && t.def.ingestible?.HumanEdible == true &&
             t.def.ingestible.drugCategory == DrugCategory.None && !(t is Corpse) && !t.IsInAnyStorage() && !t.IsForbidden(pawn) && !t.Position.Fogged(pawn.Map) &&
             (t.TryGetComp<CompRottable>() == null || t.TryGetComp<CompRottable>().Stage == RotStage.Fresh) &&

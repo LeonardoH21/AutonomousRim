@@ -77,7 +77,11 @@ namespace AutonomousRim.RuntimeChecks
             component.SetAutomation(true, true);
             Check(Find.PlaySettings.useWorkPriorities, "Numeric priorities were not activated.");
             var mealBill = stove.BillStack.Bills.OfType<Bill_Production>().FirstOrDefault(b => b.recipe.defName == "CookMealSimpleBulk" || b.recipe.defName == "CookMealFineBulk");
-            Check(mealBill != null && mealBill.targetCount == 20 && mealBill.pauseWhenSatisfied && mealBill.unpauseWhenYouHave == 20, "Native bulk-meal 20/20 bill missing.");
+            var foodState = component.CurrentState ?? ColonyStateScanner.Scan(map);
+            Check(mealBill != null && mealBill.targetCount >= 20 && mealBill.targetCount == foodState.CookingTargetCount &&
+                mealBill.pauseWhenSatisfied && mealBill.unpauseWhenYouHave == mealBill.targetCount, "Dynamic bulk-meal target bill missing.");
+            Check(foodState.TargetFoodDays >= ColonyPolicy.TargetFoodDays && !string.IsNullOrEmpty(foodState.FoodReserveLevel) &&
+                foodState.FoodReserveStatus.Contains("dias"), "Food reserve days classification missing.");
             Check(butcher.BillStack.Bills.Any(b => b.recipe.defName == "ButcherCorpseFlesh"), "Butchering bill missing.");
             Check(WorkPriorityManager.CanHunt(hunter), "Prepared ranged hunter is not eligible.");
             Pawn prey = PawnGenerator.GeneratePawn(DefDatabase<PawnKindDef>.GetNamed("Hare"));

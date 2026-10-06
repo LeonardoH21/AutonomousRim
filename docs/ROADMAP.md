@@ -53,7 +53,7 @@
 - [x] Initial optional skill/passion-based work priorities with manual overrides and restoration
 - [x] Initial optional food production: passive-wildlife hunting, butchering and simple-meal orders
 - [ ] Full agricultural planning and diet-aware recipe optimization
-- [x] Initial native clothing bills (three spare pants/shirts/temperature-appropriate coats) and bulk meals at 20/20; full crafting/material selection remains pending
+- [x] Dynamic native cooking bills by survival-day reserve, recipe suitability, ingredient availability, seasonal risk and freezer capacity; clothing bills remain three spare pants/shirts/temperature-appropriate coats
 - [ ] Research selection
 - [x] Initial optional native weapon/apparel assignments with player-policy and forced-item protection
 - [ ] Medical management

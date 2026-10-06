@@ -71,4 +71,12 @@ Antes de acelerar pesquisa tecnológica ou a rota da nave, o planejador calcula 
 
 A avaliação de terreno registra teto espesso, espaço livre e bordas conectadas de uma possível área montanhosa. Uma montanha candidata recebe um plano de análise para entradas, duas fugas, corredores, portas, chokepoints, melee block, linhas de tiro, temperatura, infestação e expansão por etapas. Esse registro não autoriza escavação automática: o anel externo continua sendo a opção segura até que os riscos sejam validados no mapa.
 
+### Cooking, Bills e reserva alimentar
+
+O scanner transforma comida disponível em dias de sobrevivência usando o consumo real dos colonos e as dietas ativas. O alvo aumenta em inverno, extremos térmicos e colônias grandes. A HUD mostra a classificação **Crítica**, **Baixa**, **Normal**, **Alta** ou **Excessiva**, além da nutrição perecível, reserva longa, alimentos próximos de estragar e o alvo de refeições.
+
+As Bills de Cooking são nativas e usam TargetCount. O alvo é recalculado pela demanda diária e pelos dias desejados, com mínimo operacional de 20 e máximo de 400. A IA prefere Simple em escassez, Fine em situação normal e Lavish apenas com abundância, ingredientes e cozinheiro compatível. Pemmican ou Packaged Survival Meal recebem uma Bill separada para a reserva estratégica quando existe capacidade livre. Bills manuais são preservadas; somente Bills de comida criadas pela IA podem ser trocadas ou pausadas.
+
+O estoque geral da IA continua sem comida. Freezer e prateleiras aceitam alimentos e mantêm prioridade Important; quando as células frias chegam a 80% de ocupação, o freezer passa a Critical, a produção principal pausa se a reserva já estiver segura e prateleiras pesquisadas podem ser enfileiradas no módulo do freezer. Comida próxima de estragar é sinalizada para consumo/processamento primeiro. A expansão física do cômodo ainda depende do planejador de base; não há criação instantânea de espaço.
+
 Quando uma nova presença hostil é detectada, a IA registra um snapshot de força amiga/inimiga, composição ranged/melee, risco, feridos e comida e cria um save separado `AutonomousRim_Raid_*`. Até doze snapshots ficam no histórico do save da colônia para futuras comparações. O checkpoint não sobrescreve o save do jogador e não reinicia a partida. A análise não treina um modelo externo: preserva evidências estruturadas para decisões táticas futuras.
