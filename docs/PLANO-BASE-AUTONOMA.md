@@ -1,6 +1,6 @@
 # Plano de base autônoma
 
-Especificação de prioridades definida em 05/10/2026. Este documento orienta a próxima implementação; a construção inicial de quartos, estoque e cozinha foi implementada após esta especificação; plantio, energia e fabricação de roupas ainda não são executados automaticamente nesta versão. Refeições/abate em bancadas existentes e autoequipamento já estão implementados.
+Especificação de prioridades definida em 05/10/2026. Este documento orienta a próxima implementação; a construção inicial de quartos, estoque e cozinha foi implementada após esta especificação; plantio e fabricação de roupas continuam pendentes; energia/climatização pesquisadas já integram novos blocos compactos. Refeições/abate em bancadas existentes e autoequipamento já estão implementados.
 
 ## Dimensões e organização
 
@@ -103,4 +103,4 @@ Os limiares de orçamento, tamanho do freezer e quantidade de camas médicas sã
 
 ## Implementação inicial e controles
 
-A HUD Rim AI possui botões fixos para base automática, itens/autoequipamento, alimentação e prioridades, além de prévia do plano e desligamento geral. A implementação constrói quartos/estoque/cozinha/sala social em blocos compactos, corredor de duas células com duas saídas e, com pesquisa disponível, ventilação, geradores/cabos, aquecedores/resfriadores e iluminação. Conforto e pisos seguem as etapas básicas; pedra é selecionada quando há estoque suficiente. Veja [layout, estilo e limites de climatização](LAYOUT-COMPACTO.md). Cobertura e zona de estoque seguem a conclusão real, com lotes limitados e orçamento de material. Agricultura, freezer, hospital, craft e defesa continuam pendentes; obtenção automática de recursos, pesquisas e reforma de projetos antigos ainda não são executadas.
+A HUD Rim AI possui botões fixos para base automática, itens/autoequipamento, alimentação e prioridades, allow gradual dos itens do chão, além de prévia do plano e desligamento geral. A fila atual começa pelo estoque coberto, seguido de quartos, cozinha e sala social. Novos quartos reservam cama de casal e incluem cabeceira, cômoda e vaso. A implementação constrói quartos/estoque/cozinha/sala social em blocos compactos, corredor de duas células com duas saídas e, com pesquisa disponível, ventilação, geradores/cabos, aquecedores/resfriadores e iluminação. Conforto e pisos seguem as etapas básicas; pedra é selecionada quando há estoque suficiente. Veja [layout, estilo e limites de climatização](LAYOUT-COMPACTO.md). Cobertura e zona de estoque seguem a conclusão real, com lotes limitados e orçamento de material. Agricultura, freezer, hospital, craft e defesa continuam pendentes; obtenção automática de recursos, pesquisas e reforma de projetos antigos ainda não são executadas.

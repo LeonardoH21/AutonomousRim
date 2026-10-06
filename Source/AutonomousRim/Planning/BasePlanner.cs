@@ -35,14 +35,19 @@ namespace AutonomousRim.Planning
                 project.Shell.Add(new ConstructionTask { Def = door ? ThingDefOf.Door : ThingDefOf.Wall,
                     Stuff = material, Position = cell, Rotation = door ? Rot4.East : Rot4.North });
             }
-            if (kind == "Quarto") project.Furniture.Add(new ConstructionTask { Def = ThingDefOf.Bed,
-                Stuff = material, Position = origin + new IntVec3(2, 0, 3) });
+            if (kind == "Quarto")
+            {
+                project.ReserveDoubleBed = true;
+                project.Furniture.Add(new ConstructionTask { Def = ThingDefOf.Bed,
+                    Stuff = material, Position = origin + new IntVec3(4, 0, 5), Rotation = Rot4.South });
+            }
             if (kind == "Cozinha")
             {
                 project.Furniture.Add(new ConstructionTask { Def = DefDatabase<ThingDef>.GetNamed("FueledStove"),
                     Position = origin + new IntVec3(2, 0, 3), Stuff = ThingDefOf.Steel });
                 project.Furniture.Add(new ConstructionTask { Def = DefDatabase<ThingDef>.GetNamed("TableButcher"),
                     Position = origin + new IntVec3(2, 0, 1), Stuff = material, Rotation = Rot4.South });
+                project.Furniture.Add(new ConstructionTask { Def = ThingDefOf.Stool, Stuff = material, Position = origin + new IntVec3(2, 0, 2) });
             }
             if (kind == "Sala social")
             {
@@ -62,7 +67,11 @@ namespace AutonomousRim.Planning
                     if (!occupied.Add(cell) || !project.Footprint.Contains(cell)) { LastRoomFailure = kind + ": footprint " + task.Def.defName; return null; }
             }
             foreach (ConstructionTask task in project.Furniture.Where(t => t.Def is ThingDef thing && thing.hasInteractionCell))
-                if (occupied.Contains(task.Position + ((ThingDef)task.Def).interactionCellOffset.RotatedBy(task.Rotation))) { LastRoomFailure = kind + ": interaction " + task.Def.defName; return null; }
+            {
+                IntVec3 interaction = task.Position + ((ThingDef)task.Def).interactionCellOffset.RotatedBy(task.Rotation);
+                if (project.Shell.Concat(project.Furniture).Any(t => GenAdj.OccupiedRect(t.Position, t.Rotation, ((ThingDef)t.Def).size).Contains(interaction) &&
+                    ((ThingDef)t.Def).building?.isSittable != true)) { LastRoomFailure = kind + ": interaction " + task.Def.defName; return null; }
+            }
             return project;
         }
 
@@ -83,6 +92,7 @@ namespace AutonomousRim.Planning
             if ((!stove || !butcher) && !projects.Any(p => p.Kind == "Cozinha")) requests.Add(new KeyValuePair<string, int>("Cozinha", 4));
             if (!projects.Any(p => p.Kind == "Sala social") && !map.listerBuildings.AllBuildingsColonistOfClass<Building>().Any(b => b.GetRoom()?.Role?.defName == "RecRoom"))
                 requests.Add(new KeyValuePair<string, int>("Sala social", 6));
+            requests = requests.OrderBy(r => r.Key == "Estoque" ? 0 : r.Key == "Cozinha" ? 1 : r.Key == "Sala social" ? 2 : 3).ToList();
             if (requests.Count > 0)
             {
                 List<RoomProject> compact = CompactBasePlanner.Find(map, projects, anchorPawn.Position, requests);

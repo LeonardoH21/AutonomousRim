@@ -86,8 +86,8 @@ namespace AutonomousRim.RuntimeChecks
         {
             // Quicktest can generate a heavily mountainous map. Keep production's refusal
             // intact, then prepare terrain only in this disposable fixture to test execution.
-            IntVec3 origin = worker.Position + new IntVec3(-42, 0, -30);
-            var area = new CellRect(origin.x - 1, origin.z - 1, 24, 38);
+            IntVec3 origin = map.mapPawns.FreeColonistsSpawned.First().Position + new IntVec3(-42, 0, -30);
+            var area = new CellRect(origin.x - 2, origin.z - 3, 26, 40);
             var cells = new HashSet<IntVec3>(area.Cells);
             for (int x = origin.x + 8; x <= worker.Position.x; x++)
                 for (int z = worker.Position.z - 1; z <= worker.Position.z + 1; z++) cells.Add(new IntVec3(x, 0, z));
@@ -95,8 +95,11 @@ namespace AutonomousRim.RuntimeChecks
                 for (int x = origin.x + 7; x <= origin.x + 9; x++) cells.Add(new IntVec3(x, 0, z));
             foreach (IntVec3 cell in cells.Where(c => c.InBounds(map)))
             {
-                foreach (Thing rock in cell.GetThingList(map).Where(t => t.def.building?.isNaturalRock == true).ToList()) rock.Destroy();
-                if (cell.GetRoof(map)?.isNatural == true) map.roofGrid.SetRoof(cell, null);
+                foreach (Thing rock in cell.GetThingList(map).Where(t => t.def.category == ThingCategory.Building && t.Faction != Faction.OfPlayer).ToList()) rock.Destroy();
+                foreach (Filth filth in cell.GetThingList(map).OfType<Filth>().ToList()) filth.Destroy();
+                foreach (Thing item in cell.GetThingList(map).Where(t => t.def.category == ThingCategory.Item).ToList())
+                { item.DeSpawn(); GenSpawn.Spawn(item, EmptyCell(), map); }
+                if (cell.Roofed(map)) map.roofGrid.SetRoof(cell, null);
                 map.terrainGrid.SetTerrain(cell, TerrainDefOf.Soil);
                 map.fogGrid.Unfog(cell);
             }
@@ -161,6 +164,7 @@ namespace AutonomousRim.RuntimeChecks
                 else if (stage == 5 && ticks - started >= 400)
                 {
                         Check(corridor.Interior.CenterCell.GetTemperature(map) < thermalStart, "Powered coolers did not lower corridor temperature.");
+                        LootAccessChecks.Run(map, worker, component);
                         Log.Message("[AutonomousRim.LayoutTests] PASS: compact corridor enclosed, vents connected, generator powers all thermostats; native heating/cooling and comfort links verified.");
                         if (!GenCommandLine.CommandLineArgPassed("autonomousrimvisualtest"))
                         {
@@ -217,6 +221,15 @@ namespace AutonomousRim.RuntimeChecks
             int count = component.BaseProjects.Count; component.PreviewBase();
             Check(component.BaseProjects.Count == count, "Preview duplicated base modules.");
             Check(component.BaseProjects.Where(p => p.Kind == "Quarto").All(p => p.InteriorSize == 5 && p.Shell.Count == 24), "Bedroom must have 5x5 interior and 24 perimeter cells.");
+            foreach (RoomProject bedroom in component.BaseProjects.Where(p => p.Kind == "Quarto"))
+            {
+                ConstructionTask bed = bedroom.Furniture.Single(t => t.Def == ThingDefOf.Bed);
+                Check(bedroom.ReserveDoubleBed && GenAdj.OccupiedRect(bed.Position, bed.Rotation, ThingDefOf.Bed.size).All(bedroom.DoubleBedSpace.Contains), "Single bed is outside the reserved double-bed area.");
+                ThingDef doubleBed = DefDatabase<ThingDef>.GetNamed("DoubleBed");
+                Check(GenAdj.OccupiedRect(bedroom.Origin + new IntVec3(5, 0, 5), Rot4.South, doubleBed.size).All(bedroom.DoubleBedSpace.Contains), "Future double bed does not fit.");
+                Check(component.BaseProjects.SelectMany(p => p.Furniture).Where(t => t.Def is ThingDef && t.Def != ThingDefOf.Bed)
+                    .All(t => !GenAdj.OccupiedRect(t.Position, t.Rotation, ((ThingDef)t.Def).size).Overlaps(bedroom.DoubleBedSpace)), "Furniture blocks the double-bed reserve.");
+            }
             corridor = component.BaseProjects.Single(p => p.Kind == "Corredor");
             Check(corridor.InteriorSize == 2 && corridor.Shell.Count(t => t.Def == ThingDefOf.Door && t.Rotation == Rot4.North) == 2, "Corridor requires width two and two exterior exits.");
             foreach (RoomProject room in component.BaseProjects.Where(p => p.RequiresRoof && p != corridor))
@@ -272,7 +285,11 @@ namespace AutonomousRim.RuntimeChecks
                 CompleteFixture(project);
                 BaseConstructionManager.Apply(map, new List<RoomProject> { project });
                 Check(project.Completed, "Module completion failed for " + kind);
-                if (kind == "Estoque") Check(project.Stockpile != null && project.Stockpile.CellCount == 36, "Stockpile zone not created.");
+                if (kind == "Estoque")
+                {
+                    Check(project.Stockpile != null && project.Stockpile.CellCount == 35, "Stockpile must reserve the interior doorway cell.");
+                    Check(!project.Stockpile.GetStoreSettings().filter.Allows(DefDatabase<ThingDef>.GetNamed("Chemfuel")), "General stockpile must exclude chemfuel.");
+                }
                 else Check(project.Interior.Count() == 16 && project.Furniture.All(t => t.Complete(map) && t.Pending?.Spawned != true), "Kitchen benches not placed with valid footprints.");
             }
             // A player's cancellation must pause rather than silently recreate a blueprint.
@@ -316,6 +333,9 @@ namespace AutonomousRim.RuntimeChecks
 
         private void VerifyHeat()
         {
+            var powerProject = component.BaseProjects.Single(p => p.Kind == "Energia e climatização");
+            foreach (ConstructionTask task in powerProject.Furniture.Where(t => t.Def.defName == "PowerConduit"))
+                Check(task.Complete(map), "Conduit disappeared during furnishing/flooring: " + task.Position);
             Check(!corridor.Interior.CenterCell.GetRoom(map).UsesOutdoorTemperature, "Corridor is not an enclosed temperature-controlled room.");
             Check(corridor.Interior.CenterCell.GetTemperature(map) > thermalStart, "Powered heaters did not increase corridor temperature.");
             foreach (ConstructionTask task in component.BaseProjects.SelectMany(p => p.Shell.Concat(p.Furniture)).Where(t => t.TargetTemperature > -999f))
@@ -328,13 +348,21 @@ namespace AutonomousRim.RuntimeChecks
             {
                 ThingWithComps lamp = task.Position.GetThingList(map).OfType<ThingWithComps>().Single(t => t.def == task.Def);
                 CompPowerTrader electricity = lamp.TryGetComp<CompPowerTrader>();
-                Check(electricity.PowerOn, $"A room lamp is off at {task.Position}: net={electricity.PowerNet != null}, connection={electricity.connectParent?.parent.Position}, flick={lamp.TryGetComp<CompFlickable>()?.SwitchIsOn}.");
+                Check(electricity.PowerOn, $"A room lamp is off at {task.Position}: net={electricity.PowerNet != null}, connection={electricity.connectParent?.parent.Position}, flick={lamp.TryGetComp<CompFlickable>()?.SwitchIsOn}; powered generators=" +
+                    string.Join(",", powerProject.Furniture.Where(t => t.Def.defName == "WoodFiredGenerator").Select(t => {
+                        var generator = t.Position.GetThingList(map).OfType<ThingWithComps>().Single(b => b.def == t.Def);
+                        var trader = generator.TryGetComp<CompPowerTrader>();
+                        return t.Position + ":" + trader.PowerOn + "/sameNet=" + (trader.PowerNet == electricity.PowerNet);
+                    })));
             }
             foreach (RoomProject room in component.BaseProjects.Where(p => p.Kind == "Quarto"))
             {
                 var bed = room.Furniture.Single(t => t.Def == ThingDefOf.Bed).Position.GetThingList(map).OfType<Building_Bed>().Single();
+                Check(bed.GetSleepingSlotPos(0).z == room.Interior.maxZ, "Bed head is not against the north wall.");
                 Check(bed.TryGetComp<CompAffectedByFacilities>().LinkedFacilitiesListForReading.Any(t => t.def.defName == "EndTable") &&
                     bed.TryGetComp<CompAffectedByFacilities>().LinkedFacilitiesListForReading.Any(t => t.def.defName == "Dresser"), "Comfort furniture failed to link to a bed.");
+                var pots = room.Interior.SelectMany(c => c.GetThingList(map)).OfType<Building_PlantGrower>().ToList();
+                Check(pots.Count == 1 && pots[0].GetPlantDefToGrow().defName == "Plant_Daylily", "Bedroom pot is missing or unconfigured.");
             }
             foreach (RoomProject room in component.BaseProjects.Where(p => p.RequiresRoof)) room.Interior.CenterCell.GetRoom(map).Temperature = 40f;
             thermalStart = corridor.Interior.CenterCell.GetTemperature(map);

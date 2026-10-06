@@ -41,6 +41,8 @@ namespace AutonomousRim.Planning
         public int InteriorSize;
         public int InteriorHeight;
         public bool RequiresRoof = true;
+        public bool ReserveDoubleBed;
+        public CellRect DoubleBedSpace => new CellRect(Origin.x + 4, Origin.z + 4, 2, 2);
         public List<ConstructionTask> Shell = new List<ConstructionTask>();
         public List<ConstructionTask> Furniture = new List<ConstructionTask>();
         public List<IntVec3> RoofOrders = new List<IntVec3>();
@@ -56,6 +58,7 @@ namespace AutonomousRim.Planning
             Scribe_Values.Look(ref InteriorSize, "interiorSize");
             Scribe_Values.Look(ref InteriorHeight, "interiorHeight");
             Scribe_Values.Look(ref RequiresRoof, "requiresRoof", true);
+            Scribe_Values.Look(ref ReserveDoubleBed, "reserveDoubleBed");
             Scribe_Collections.Look(ref Shell, "shell", LookMode.Deep);
             Scribe_Collections.Look(ref Furniture, "furniture", LookMode.Deep);
             Scribe_Collections.Look(ref RoofOrders, "roofOrders", LookMode.Value);

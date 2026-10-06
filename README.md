@@ -22,7 +22,7 @@ The long-term goal is a full autonomous player capable of perceiving the map, ev
 - Trait-aware weapon roles, effective aiming/accuracy and audited active trait modifiers
 - Optional automatic hunting, butchering/meal bills and skill/passion-based work priorities
 - Initial optional construction of 5×5 bedrooms, 6×6 stockroom and 4×4 kitchen, using native blueprints
-- Fixed HUD buttons for base, equipment, food, work priorities, plan preview and disable-all
+- Fixed HUD buttons for base, equipment, food, work priorities, ground-item allow, plan preview and disable-all
 - Hostile composition, heuristic risk and presence transitions checked every 120 ticks
 - Structured project layout for future AI systems
 
@@ -105,7 +105,13 @@ Equipment automation is optional per map, with a separate opt-out for each pawn.
 
 Weapon scores use the game's current aiming delay, shooting accuracy, melee hit/damage/cooldown and a 12-cell accuracy reference. Brawlers favor melee; other colonists can prefer melee when their skills strongly support it. Apparel scores consider covered body parts, armor, current outdoor temperature, condition and movement penalties. Nudists receive a clothing penalty in temperate conditions. The inspector exposes trait modifiers, suppressed traits and current derived stats; numerical trait effects are read through game stats, without applying them twice. This does not model every trait's mood or strategic behavior, nor a specific enemy, future season, ideology/royalty preference or modded ammunition system.
 
-Accessible allowed ground gear is considered, including items outside storage; reachability checks are limited to the five strongest weapon and apparel candidates. Recommendations may suggest the same item to several pawns, but execution gives each item to at most one pawn per scan and respects reservations. The loot inventory also identifies forbidden gear and corpse apparel without unforbidding or stripping it. Explosives and nonstandard attack verbs remain excluded. Loot is paginated in the inspector.
+Accessible allowed ground gear is considered, including items outside storage; reachability checks are limited to the five strongest weapon and apparel candidates. Recommendations may suggest the same item to several pawns, but execution gives each item to at most one pawn per scan and respects reservations. The loot inventory also identifies forbidden gear and corpse apparel without stripping it. The separate optional ground-item allow toggle can release useful forbidden loot. Explosives and nonstandard attack verbs remain excluded. Loot is paginated in the inspector.
+
+## Gradual ground-item allow
+
+**Itens do chão / allow gradual** releases at most two visible, reachable stacks every 600 game ticks (10 seconds at normal speed). It prioritizes a medicine reserve, food deficit, current construction materials/generator fuel and useful equipment upgrades. Food policies, gear eligibility and per-pawn equipment opt-outs are respected. Hostiles pause releases; candidates must be within 60 cells of an available colonist with safe reachability. Unrelated items remain forbidden until there is a supported need.
+
+Re-forbidding an already tracked item prevents that exact item being released again. Disabling preserves released items. This does not strip corpses, force hauling or split stacks; native work handles collection. Flower pots use the native daylily grower and require Growing work, suitable light and temperature.
 
 ## Calculation checks
 
@@ -130,9 +136,9 @@ Early development. Optional food/work/equipment management and compact base cons
 
 ## Initial base construction
 
-Use **Planejar base** to preview modules without opening construction work. **Base automática** enables execution. All automations default to off. The six controls stay at the top of Rim AI while the inspector scrolls; **Desligar todas** stops all four functions. Item control currently means weapon/apparel autoequipment, not a separate general hauling manager.
+Use **Planejar base** to preview modules without opening construction work. **Base automática** enables execution. All automations default to off. The seven controls stay at the top of Rim AI while the inspector scrolls; **Desligar todas** stops all five functions. Ground-item allow and autoequipment have separate toggles; hauling remains under native pawn work.
 
-Rooms use interior dimensions excluding walls: bedrooms 5×5, stockroom and social room 6×6, kitchen 4×4 with fueled stove and butcher table. New rooms face a two-cell covered corridor with two exterior exits. Existing qualifying bedrooms, stockpiles and cooking/butchering infrastructure are considered. Stone walls/floors are preferred when research and sufficient existing resources permit; the early fallback is wood. Comfort furniture and floors follow shelter. The mod does not automatically harvest/mine materials.
+Rooms use interior dimensions excluding walls: bedrooms 5×5, stockroom and social room 6×6, kitchen 4×4 with fueled stove and butcher table. New rooms face a two-cell covered corridor with two exterior exits. Existing qualifying bedrooms, stockpiles and cooking/butchering infrastructure are considered. Stone walls/floors are preferred when research and sufficient existing resources permit; the early fallback is wood. The queue starts with protected storage, then bedrooms, kitchen and social space. Kitchen/storage occupy the entrance side, bedrooms the farther wing. Comfort furniture and floors follow shelter. New bedrooms have a single bed head against the north wall, end table, dresser and flower pot, plus a clear 2×2 footprint for a future double bed. Replacement is not automated; old rooms are preserved. Kitchen work points have a stool. Storage keeps the cell beside its door clear and excludes corpses, chemfuel and mortar shells. The mod does not automatically harvest/mine materials.
 
 The planner reserves a visible, accessible, clear compact block near colonists and preserves existing buildings/zones and old plans. Corridor boundaries shared with rooms are constructed once. It finances the remaining module before issuing work, subtracts outstanding player/AI construction material needs, opens at most six blueprints per cycle and limits active AI works to twelve. Colonists build through RimWorld's normal construction jobs. Roof orders follow shell completion; actual buildings/furniture/floors and roofing are verified. Food production remains a separate toggle.
 

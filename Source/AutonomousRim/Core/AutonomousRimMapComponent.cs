@@ -17,6 +17,11 @@ namespace AutonomousRim.Core
         private bool workAutomation;
         private bool equipmentAutomation;
         private bool baseAutomation;
+        private bool lootAutomation;
+        private int lastLootTick = -600;
+        private List<Thing> releasedLoot = new List<Thing>();
+        public bool LootAutomation => lootAutomation;
+        public string LootStatus { get; private set; } = "Allow gradual desativado.";
         private List<RoomProject> baseProjects = new List<RoomProject>();
         public bool BaseAutomation => baseAutomation;
         public IReadOnlyList<RoomProject> BaseProjects => baseProjects;
@@ -41,6 +46,9 @@ namespace AutonomousRim.Core
             Scribe_Values.Look(ref workAutomation, "workAutomation");
             Scribe_Values.Look(ref equipmentAutomation, "equipmentAutomation");
             Scribe_Values.Look(ref baseAutomation, "baseAutomation");
+            Scribe_Values.Look(ref lootAutomation, "lootAutomation");
+            Scribe_Values.Look(ref lastLootTick, "lastLootTick", -600);
+            Scribe_Collections.Look(ref releasedLoot, "releasedLoot", LookMode.Reference);
             Scribe_Collections.Look(ref baseProjects, "baseProjects", LookMode.Deep);
             Scribe_Collections.Look(ref equipmentOrders, "equipmentOrders", LookMode.Deep);
             Scribe_Collections.Look(ref managedApparel, "managedApparel", LookMode.Deep);
@@ -61,6 +69,8 @@ namespace AutonomousRim.Core
                 managedApparel.RemoveAll(o => o.Pawn == null || o.Apparel == null);
                 equipmentExcluded.RemoveAll(p => p == null);
                 baseProjects = baseProjects ?? new List<RoomProject>();
+                releasedLoot = releasedLoot ?? new List<Thing>();
+                releasedLoot.RemoveAll(t => t == null || t.Destroyed);
             }
         }
 
@@ -83,9 +93,17 @@ namespace AutonomousRim.Core
 
         public void DisableAll()
         {
+            SetLootAutomation(false);
             SetBaseAutomation(false);
             SetEquipmentAutomation(false);
             SetAutomation(false, false);
+        }
+
+        public void SetLootAutomation(bool enabled)
+        {
+            lootAutomation = enabled;
+            if (enabled) ManageColony();
+            else LootStatus = "Allow desligado; itens já liberados permanecem disponíveis.";
         }
 
         public void SetEquipmentAutomation(bool enabled)
@@ -163,6 +181,17 @@ namespace AutonomousRim.Core
 
         private void ManageColony()
         {
+            if (lootAutomation && CurrentState != null && Find.TickManager.TicksGame - lastLootTick >= ScanIntervalTicks)
+            {
+                lastLootTick = Find.TickManager.TicksGame;
+                LootStatus = LootAccessManager.Apply(map, CurrentState, baseAutomation, baseProjects, managedApparel, EquipmentAllowedFor, releasedLoot, out int released);
+                if (released > 0)
+                {
+                    string transition = CurrentState.Threat.LastTransition;
+                    CurrentState = ColonyStateScanner.Scan(map);
+                    CurrentState.Threat.LastTransition = transition;
+                }
+            }
             if (workAutomation && Find.PlaySettings.useWorkPriorities) WorkPriorityManager.Apply(map, CurrentState, workChanges);
             ManagementStatus = foodAutomation ? FoodManager.Apply(map, CurrentState, ownedHunts, ownedBills) : "Alimentação automática desativada.";
             if (workAutomation) ManagementStatus += Find.PlaySettings.useWorkPriorities

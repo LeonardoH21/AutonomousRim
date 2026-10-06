@@ -76,7 +76,7 @@ namespace AutonomousRim.Planning
                 foreach (ConstructionTask task in room.Shell)
                 {
                     if (stone != null && task.Def == ThingDefOf.Wall) task.Stuff = stone;
-                    if (climate && task.Position.x == origin.x + (right ? 10 : 7) && task.Position.z == roomOrigin.z + 4)
+                    if (climate && task.Position.x == origin.x + (right ? 10 : 7) && task.Position.z == roomOrigin.z + (request.Key == "Quarto" ? 3 : 4))
                     {
                         task.Def = DefDatabase<ThingDef>.GetNamed("Vent"); task.Stuff = null; task.Rotation = Rot4.East;
                     }
@@ -84,6 +84,7 @@ namespace AutonomousRim.Planning
                 }
                 result.Add(room);
             }
+            result = result.OrderBy(p => p.Kind == "Estoque" ? 0 : p.Kind == "Quarto" ? 1 : p.Kind == "Cozinha" ? 2 : 3).ToList();
             var corridor = new RoomProject { Kind = "Corredor", Origin = origin + new IntVec3(7, 0, -1), InteriorSize = 2, InteriorHeight = length };
             foreach (IntVec3 cell in corridor.Footprint.EdgeCells)
             {
@@ -116,7 +117,7 @@ namespace AutonomousRim.Planning
                 for (int z = -1; z <= length + 3; z++) cableCells.Add(origin + new IntVec3(8, 0, z));
                 for (int x = 8; x <= 13 + (generators - 1) * 3; x++) cableCells.Add(origin + new IntVec3(x, 0, length + 3));
                 var lamps = result.Where(p => p != corridor).Select(room => new ConstructionTask { Def = lampDef,
-                    Position = room.Origin + new IntVec3(room.Origin.x >= origin.x + 10 ? 1 : room.InteriorSize - 1, 0, room.InteriorSize) }).ToList();
+                    Position = room.Origin + (room.Kind == "Quarto" ? new IntVec3(1, 0, 3) : new IntVec3(room.Origin.x >= origin.x + 10 ? 1 : room.InteriorSize - 1, 0, room.InteriorSize)) }).ToList();
                 foreach (ConstructionTask lamp in lamps)
                     for (int x = Math.Min(origin.x + 8, lamp.Position.x); x <= Math.Max(origin.x + 8, lamp.Position.x); x++)
                         cableCells.Add(new IntVec3(x, 0, lamp.Position.z));
@@ -135,8 +136,10 @@ namespace AutonomousRim.Planning
                 var comfort = new RoomProject { Kind = "Conforto dos quartos", Origin = origin, InteriorSize = 1, RequiresRoof = false };
                 foreach (RoomProject bedroom in result.Where(p => p.Kind == "Quarto"))
                 {
-                    comfort.Furniture.Add(new ConstructionTask { Def = DefDatabase<ThingDef>.GetNamed("EndTable"), Stuff = material, Position = bedroom.Origin + new IntVec3(3, 0, 3) });
-                    comfort.Furniture.Add(new ConstructionTask { Def = DefDatabase<ThingDef>.GetNamed("Dresser"), Stuff = material, Position = bedroom.Origin + new IntVec3(4, 0, 1) });
+                    if (!bedroom.ReserveDoubleBed) continue;
+                    comfort.Furniture.Add(new ConstructionTask { Def = DefDatabase<ThingDef>.GetNamed("EndTable"), Stuff = material, Position = bedroom.Origin + new IntVec3(3, 0, 5) });
+                    comfort.Furniture.Add(new ConstructionTask { Def = DefDatabase<ThingDef>.GetNamed("Dresser"), Stuff = material, Position = bedroom.Origin + new IntVec3(1, 0, 5) });
+                    comfort.Furniture.Add(new ConstructionTask { Def = DefDatabase<ThingDef>.GetNamed("PlantPot"), Stuff = material, Position = bedroom.Origin + new IntVec3(1, 0, 1) });
                 }
                 if (comfort.Furniture.Count > 0) result.Add(comfort);
             }

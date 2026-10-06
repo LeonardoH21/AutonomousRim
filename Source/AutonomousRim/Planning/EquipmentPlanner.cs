@@ -11,9 +11,9 @@ namespace AutonomousRim.Planning
 {
     public static class EquipmentPlanner
     {
-        public static bool AllowedWeapon(Pawn pawn, Thing item)
+        public static bool AllowedWeapon(Pawn pawn, Thing item, bool considerForbidden = false)
         {
-            if (!PawnAnalyzer.IsCombatReady(pawn) || !item.Spawned || item.Map != pawn.Map || item.Position.Fogged(pawn.Map) || item.IsForbidden(pawn) ||
+            if (!PawnAnalyzer.IsCombatReady(pawn) || !item.Spawned || item.Map != pawn.Map || item.Position.Fogged(pawn.Map) || (!considerForbidden && item.IsForbidden(pawn)) ||
                 item.TryGetComp<CompBladelinkWeapon>() != null) return false;
             if (!EquipmentUtility.CanEquip(item, pawn)) return false;
             var biocode = item.TryGetComp<CompBiocodable>();
@@ -27,9 +27,9 @@ namespace AutonomousRim.Planning
             return pawn.apparel.WornApparel.Where(a => !ApparelUtility.CanWearTogether(a.def, candidate.def, pawn.RaceProps.body)).ToList();
         }
 
-        public static bool AllowedApparel(Pawn pawn, Apparel item, List<Execution.ManagedApparel> owned)
+        public static bool AllowedApparel(Pawn pawn, Apparel item, List<Execution.ManagedApparel> owned, bool considerForbidden = false)
         {
-            if (pawn.apparel == null || !item.Spawned || item.Map != pawn.Map || item.Position.Fogged(pawn.Map) || item.IsForbidden(pawn) || item.WornByCorpse ||
+            if (pawn.apparel == null || !item.Spawned || item.Map != pawn.Map || item.Position.Fogged(pawn.Map) || (!considerForbidden && item.IsForbidden(pawn)) || item.WornByCorpse ||
                 !item.def.apparel.PawnCanWear(pawn) || !ApparelUtility.HasPartsToWear(pawn, item.def) ||
                 (item.def.useHitPoints && (float)item.HitPoints / Mathf.Max(1, item.MaxHitPoints) < 0.5f)) return false;
             if (pawn.outfits?.CurrentApparelPolicy != null && !pawn.outfits.CurrentApparelPolicy.filter.Allows(item)) return false;
@@ -40,14 +40,14 @@ namespace AutonomousRim.Planning
                 (pawn.outfits?.forcedHandler.IsForced(a) == true && !owned.Any(o => o.Pawn == pawn && o.Apparel == a)));
         }
 
-        public static List<EquipmentDecision> Plan(Map map, List<Execution.ManagedApparel> owned)
+        public static List<EquipmentDecision> Plan(Map map, List<Execution.ManagedApparel> owned, bool considerForbidden = false)
         {
             var proposals = new List<EquipmentDecision>();
             var weapons = map.listerThings.ThingsInGroup(ThingRequestGroup.Weapon)
-                .Where(t => !t.Position.Fogged(map) && !t.IsForbidden(Faction.OfPlayer))
+                .Where(t => !t.Position.Fogged(map) && (considerForbidden || !t.IsForbidden(Faction.OfPlayer)))
                 .Select(t => new { Item = t, Profile = EquipmentAnalyzer.Analyze(t) }).ToList();
             var clothes = map.listerThings.ThingsInGroup(ThingRequestGroup.Apparel).OfType<Apparel>()
-                .Where(t => !t.Position.Fogged(map) && !t.IsForbidden(Faction.OfPlayer) && !t.WornByCorpse).ToList();
+                .Where(t => !t.Position.Fogged(map) && (considerForbidden || !t.IsForbidden(Faction.OfPlayer)) && !t.WornByCorpse).ToList();
             foreach (Pawn pawn in map.mapPawns.FreeColonistsSpawned)
             {
                 if (pawn.Dead || pawn.Downed || pawn.InMentalState) continue;
@@ -58,7 +58,7 @@ namespace AutonomousRim.Planning
                     if (current?.SpecialAttack != true)
                     {
                         float score = EquipmentAnalyzer.Suitability(pawn, current);
-                        var candidates = weapons.Where(w => AllowedWeapon(pawn, w.Item))
+                        var candidates = weapons.Where(w => AllowedWeapon(pawn, w.Item, considerForbidden))
                             .Select(w => new { w.Item, Score = EquipmentAnalyzer.Suitability(pawn, w.Profile) })
                             .Where(w => EquipmentPolicy.WorthUpgrade(score, w.Score)).OrderByDescending(w => w.Score).Take(5);
                         foreach (var candidate in candidates)
@@ -68,7 +68,7 @@ namespace AutonomousRim.Planning
                     }
                 }
                 if (pawn.apparel == null) continue;
-                var apparelCandidates = clothes.Where(a => AllowedApparel(pawn, a, owned)).Select(a =>
+                var apparelCandidates = clothes.Where(a => AllowedApparel(pawn, a, owned, considerForbidden)).Select(a =>
                 {
                     float current = Conflicts(pawn, a).Sum(old => ApparelAnalyzer.Score(pawn, old, map.mapTemperature.OutdoorTemp));
                     float candidate = ApparelAnalyzer.Score(pawn, a, map.mapTemperature.OutdoorTemp);

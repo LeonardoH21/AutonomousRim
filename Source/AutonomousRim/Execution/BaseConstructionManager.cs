@@ -35,7 +35,7 @@ namespace AutonomousRim.Execution
             else { task.Pending = null; task.CancelledByPlayer = true; }
         }
 
-        private static Dictionary<ThingDef, int> Available(Map map)
+        public static Dictionary<ThingDef, int> Available(Map map)
         {
             var budget = map.listerThings.AllThings.Where(t => t.def.category == ThingCategory.Item && !t.IsForbidden(Faction.OfPlayer) && !t.Position.Fogged(map))
                 .GroupBy(t => t.def).ToDictionary(g => g.Key, g => g.Sum(t => t.stackCount));
@@ -46,7 +46,8 @@ namespace AutonomousRim.Execution
                 foreach (ThingDefCountClass cost in costs)
                 {
                     int needed = pending is Frame f ? f.ThingCountNeeded(cost.thingDef) : cost.count;
-                    if (budget.ContainsKey(cost.thingDef)) budget[cost.thingDef] -= needed;
+                    budget.TryGetValue(cost.thingDef, out int held);
+                    budget[cost.thingDef] = held - needed;
                 }
             }
             return budget;
@@ -92,8 +93,13 @@ namespace AutonomousRim.Execution
                     if (project.Interior.Any(c => c.GetZone(map) != null)) return "Estoque: área ocupada por zona do jogador; nenhuma zona substituída.";
                     project.Stockpile = new Zone_Stockpile(StorageSettingsPreset.DefaultStockpile, map.zoneManager);
                     map.zoneManager.RegisterZone(project.Stockpile);
-                    foreach (IntVec3 cell in project.Interior) project.Stockpile.AddCell(cell);
+                    var doorCells = project.Shell.Where(t => t.Def == ThingDefOf.Door).Select(t => t.Position).ToList();
+                    foreach (IntVec3 cell in project.Interior.Where(c => !doorCells.Any(d => c.AdjacentToCardinal(d)))) project.Stockpile.AddCell(cell);
                     project.Stockpile.GetStoreSettings().filter.SetAllow(ThingCategoryDefOf.Corpses, false);
+                    ThingDef chemfuel = DefDatabase<ThingDef>.GetNamedSilentFail("Chemfuel");
+                    if (chemfuel != null) project.Stockpile.GetStoreSettings().filter.SetAllow(chemfuel, false);
+                    ThingCategoryDef shells = DefDatabase<ThingCategoryDef>.GetNamedSilentFail("MortarShells");
+                    if (shells != null) project.Stockpile.GetStoreSettings().filter.SetAllow(shells, false);
                 }
                 project.Completed = true;
                 return $"{project.Kind} concluído: estrutura, móveis e cobertura verificados.";

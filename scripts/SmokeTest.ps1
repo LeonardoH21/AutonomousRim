@@ -60,7 +60,7 @@ try {
             if ($logText -match 'Exception|Error while|XML error|Config error|Attempted to calculate value for disabled stat|Two power nets on the same cell') { throw "Game reported an error. Inspect $logFile" }
             $scanCount = ([regex]::Matches($logText, '\[AutonomousRim\] Scan:')).Count
             if ($scanCount -ge 2 -and $logText.Contains('[AutonomousRim] Loaded successfully.') -and
-                (!$RuntimeChecks -or ($logText.Contains('[AutonomousRim.Tests] PASS:') -and $logText.Contains('[AutonomousRim.EquipmentTests] PASS:') -and $logText.Contains('[AutonomousRim.ConstructionTests] PASS:') -and (!$Visible -or $logText.Contains('[AutonomousRim.HudTests] PASS:'))))) {
+                (!$RuntimeChecks -or ($logText.Contains('[AutonomousRim.Tests] PASS:') -and $logText.Contains('[AutonomousRim.EquipmentTests] PASS:') -and $logText.Contains('[AutonomousRim.AllowTests] PASS:') -and $logText.Contains('[AutonomousRim.ConstructionTests] PASS:') -and (!$Visible -or $logText.Contains('[AutonomousRim.HudTests] PASS:'))))) {
                 Write-Output "PASS: mod loaded and $scanCount colony scans completed without exceptions. Log: $logFile"
                 return
             }

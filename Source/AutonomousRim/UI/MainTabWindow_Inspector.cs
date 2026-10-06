@@ -36,8 +36,10 @@ namespace AutonomousRim.UI
                 component.SetAutomation(component.FoodAutomation, !component.WorkAutomation);
             if (Widgets.ButtonText(new Rect(inRect.x, inRect.y + 104f, half, 30f), "Planejar base (sem iniciar obras)")) component.PreviewBase();
             if (Widgets.ButtonText(new Rect(inRect.x + half + 8f, inRect.y + 104f, half, 30f), "Desligar todas as automações")) component.DisableAll();
+            if (Widgets.ButtonText(new Rect(inRect.x, inRect.y + 138f, inRect.width, 30f), $"Itens do chão / allow gradual: {(component.LootAutomation ? "LIGADO" : "DESLIGADO")}"))
+                component.SetLootAutomation(!component.LootAutomation);
             state = component.CurrentState;
-            Rect viewport = new Rect(inRect.x, inRect.y + 142f, inRect.width, inRect.height - 142f);
+            Rect viewport = new Rect(inRect.x, inRect.y + 176f, inRect.width, inRect.height - 176f);
             Rect content = new Rect(0f, 0f, viewport.width - 20f, contentHeight);
             Widgets.BeginScrollView(viewport, ref scrollPosition, content);
             var listing = new Listing_Standard();
@@ -50,6 +52,8 @@ namespace AutonomousRim.UI
                 listing.Label($"{project.Kind} {(project.RequiresRoof ? $"{project.InteriorSize}×{project.Height}" : "instalações")} em {project.Origin}: {(project.Completed ? "concluído" : project.Started ? "em construção" : "planejado")}");
             listing.Label(component.ManagementStatus);
             listing.Label(component.EquipmentStatus);
+            listing.Label(component.LootStatus);
+            listing.Label("Quartos novos: cama junto à parede, cabeceira, cômoda e vaso; área 2×2 reservada para futura cama de casal. Allow prioriza necessidades e respeita acesso, políticas e reproibições manuais.");
             listing.Label("Autoequipamento usa tarefas do jogo e respeita peças forçadas pelo jogador. Ao desligar, libera as fixações da IA e mantém os equipamentos atuais.");
             listing.Label("Prioridades usam o modo numérico. Ao desligar, a IA restaura prioridades e remove suas ordens que não foram editadas pelo jogador.");
             ThreatState threat = state.Threat;
