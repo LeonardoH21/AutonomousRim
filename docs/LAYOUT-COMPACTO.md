@@ -1,8 +1,8 @@
 # Base compacta, conforto e clima
 
-Implementação de 5 de outubro de 2026. Os novos planos usam um bloco com corredor central coberto de duas células, portas dos quartos voltadas para ele e duas saídas externas. Quartos têm 5×5 células internas; cozinha 4×4; estoque e sala social 6×6. O planejador aceita o bloco inteiro antes de adicionar módulos, preservando zonas, estruturas e itens proibidos. Trabalhadores podem transportar itens permitidos para fora do caminho pelas tarefas normais do jogo, sem destruí-los.
+Implementação inicial de 5 de outubro de 2026, com execução revisada em 6 de outubro. Os novos planos usam um bloco com corredor central coberto de duas células, portas dos quartos voltadas para ele e duas saídas externas. Quartos têm 5×5 células internas; cozinha 4×4; estoque, freezer pesquisado e sala social 6×6. O planejador procura o bloco inteiro; se ele não cabe, procura salas independentes, preservando zonas, estruturas e itens proibidos. Trabalhadores podem transportar itens permitidos para fora do caminho pelas tarefas normais do jogo, sem destruí-los.
 
-Exemplo para três colonos (esquema de setores, não escala):
+Exemplo anterior para três colonos, sem freezer (esquema de setores, não escala; a posição e o número de setores variam no plano atual):
 
 ![Esquema orientativo da base compacta](base-compacta.svg)
 
@@ -31,7 +31,7 @@ As salas são adicionadas em pares; tamanhos diferentes deixam recuos nas fachad
 6. Mesa de cabeceira, cômoda e vaso por quarto.
 7. Pisos uniformes nos ambientes e no corredor.
 
-Cada etapa exige os materiais reservados antes de abrir novas obras. A fila continua limitada a seis projetos por ciclo e doze pendentes. Trabalhadores reais executam as tarefas; o mod não cria prédios instantaneamente. Hostis interrompem novas ordens. Cancelamentos ou mudanças manuais pausam o módulo afetado; desligar a base remove os projetos pendentes da IA e mantém estruturas e obras que já receberam materiais.
+A ordem acima descreve as dependências do plano original. O executor atual financia lotes pequenos e mantém até três projetos ativos, até seis blueprints novos por ciclo e dezoito pendentes. O estoque funciona antes das paredes; energia pode avançar independentemente dos quartos. Consulte [execução, recuperação e testes normais](EXECUCAO-CONSTRUCAO.md) para as regras atuais. Trabalhadores reais executam as tarefas; o mod não cria prédios instantaneamente. Hostis interrompem novas ordens. Cancelamentos ou mudanças manuais pausam o módulo afetado; desligar a base remove os projetos pendentes da IA e mantém estruturas e obras que já receberam materiais.
 
 ## Estilo e felicidade
 

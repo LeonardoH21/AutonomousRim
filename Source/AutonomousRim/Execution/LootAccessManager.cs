@@ -26,8 +26,14 @@ namespace AutonomousRim.Execution
                 t.def.EverHaulable && !(t is Corpse) && !t.Position.Fogged(map) && (t.Faction == null || t.Faction == Faction.OfPlayer)).ToList();
             var humanMeats = new HashSet<ThingDef>(DefDatabase<ThingDef>.AllDefsListForReading.Where(d => d.race?.Humanlike == true)
                 .Select(d => d.race.meatDef).Where(d => d != null));
+            var eaters = map.mapPawns.FreeColonistsSpawned.Where(p => p.needs?.food != null).ToList();
+            TraitDef cannibalTrait = DefDatabase<TraitDef>.GetNamedSilentFail("Cannibal");
+            bool acceptsPreparedHumanMeals = eaters.Count > 0 && eaters.All(p => cannibalTrait != null && p.story?.traits?.HasTrait(cannibalTrait) == true ||
+                p.Ideo?.HasPrecept(PreceptDefOf.Cannibalism_Preferred) == true || p.Ideo?.HasPrecept(PreceptDefOf.Cannibalism_RequiredStrong) == true ||
+                p.Ideo?.HasPrecept(PreceptDefOf.Cannibalism_RequiredRavenous) == true);
             Func<Thing, bool> edible = t => t.def.ingestible?.HumanEdible == true && t.def.ingestible.drugCategory == DrugCategory.None &&
-                !humanMeats.Contains(t.def) && t.TryGetComp<CompIngredients>()?.ingredients.Any(humanMeats.Contains) != true &&
+                !humanMeats.Contains(t.def) && (t.TryGetComp<CompIngredients>()?.ingredients.Any(humanMeats.Contains) != true ||
+                    acceptsPreparedHumanMeals && t.def.ingestible.IsMeal) &&
                 (t.TryGetComp<CompRottable>() == null || t.TryGetComp<CompRottable>().Stage == RotStage.Fresh) &&
                 pawns.Any(p => p.needs?.food != null && FoodUtility.WillEat(p, t, p, true, false) &&
                     (p.foodRestriction?.CurrentFoodPolicy == null || p.foodRestriction.CurrentFoodPolicy.filter.Allows(t)));

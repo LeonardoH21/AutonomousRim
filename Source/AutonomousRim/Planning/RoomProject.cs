@@ -4,6 +4,8 @@ using Verse;
 
 namespace AutonomousRim.Planning
 {
+    public enum ConstructionState { Planned, Active, WaitingMaterials, Blocked, Paused, Completed }
+    public enum ConstructionPriority { Critical, High, Normal, Low }
     public sealed class ConstructionTask : IExposable
     {
         public BuildableDef Def;
@@ -13,9 +15,14 @@ namespace AutonomousRim.Planning
         public Rot4 Rotation = Rot4.North;
         public Thing Pending;
         public bool Issued;
+        public bool Owned;
+        public bool WasCompleted;
         public bool CancelledByPlayer;
         public float TargetTemperature = -999f;
         public bool TemperatureConfigured;
+        public int RetryAfter;
+        public int FailedJobs;
+        public string LastFailure;
         public void ExposeData()
         {
             ThingDef thingDef = Def as ThingDef;
@@ -27,8 +34,13 @@ namespace AutonomousRim.Planning
             Scribe_Values.Look(ref Position, "position"); Scribe_Values.Look(ref Rotation, "rotation");
             Scribe_References.Look(ref Pending, "pending");
             Scribe_Values.Look(ref Issued, "issued"); Scribe_Values.Look(ref CancelledByPlayer, "cancelledByPlayer");
+            Scribe_Values.Look(ref Owned, "owned");
+            Scribe_Values.Look(ref WasCompleted, "wasCompleted");
             Scribe_Values.Look(ref TargetTemperature, "targetTemperature", -999f);
             Scribe_Values.Look(ref TemperatureConfigured, "temperatureConfigured");
+            Scribe_Values.Look(ref RetryAfter, "retryAfter");
+            Scribe_Values.Look(ref FailedJobs, "failedJobs");
+            Scribe_Values.Look(ref LastFailure, "lastFailure");
         }
         public bool Complete(Map map) => Position.InBounds(map) && (Def is TerrainDef terrain ? Position.GetTerrain(map) == terrain : Position.GetThingList(map).Exists(t =>
             t.def == Def && t.Position == Position && t.Rotation == Rotation && t.Faction == Faction.OfPlayer));
@@ -49,6 +61,14 @@ namespace AutonomousRim.Planning
         public Zone_Stockpile Stockpile;
         public bool Started;
         public bool Completed;
+        public ConstructionState State;
+        public ConstructionPriority Priority = ConstructionPriority.High;
+        public string BlockReason;
+        public int LastProgressTick;
+        public float LastProgress;
+        public int LastRecoveryTick;
+        public bool Stalled;
+        public bool FunctionalStorage;
         public int Height => InteriorHeight > 0 ? InteriorHeight : InteriorSize;
         public CellRect Interior => new CellRect(Origin.x + 1, Origin.z + 1, InteriorSize, Height);
         public CellRect Footprint => new CellRect(Origin.x, Origin.z, InteriorSize + 2, Height + 2);
@@ -64,6 +84,10 @@ namespace AutonomousRim.Planning
             Scribe_Collections.Look(ref RoofOrders, "roofOrders", LookMode.Value);
             Scribe_References.Look(ref Stockpile, "stockpile");
             Scribe_Values.Look(ref Started, "started"); Scribe_Values.Look(ref Completed, "completed");
+            Scribe_Values.Look(ref State, "state"); Scribe_Values.Look(ref Priority, "priority", ConstructionPriority.High);
+            Scribe_Values.Look(ref BlockReason, "blockReason");
+            Scribe_Values.Look(ref LastProgressTick, "lastProgressTick"); Scribe_Values.Look(ref LastProgress, "lastProgress");
+            Scribe_Values.Look(ref LastRecoveryTick, "lastRecoveryTick"); Scribe_Values.Look(ref FunctionalStorage, "functionalStorage");
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
             {
                 Shell = Shell ?? new List<ConstructionTask>(); Furniture = Furniture ?? new List<ConstructionTask>();

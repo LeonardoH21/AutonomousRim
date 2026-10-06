@@ -9,7 +9,8 @@ namespace AutonomousRim.Core
 {
     public sealed class AutonomousRimMapComponent : MapComponent
     {
-        private const int ScanIntervalTicks = 600;
+        private const int ScanIntervalTicks = 360;
+        private const int LootIntervalTicks = 600;
         private const int ThreatIntervalTicks = 120;
 
         public ColonyState CurrentState { get; private set; }
@@ -17,6 +18,13 @@ namespace AutonomousRim.Core
         private bool workAutomation;
         private bool equipmentAutomation;
         private bool baseAutomation;
+        private int lastPlanTick = -3600;
+        private int lastConstructionTick = -120;
+        private int plannedPawnCount;
+        private bool plannedClimateResearch;
+        private List<ConstructionOrder> constructionOrders = new List<ConstructionOrder>();
+        private List<Thing> constructionGathering = new List<Thing>();
+        public string GatheringStatus { get; private set; } = "Coleta desativada.";
         private bool lootAutomation;
         private int lastLootTick = -600;
         private List<Thing> releasedLoot = new List<Thing>();
@@ -46,6 +54,11 @@ namespace AutonomousRim.Core
             Scribe_Values.Look(ref workAutomation, "workAutomation");
             Scribe_Values.Look(ref equipmentAutomation, "equipmentAutomation");
             Scribe_Values.Look(ref baseAutomation, "baseAutomation");
+            Scribe_Values.Look(ref lastPlanTick, "lastPlanTick", -3600);
+            Scribe_Values.Look(ref plannedPawnCount, "plannedPawnCount");
+            Scribe_Values.Look(ref plannedClimateResearch, "plannedClimateResearch");
+            Scribe_Collections.Look(ref constructionOrders, "constructionOrders", LookMode.Deep);
+            Scribe_Collections.Look(ref constructionGathering, "constructionGathering", LookMode.Reference);
             Scribe_Values.Look(ref lootAutomation, "lootAutomation");
             Scribe_Values.Look(ref lastLootTick, "lastLootTick", -600);
             Scribe_Collections.Look(ref releasedLoot, "releasedLoot", LookMode.Reference);
@@ -71,22 +84,34 @@ namespace AutonomousRim.Core
                 baseProjects = baseProjects ?? new List<RoomProject>();
                 releasedLoot = releasedLoot ?? new List<Thing>();
                 releasedLoot.RemoveAll(t => t == null || t.Destroyed);
+                constructionOrders = constructionOrders ?? new List<ConstructionOrder>();
+                constructionOrders.RemoveAll(o => o.Pawn == null);
+                constructionGathering = constructionGathering ?? new List<Thing>();
+                constructionGathering.RemoveAll(t => t == null || t.Destroyed);
             }
         }
 
         public void PreviewBase()
         {
             BaseStatus = BasePlanner.Plan(map, baseProjects);
+            lastPlanTick = Find.TickManager.TicksGame;
+            plannedPawnCount = map.mapPawns.FreeColonistsSpawnedCount;
+            plannedClimateResearch = DefDatabase<ResearchProjectDef>.GetNamed("AirConditioning").IsFinished;
         }
 
         public void SetBaseAutomation(bool enabled)
         {
-            if (!enabled) BaseConstructionManager.Stop(map, baseProjects);
+            if (!enabled)
+            {
+                ConstructionWorkManager.Stop(constructionOrders);
+                ConstructionResourceManager.Stop(map, constructionGathering);
+                BaseConstructionManager.Stop(map, baseProjects);
+            }
             baseAutomation = enabled;
             if (enabled)
             {
                 PreviewBase();
-                if (baseProjects.Count > 0) BaseStatus = BaseConstructionManager.Apply(map, baseProjects);
+                ExecuteConstruction(Find.TickManager.TicksGame);
             }
             else BaseStatus = "Base automática desligada. Projetos pendentes da IA cancelados; estruturas e obras com materiais mantidas.";
         }
@@ -158,6 +183,7 @@ namespace AutonomousRim.Core
             base.MapComponentTick();
 
             int ticks = Find.TickManager?.TicksGame ?? 0;
+            if (baseAutomation && ticks > 0 && ticks % BaseConstructionManager.ExecutionInterval == 0) ExecuteConstruction(ticks);
             if (CurrentState != null && ticks > 0 && ticks % ThreatIntervalTicks == 0)
             {
                 if (equipmentAutomation) EquipmentManager.TrackOrders(equipmentOrders, managedApparel);
@@ -181,7 +207,7 @@ namespace AutonomousRim.Core
 
         private void ManageColony()
         {
-            if (lootAutomation && CurrentState != null && Find.TickManager.TicksGame - lastLootTick >= ScanIntervalTicks)
+            if (lootAutomation && CurrentState != null && Find.TickManager.TicksGame - lastLootTick >= LootIntervalTicks)
             {
                 lastLootTick = Find.TickManager.TicksGame;
                 LootStatus = LootAccessManager.Apply(map, CurrentState, baseAutomation, baseProjects, managedApparel, EquipmentAllowedFor, releasedLoot, out int released);
@@ -192,7 +218,8 @@ namespace AutonomousRim.Core
                     CurrentState.Threat.LastTransition = transition;
                 }
             }
-            if (workAutomation && Find.PlaySettings.useWorkPriorities) WorkPriorityManager.Apply(map, CurrentState, workChanges);
+            if (workAutomation && Find.PlaySettings.useWorkPriorities) WorkPriorityManager.Apply(map, CurrentState, workChanges,
+                baseAutomation && baseProjects.Exists(p => !p.Completed && p.Priority <= ConstructionPriority.High), constructionGathering.Count > 0);
             ManagementStatus = foodAutomation ? FoodManager.Apply(map, CurrentState, ownedHunts, ownedBills) : "Alimentação automática desativada.";
             if (workAutomation) ManagementStatus += Find.PlaySettings.useWorkPriorities
                 ? " Prioridades ativas; alterações manuais do jogador são preservadas."
@@ -200,10 +227,25 @@ namespace AutonomousRim.Core
             if (equipmentAutomation) EquipmentStatus = EquipmentManager.Apply(map, CurrentState, equipmentOrders, managedApparel, equipmentExcluded);
             if (baseAutomation)
             {
-                BaseStatus = BasePlanner.Plan(map, baseProjects);
-                if (baseProjects.Count > 0) BaseStatus = BaseConstructionManager.Apply(map, baseProjects);
+                ExecuteConstruction(Find.TickManager.TicksGame);
             }
         }
+
+        private void ExecuteConstruction(int ticks)
+        {
+            if (lastConstructionTick == ticks) return;
+            lastConstructionTick = ticks;
+            bool climate = DefDatabase<ResearchProjectDef>.GetNamed("AirConditioning").IsFinished;
+            if (baseProjects.Count == 0 && ticks - lastPlanTick >= 1200 || plannedPawnCount != map.mapPawns.FreeColonistsSpawnedCount || plannedClimateResearch != climate)
+                PreviewBase();
+            if (baseProjects.Count == 0) return;
+            BaseStatus = BaseConstructionManager.Apply(map, baseProjects);
+            if (ticks % 600 == 0) GatheringStatus = ConstructionResourceManager.Apply(map, baseProjects, constructionGathering);
+            ConstructionWorkManager.Apply(map, baseProjects, constructionOrders);
+        }
+
+        public void NotifyConstructionJobEnding(Pawn pawn, Verse.AI.Job job, Verse.AI.JobCondition condition) =>
+            ConstructionWorkManager.NotifyEnding(pawn, job, condition, baseProjects, constructionOrders);
 
         private void RefreshThreat(int ticks)
         {

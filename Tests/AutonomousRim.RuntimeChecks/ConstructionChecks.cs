@@ -237,6 +237,11 @@ namespace AutonomousRim.RuntimeChecks
                 ConstructionTask door = room.Shell.Single(t => t.Def == ThingDefOf.Door);
                 Check(corridor.Interior.Contains(door.Position + IntVec3.East) || corridor.Interior.Contains(door.Position + IntVec3.West), "A room doorway does not meet the corridor.");
                 Check(!room.Interior.Overlaps(corridor.Interior), "Room/corridor interiors overlap.");
+                if (room.Kind == "Freezer")
+                {
+                    Check(!room.Shell.Any(t => t.Def.defName == "Vent"), "Freezer must not exchange air with the heated corridor.");
+                    continue;
+                }
                 ConstructionTask vent = room.Shell.Single(t => t.Def.defName == "Vent");
                 Check((room.Interior.Contains(vent.Position + IntVec3.East) && corridor.Interior.Contains(vent.Position + IntVec3.West)) ||
                     (room.Interior.Contains(vent.Position + IntVec3.West) && corridor.Interior.Contains(vent.Position + IntVec3.East)), "Vent blocked by a double wall.");
@@ -245,17 +250,22 @@ namespace AutonomousRim.RuntimeChecks
             var flags = map.listerThings.AllThings.Where(t => t.def == ThingDefOf.WoodLog).ToDictionary(t => t, t => t.IsForbidden(Faction.OfPlayer));
             foreach (Thing item in flags.Keys) item.SetForbidden(true, false);
             string blocked = BaseConstructionManager.Apply(map, component.BaseProjects.ToList());
-            Check(blocked.Contains("faltam") && component.BaseProjects.All(p => !p.Started), "Material budget did not block unfunded construction: " + blocked);
+            Check(!component.BaseProjects.SelectMany(p => p.Shell.Concat(p.Furniture)).Any(t =>
+                t.Pending?.Spawned == true && CostListCalculator.CostListAdjusted(t.Def, t.Stuff).Any(c => c.thingDef == ThingDefOf.WoodLog)),
+                "Forbidden wood financed a new blueprint: " + blocked);
             foreach (var entry in flags) entry.Key.SetForbidden(entry.Value, false);
             Resource(ThingDefOf.WoodLog, 800); Resource(ThingDefOf.Steel, 300); Resource(ThingDefOf.ComponentIndustrial, 20);
             playerBlueprint = GenConstruct.PlaceBlueprintForBuild(ThingDefOf.Wall, EmptyCell(), map, Rot4.North, Faction.OfPlayer, ThingDefOf.WoodLog);
+            int beforeCount = component.BaseProjects.SelectMany(p => p.Shell.Concat(p.Furniture))
+                .Where(t => t.Pending?.Spawned == true).Select(t => t.Pending).Distinct().Count();
             component.SetBaseAutomation(true);
             var tasks = component.BaseProjects.SelectMany(p => p.Shell.Concat(p.Furniture)).ToList();
-            Check(tasks.Count(t => t.Pending?.Spawned == true) > 0 && tasks.Count(t => t.Pending?.Spawned == true) <= 6, "Initial blueprint batch invalid: " + component.BaseStatus);
+            int afterCount = tasks.Where(t => t.Pending?.Spawned == true).Select(t => t.Pending).Distinct().Count();
+            Check(afterCount > 0 && afterCount - beforeCount <= 6, "Initial blueprint batch invalid: " + component.BaseStatus);
             BaseConstructionManager.Apply(map, component.BaseProjects.ToList());
             BaseConstructionManager.Apply(map, component.BaseProjects.ToList());
-            Check(tasks.Count(t => t.Pending?.Spawned == true) <= BaseConstructionManager.MaxPending, "Construction queue exceeded its limit.");
-            Check(tasks.Where(t => t.Pending?.Spawned == true).Select(t => t.Position).Distinct().Count() == tasks.Count(t => t.Pending?.Spawned == true), "Duplicated blueprint cells.");
+            Check(tasks.Where(t => t.Pending?.Spawned == true).Select(t => t.Pending).Distinct().Count() <= BaseConstructionManager.MaxPending, "Construction queue exceeded its limit.");
+            Check(tasks.Where(t => t.Pending?.Spawned == true).GroupBy(t => t.Position).All(g => g.Select(t => t.Pending).Distinct().Count() == 1), "Duplicated blueprint cells.");
             wall = tasks.First(t => t.Def == ThingDefOf.Wall && t.Pending is Blueprint_Build);
             Frame frame = PrepareFrame(wall);
             worker.jobs.EndCurrentJob(JobCondition.InterruptForced, false);
@@ -297,7 +307,8 @@ namespace AutonomousRim.RuntimeChecks
             BaseConstructionManager.Apply(map, new List<RoomProject> { cancelled });
             ConstructionTask task = cancelled.Shell.First(t => t.Pending is Blueprint_Build bp && bp.Spawned);
             task.Pending.Destroy(DestroyMode.Cancel);
-            Check(BaseConstructionManager.Apply(map, new List<RoomProject> { cancelled }).Contains("cancelamento"), "Cancelled player project was recreated.");
+            BaseConstructionManager.Apply(map, new List<RoomProject> { cancelled });
+            Check(cancelled.State == ConstructionState.Paused && cancelled.BlockReason.Contains("cancelamento"), "Cancelled player project was recreated.");
             component.SetEquipmentAutomation(true);
             component.SetAutomation(true, true);
             component.DisableAll();

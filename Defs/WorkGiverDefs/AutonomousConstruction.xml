@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <WorkGiverDef>
+    <defName>AutonomousRimDeliverConstruction</defName>
+    <label>deliver to active AI construction</label>
+    <giverClass>AutonomousRim.Execution.WorkGiver_AutonomousConstruction</giverClass>
+    <workType>Hauling</workType>
+    <priorityInType>120</priorityInType>
+    <verb>deliver to</verb>
+    <gerund>delivering to</gerund>
+    <requiredCapacities><li>Manipulation</li></requiredCapacities>
+    <prioritizeSustains>true</prioritizeSustains>
+  </WorkGiverDef>
+  <WorkGiverDef>
+    <defName>AutonomousRimConstructActive</defName>
+    <label>construct active AI projects</label>
+    <giverClass>AutonomousRim.Execution.WorkGiver_AutonomousConstruction</giverClass>
+    <workType>Construction</workType>
+    <priorityInType>85</priorityInType>
+    <verb>construct</verb>
+    <gerund>constructing</gerund>
+    <requiredCapacities><li>Manipulation</li></requiredCapacities>
+    <prioritizeSustains>true</prioritizeSustains>
+  </WorkGiverDef>
+</Defs>

@@ -12,10 +12,10 @@ namespace AutonomousRim.Planning
         private static string lastPlacementFailure;
         private static bool Researched(string name) => DefDatabase<ResearchProjectDef>.GetNamed(name).IsFinished;
         private static int HeaterCount(int length) => Math.Max(2, (length + 6) / 7);
-        private static int GeneratorCount(int length, int rooms)
+        private static int GeneratorCount(int length, int rooms, int freezers = 0)
         {
             float peak = HeaterCount(length) * DefDatabase<ThingDef>.GetNamed("Heater").GetCompProperties<CompProperties_Power>().PowerConsumption +
-                2 * DefDatabase<ThingDef>.GetNamed("Cooler").GetCompProperties<CompProperties_Power>().PowerConsumption +
+                (2 + freezers * 2) * DefDatabase<ThingDef>.GetNamed("Cooler").GetCompProperties<CompProperties_Power>().PowerConsumption +
                 rooms * DefDatabase<ThingDef>.GetNamed("StandingLamp").GetCompProperties<CompProperties_Power>().PowerConsumption;
             return (int)Math.Ceiling(peak * 1.2f / -DefDatabase<ThingDef>.GetNamed("WoodFiredGenerator").GetCompProperties<CompProperties_Power>().PowerConsumption);
         }
@@ -34,7 +34,7 @@ namespace AutonomousRim.Planning
             for (int i = 0; i < requests.Count; i += 2)
                 length += Math.Max(requests[i].Value, i + 1 < requests.Count ? requests[i + 1].Value : 0) + 2;
             bool climate = Researched("Electricity") && Researched("AirConditioning") && Researched("ComplexFurniture");
-            int width = Math.Max(18, climate ? 12 + GeneratorCount(length, requests.Count) * 3 : 18);
+            int width = Math.Max(18, climate ? 12 + GeneratorCount(length, requests.Count, requests.Count(r => r.Key == "Freezer")) * 3 : 18);
             lastPlacementFailure = null;
             int sites = 0;
             // Reserve the entire block and the outdoor generator/exhaust before accepting any room.
@@ -76,7 +76,10 @@ namespace AutonomousRim.Planning
                 foreach (ConstructionTask task in room.Shell)
                 {
                     if (stone != null && task.Def == ThingDefOf.Wall) task.Stuff = stone;
-                    if (climate && task.Position.x == origin.x + (right ? 10 : 7) && task.Position.z == roomOrigin.z + (request.Key == "Quarto" ? 3 : 4))
+                    if (climate && request.Key == "Freezer" && task.Position.x == roomOrigin.x + (right ? request.Value + 1 : 0) &&
+                        (task.Position.z == roomOrigin.z + 3 || task.Position.z == roomOrigin.z + 4))
+                    { task.Def = DefDatabase<ThingDef>.GetNamed("Cooler"); task.Stuff = null; task.Rotation = right ? Rot4.East : Rot4.West; task.TargetTemperature = -4f; }
+                    else if (climate && request.Key != "Freezer" && task.Position.x == origin.x + (right ? 10 : 7) && task.Position.z == roomOrigin.z + (request.Key == "Quarto" ? 3 : 4))
                     {
                         task.Def = DefDatabase<ThingDef>.GetNamed("Vent"); task.Stuff = null; task.Rotation = Rot4.East;
                     }
@@ -108,7 +111,7 @@ namespace AutonomousRim.Planning
                 var power = new RoomProject { Kind = "Energia e climatização", Origin = origin + new IntVec3(13, 0, length + 2), InteriorSize = 1, RequiresRoof = false };
                 ThingDef generatorDef = DefDatabase<ThingDef>.GetNamed("WoodFiredGenerator"), heaterDef = DefDatabase<ThingDef>.GetNamed("Heater"), lampDef = DefDatabase<ThingDef>.GetNamed("StandingLamp");
                 int heaters = HeaterCount(length);
-                int generators = GeneratorCount(length, requests.Count);
+                int generators = GeneratorCount(length, requests.Count, requests.Count(r => r.Key == "Freezer"));
                 power.InteriorSize = generators * 3; power.InteriorHeight = 1;
                 for (int i = 0; i < generators; i++)
                     power.Furniture.Add(new ConstructionTask { Def = generatorDef, Position = origin + new IntVec3(13 + i * 3, 0, length + 3) });
@@ -116,6 +119,10 @@ namespace AutonomousRim.Planning
                 // Continuous feeder down the corridor, crossing doors without blocking walking.
                 for (int z = -1; z <= length + 3; z++) cableCells.Add(origin + new IntVec3(8, 0, z));
                 for (int x = 8; x <= 13 + (generators - 1) * 3; x++) cableCells.Add(origin + new IntVec3(x, 0, length + 3));
+                foreach (RoomProject freezer in result.Where(p => p.Kind == "Freezer"))
+                    foreach (ConstructionTask cooler in freezer.Shell.Where(t => t.Def.defName == "Cooler"))
+                        for (int x = Math.Min(origin.x + 8, cooler.Position.x); x <= Math.Max(origin.x + 8, cooler.Position.x); x++)
+                            cableCells.Add(new IntVec3(x, 0, cooler.Position.z));
                 var lamps = result.Where(p => p != corridor).Select(room => new ConstructionTask { Def = lampDef,
                     Position = room.Origin + (room.Kind == "Quarto" ? new IntVec3(1, 0, 3) : new IntVec3(room.Origin.x >= origin.x + 10 ? 1 : room.InteriorSize - 1, 0, room.InteriorSize)) }).ToList();
                 foreach (ConstructionTask lamp in lamps)
@@ -133,7 +140,7 @@ namespace AutonomousRim.Planning
             // Comfort follows shelter and power; no bedhead or doorway is obstructed.
             if (Researched("ComplexFurniture"))
             {
-                var comfort = new RoomProject { Kind = "Conforto dos quartos", Origin = origin, InteriorSize = 1, RequiresRoof = false };
+                var comfort = new RoomProject { Kind = "Conforto dos quartos", Origin = origin, InteriorSize = 1, RequiresRoof = false, Priority = ConstructionPriority.Low };
                 foreach (RoomProject bedroom in result.Where(p => p.Kind == "Quarto"))
                 {
                     if (!bedroom.ReserveDoubleBed) continue;
@@ -143,7 +150,7 @@ namespace AutonomousRim.Planning
                 }
                 if (comfort.Furniture.Count > 0) result.Add(comfort);
             }
-            var finish = new RoomProject { Kind = "Pisos e acabamento", Origin = origin, InteriorSize = 1, RequiresRoof = false };
+            var finish = new RoomProject { Kind = "Pisos e acabamento", Origin = origin, InteriorSize = 1, RequiresRoof = false, Priority = ConstructionPriority.Low };
             int floorCells = result.Where(p => p.RequiresRoof).Sum(p => p.Interior.Count());
             TerrainDef floor = DefDatabase<TerrainDef>.GetNamed("WoodPlankFloor");
             if (Researched("Stonecutting"))

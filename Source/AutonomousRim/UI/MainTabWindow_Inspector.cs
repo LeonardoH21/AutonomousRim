@@ -49,7 +49,9 @@ namespace AutonomousRim.UI
             listing.Label("Blocos compactos: quartos 5×5, cozinha 4×4, estoque e sala social 6×6; corredor coberto de 2 células e duas saídas. Planos antigos são preservados.");
             listing.Label(AutonomousRim.Planning.CompactBasePlanner.ClimateSummary(map));
             foreach (var project in component.BaseProjects)
-                listing.Label($"{project.Kind} {(project.RequiresRoof ? $"{project.InteriorSize}×{project.Height}" : "instalações")} em {project.Origin}: {(project.Completed ? "concluído" : project.Started ? "em construção" : "planejado")}");
+                listing.Label($"{project.Kind} {(project.RequiresRoof ? $"{project.InteriorSize}×{project.Height}" : "instalações")} em {project.Origin}: {project.State}; prioridade {project.Priority}. {project.BlockReason}" +
+                    (project.FunctionalStorage && !project.Completed ? " Estoque utilizável; proteção climática ainda em obra." : ""));
+            listing.Label(component.GatheringStatus);
             listing.Label(component.ManagementStatus);
             listing.Label(component.EquipmentStatus);
             listing.Label(component.LootStatus);

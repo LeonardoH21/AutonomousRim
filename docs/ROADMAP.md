@@ -76,6 +76,6 @@
 ## Initial construction controls
 - Fixed Rim AI buttons: base construction, item autoequipment, food, work priorities, plan preview and disable-all.
 - Bedroom 5×5, stockroom 6×6 and kitchen 4×4 interiors, with material gating, queue caps and player cancellation preservation.
-- Agriculture, power/freezer, hospital, apparel crafting and perimeter/killbox executors remain pending.
+- Researched power/climate/freezer and native construction gathering are implemented; see `EXECUCAO-CONSTRUCAO.md` for the current executor and normal-run validation. Agriculture, hospital, apparel crafting and perimeter/killbox executors remain pending.
 
 - In-game native construction completed a full 5×5 bedroom with bed/roof; stockroom/kitchen fixture transitions and toggle cleanup passed. Visible HUD rendered and screenshot layout was verified; 21 scans completed without exceptions.
