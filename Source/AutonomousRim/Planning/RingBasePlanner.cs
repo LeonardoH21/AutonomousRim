@@ -214,7 +214,7 @@ namespace AutonomousRim.Planning
             if(climate)foreach(int y in new[]{7,34}){var heater=Task("Heater",At(anchor,33,y));heater.TargetTemperature=20;power.Furniture.Add(heater);connect(heater.Position);}
             foreach(var t in power.Furniture)connect(t.Position);
             var generators=power.Furniture.Where(t=>t.Def==generator).Select(t=>GenAdj.OccupiedRect(t.Position,t.Rotation,t.Def.Size)).ToList();
-            foreach(var c in cables.Where(c=>!generators.Any(r=>r.Contains(c))))power.Furniture.Add(Task("PowerConduit",c));
+            foreach(var c in cables.Where(c=>!generators.Any(r=>r.Contains(c))))power.Furniture.Add(Task("HiddenConduit",c));
             result.Add(power);
         }
         private static void AddCrops(IntVec3 anchor,List<RoomProject> result)
@@ -239,7 +239,7 @@ namespace AutonomousRim.Planning
                 if(!t.Position.InBounds(map)||need!=null&&!t.Position.GetTerrain(map).affordances.Contains(need))return false;
             }
             var occupied = new Dictionary<IntVec3,ConstructionTask>();
-            foreach(var t in projects.SelectMany(p=>p.Shell.Concat(p.Furniture)).Where(t=>t.Def is ThingDef && t.Def.defName!="PowerConduit").GroupBy(t=>new{t.Def,t.Stuff,t.Position,t.Rotation}).Select(g=>g.First()))
+            foreach(var t in projects.SelectMany(p=>p.Shell.Concat(p.Furniture)).Where(t=>t.Def is ThingDef && t.Def.defName!="PowerConduit" && t.Def.defName!="HiddenConduit").GroupBy(t=>new{t.Def,t.Stuff,t.Position,t.Rotation}).Select(g=>g.First()))
             {
                 foreach(var c in GenAdj.OccupiedRect(t.Position,t.Rotation,t.Def.Size))
                 {

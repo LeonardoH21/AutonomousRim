@@ -174,7 +174,7 @@ namespace AutonomousRim.Planning
             {var t=Task("Heater",c);t.TargetTemperature=20;power.Furniture.Add(t);connect(c);}
             foreach(var t in power.Furniture)connect(t.Position);
             var generators=power.Furniture.Where(t=>t.Def.defName=="WoodFiredGenerator"||t.Def.defName=="SolarGenerator").Select(t=>GenAdj.OccupiedRect(t.Position,t.Rotation,t.Def.Size)).ToList();
-            foreach(var c in cables.Where(c=>!generators.Any(r=>r.Contains(c))))power.Furniture.Add(Task("PowerConduit",c));
+            foreach(var c in cables.Where(c=>!generators.Any(r=>r.Contains(c))))power.Furniture.Add(Task("HiddenConduit",c));
             result.Add(power);
 
             var cropRects=new[]{new[]{21,22,19,16},new[]{59,21,21,16},new[]{21,60,19,17},new[]{60,60,20,17}};

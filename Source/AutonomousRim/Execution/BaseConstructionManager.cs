@@ -70,7 +70,7 @@ namespace AutonomousRim.Execution
                         for(int z=Math.Min(t.Position.z,trunk.z);z<=Math.Max(t.Position.z,trunk.z);z++)essential.Add(new IntVec3(t.Position.x,0,z));
                     }
                     return p.Furniture.OrderBy(t=>t.Def.defName=="WoodFiredGenerator"?0:
-                        t.Def.defName=="PowerConduit" && essential.Contains(t.Position)?1:2);
+                        (t.Def.defName=="PowerConduit" || t.Def.defName=="HiddenConduit") && essential.Contains(t.Position)?1:2);
                 }
             }
             if (!CourtyardSupport(map,p)) return p.Furniture;

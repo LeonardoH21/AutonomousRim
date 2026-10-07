@@ -188,9 +188,9 @@ namespace AutonomousRim.Planning
                     Origin = generator.Position, InteriorSize = 1, Priority = ConstructionPriority.High };
                 var cooler = freezer.Shell.First(t => t.Def.defName == "Cooler");
                 for (int x = Math.Min(generator.Position.x, cooler.Position.x); x <= Math.Max(generator.Position.x, cooler.Position.x); x++)
-                    power.Furniture.Add(Thing("PowerConduit", new IntVec3(x, 0, generator.Position.z)));
+                    power.Furniture.Add(Thing("HiddenConduit", new IntVec3(x, 0, generator.Position.z)));
                 for (int z = Math.Min(generator.Position.z, cooler.Position.z); z <= Math.Max(generator.Position.z, cooler.Position.z); z++)
-                    if (z != generator.Position.z) power.Furniture.Add(Thing("PowerConduit", new IntVec3(cooler.Position.x, 0, z)));
+                    if (z != generator.Position.z) power.Furniture.Add(Thing("HiddenConduit", new IntVec3(cooler.Position.x, 0, z)));
                 projects.Add(power);
             }
             AddFoodGrowing(map, projects, root);

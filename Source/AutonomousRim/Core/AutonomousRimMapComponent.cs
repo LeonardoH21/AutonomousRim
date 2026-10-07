@@ -10,7 +10,7 @@ namespace AutonomousRim.Core
     public sealed class AutonomousRimMapComponent : MapComponent
     {
         private const int ScanIntervalTicks = 360;
-        private const int LootIntervalTicks = 600;
+        private const int LootIntervalTicks = 120;
         private const int ThreatIntervalTicks = 15;
         private bool emergencyAutomation = true;
         private EmergencyState emergency = new EmergencyState();
@@ -360,6 +360,7 @@ namespace AutonomousRim.Core
             if (workAutomation && (force || cycle % 600 == 60)) ManagementStatus += Find.PlaySettings.useWorkPriorities
                 ? " Prioridades ativas; alterações manuais do jogador são preservadas."
                 : " Prioridades pausadas: o modo numérico de trabalho foi desligado pelo jogador.";
+            if (baseAutomation && (force || cycle % 300 == 150)) StoragePolicy.ManageFoodStorage(map, CurrentState, baseProjects);
             if (equipmentAutomation && (force || cycle % 900 == 90)) EquipmentStatus = EquipmentManager.Apply(map, CurrentState, equipmentOrders, managedApparel, equipmentExcluded);
             if (force && baseAutomation) ExecuteConstruction(cycle);
         }

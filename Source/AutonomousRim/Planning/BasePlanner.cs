@@ -241,7 +241,7 @@ namespace AutonomousRim.Planning
                             { wall.Def = DefDatabase<ThingDef>.GetNamed("Cooler"); wall.Stuff = null; wall.Rotation = Rot4.West; wall.TargetTemperature = -2; }
                             var supply = new RoomProject { Kind = "Energia e climatização", Origin = cell + new IntVec3(-6, 0, 2), InteriorSize = 2, InteriorHeight = 2, RequiresRoof = false };
                             supply.Furniture.Add(new ConstructionTask { Def = DefDatabase<ThingDef>.GetNamed("WoodFiredGenerator"), Position = cell + new IntVec3(-4, 0, 4) });
-                            for (int x = -2; x <= 0; x++) supply.Furniture.Add(new ConstructionTask { Def = DefDatabase<ThingDef>.GetNamed("PowerConduit"), Position = cell + new IntVec3(x, 0, 4) });
+                            for (int x = -2; x <= 0; x++) supply.Furniture.Add(new ConstructionTask { Def = DefDatabase<ThingDef>.GetNamed("HiddenConduit"), Position = cell + new IntVec3(x, 0, 4) });
                             projects.Add(supply);
                         }
                         projects.Add(room); independent.Add(room); break;

@@ -36,7 +36,7 @@ namespace AutonomousRim.Planning
                 if(power!=null && reservation!=null && def.GetCompProperties<CompProperties_Power>()!=null)
                 {
                     var trunk=RingBasePlanner.At(reservation.LayoutAnchor,33,24);
-                    var cable=DefDatabase<ThingDef>.GetNamed("PowerConduit");
+                    var cable=DefDatabase<ThingDef>.GetNamed("HiddenConduit");
                     void connect(IntVec3 c)
                     {
                         if(rooms.SelectMany(BaseConstructionManager.Tasks).Any(existing=>existing.Def==cable && existing.Position==c))return;

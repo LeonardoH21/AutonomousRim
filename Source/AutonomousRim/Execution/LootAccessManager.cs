@@ -11,7 +11,7 @@ namespace AutonomousRim.Execution
 {
     public static class LootAccessManager
     {
-        public const int MaxStacksPerCycle = 8;
+        public const int MaxStacksPerCycle = 16;
         private sealed class Candidate { public Thing Item; public int Priority; public string Reason; }
 
         public static string Apply(Map map, ColonyState state, bool building, IReadOnlyList<RoomProject> projects,
@@ -117,7 +117,7 @@ namespace AutonomousRim.Execution
                 if (materials.ContainsKey(item.def)) materials[item.def] -= item.stackCount;
                 Log.Message($"[AutonomousRim] Allow: {item.LabelCap} — {candidate.Reason}.");
             }
-            return $"Allow gradual: {released} pilhas liberadas neste ciclo (máximo {MaxStacksPerCycle}/10 s de jogo). Reproibições manuais são respeitadas; itens já liberados permanecem disponíveis ao desligar.";
+            return $"Allow gradual: {released} pilhas liberadas neste ciclo (máximo {MaxStacksPerCycle}/2 s de simulação). Reproibições manuais são respeitadas; itens já liberados permanecem disponíveis ao desligar.";
         }
     }
 }

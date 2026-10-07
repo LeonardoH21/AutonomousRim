@@ -132,7 +132,7 @@ namespace AutonomousRim.Planning
                         cableCells.Add(new IntVec3(x, 0, lamp.Position.z));
                 var generatorFootprints = power.Furniture.Select(t => GenAdj.OccupiedRect(t.Position, Rot4.North, generatorDef.size)).ToList();
                 foreach (IntVec3 cell in cableCells.Where(c => !generatorFootprints.Any(rect => rect.Contains(c))).OrderBy(c => c.z).ThenBy(c => c.x))
-                    power.Furniture.Add(new ConstructionTask { Def = DefDatabase<ThingDef>.GetNamed("PowerConduit"), Position = cell });
+                    power.Furniture.Add(new ConstructionTask { Def = DefDatabase<ThingDef>.GetNamed("HiddenConduit"), Position = cell });
                 for (int i = 0; i < heaters; i++)
                     power.Furniture.Add(new ConstructionTask { Def = heaterDef,
                         Position = origin + new IntVec3(9, 0, i == 0 ? 1 : length - 2), TargetTemperature = 20f });
@@ -172,7 +172,7 @@ namespace AutonomousRim.Planning
             // future modules. Check reservations as well, allowing shared aliases
             // and conduit/floor overlays only.
             var reserved = new Dictionary<IntVec3, ConstructionTask>();
-            foreach (var task in result.SelectMany(p => p.Shell.Concat(p.Furniture)).Where(t => t.Def is ThingDef && t.Def.defName != "PowerConduit")
+            foreach (var task in result.SelectMany(p => p.Shell.Concat(p.Furniture)).Where(t => t.Def is ThingDef && t.Def.defName != "PowerConduit" && t.Def.defName != "HiddenConduit")
                 .GroupBy(t => new { t.Def, t.Stuff, t.Position, t.Rotation }).Select(g => g.First()))
                 foreach (var cell in GenAdj.OccupiedRect(task.Position, task.Rotation, task.Def.Size))
                 {

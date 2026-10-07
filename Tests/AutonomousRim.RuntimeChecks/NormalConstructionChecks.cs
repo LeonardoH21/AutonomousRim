@@ -321,7 +321,7 @@ namespace AutonomousRim.RuntimeChecks
                 !projects.Any(p => p.Kind == "Medicamentos" && p.StorageCells.Count == 3) || !projects.Any(p => p.Kind == "Despejo"))
                 throw new InvalidOperationException("Missing compact modules: " + component.BaseStatus);
             var occupied = new HashSet<IntVec3>();
-            foreach (var task in projects.SelectMany(BaseConstructionManager.Tasks).Where(t => t.Def is ThingDef && t.Def.defName != "PowerConduit")
+            foreach (var task in projects.SelectMany(BaseConstructionManager.Tasks).Where(t => t.Def is ThingDef && t.Def.defName != "PowerConduit" && t.Def.defName != "HiddenConduit")
                 .GroupBy(t => new { t.Def, t.Stuff, t.Position, t.Rotation }).Select(g => g.First()))
                 foreach (var cell in GenAdj.OccupiedRect(task.Position, task.Rotation, task.Def.Size))
                     if (!occupied.Add(cell)) throw new InvalidOperationException("Planned furniture/module overlap at " + cell + ": " + task.Def.defName);

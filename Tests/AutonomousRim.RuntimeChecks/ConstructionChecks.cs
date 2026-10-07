@@ -345,7 +345,7 @@ namespace AutonomousRim.RuntimeChecks
         private void VerifyHeat()
         {
             var powerProject = component.BaseProjects.Single(p => p.Kind == "Energia e climatização");
-            foreach (ConstructionTask task in powerProject.Furniture.Where(t => t.Def.defName == "PowerConduit"))
+            foreach (ConstructionTask task in powerProject.Furniture.Where(t => (t.Def.defName == "PowerConduit" || t.Def.defName == "HiddenConduit")))
                 Check(task.Complete(map), "Conduit disappeared during furnishing/flooring: " + task.Position);
             Check(!corridor.Interior.CenterCell.GetRoom(map).UsesOutdoorTemperature, "Corridor is not an enclosed temperature-controlled room.");
             Check(corridor.Interior.CenterCell.GetTemperature(map) > thermalStart, "Powered heaters did not increase corridor temperature.");

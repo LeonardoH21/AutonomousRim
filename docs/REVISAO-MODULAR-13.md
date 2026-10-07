@@ -67,3 +67,16 @@ Evidência local: `.tools/modular-construction-run-6/Player-20261007-204234.log`
 Compilação da produção e do observador sem avisos/erros; 35 verificações de políticas passaram. Os testes de construção usam trabalho real. Os dois testes de geometria rejeitados, a execução interrompida e o teste que ultrapassou três dias foram mantidos como evidência de diagnóstico.
 
 Para exportar o save sem o observador de testes, use `scripts/ExportModularSave.ps1 -RunName run-6 -CopyToGameSaves`. O exportador remove somente componentes e metadados do mod temporário de teste; preserva a colônia, suas construções, recursos e trabalhos.
+
+
+## Revisão de armazenamento e cabos — 2026-10-07
+
+- Novos projetos usam HiddenConduit; validadores e ordenação aceitam também PowerConduit para compatibilidade. Cabos comuns já construídos ou gravados no planejamento de saves antigos não são substituídos nesta revisão.
+- Allow passa de 600 para 120 ticks e de 8 para até 16 pilhas úteis por ciclo; mantém bloqueio por hostis, alcance e reproibições manuais.
+- Armazenamento é revisto a cada 300 ticks com construção automática ativa, mesmo com produção de comida desligada; emergência continua suspendendo melhorias.
+- Depois de concluídos os cômodos, planeja 6 prateleiras pequenas no estoque e 4 no freezer (até 8 quando quase cheio), se houver células livres fora dos eixos de circulação e portas. Não altera projetos pausados/cancelados pelo jogador. O planejamento das prateleiras alimenta a pesquisa normal de ComplexFurniture, sem desbloquear tecnologia artificialmente.
+- Cada célula de ShelfSmall suporta 3 pilhas conforme os defs do jogo. Filtros setoriais existentes são aplicados pelo construtor.
+- Corrigida seleção sem candidato, que poderia retornar a célula zero em vez de Invalid.
+- Quartos modulares continuam com cama e piso; luz de parede, cômoda, criado-mudo e vaso ainda não são planejados. O save de review anterior permanece inalterado.
+
+Validação desta revisão: compilação do mod e do conjunto de testes nativos sem erros/avisos; 35 verificações de políticas passaram. Não foi executada nova simulação de construção desta revisão dentro do jogo.
