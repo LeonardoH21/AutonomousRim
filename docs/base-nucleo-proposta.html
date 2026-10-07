@@ -1,0 +1,130 @@
+<div id="rim-nucleo-proposta">
+  <h2>Base núcleo · proposta para aprovação</h2>
+  <div class="viz-controls" aria-label="Crescimento da base">
+    <button class="btn" type="button" data-stage="1" aria-pressed="false">1 · Núcleo</button>
+    <button class="btn" type="button" data-stage="2" aria-pressed="false">2 · Serviços</button>
+    <button class="btn" type="button" data-stage="3" aria-pressed="true">3 · Expansão e defesa</button>
+  </div>
+  <div class="text-small" id="rim-nucleo-etapa" aria-live="polite"></div>
+  <svg class="rim-nucleo-mapa" role="img" aria-label="Planta modular em células de RimWorld, com estoque central e crescimento para fora"></svg>
+  <div class="viz-row text-small"><span>▧ Pisos em todos os cômodos e corredores</span><span>▰ Paredes compartilhadas</span><span>▯ Portas</span><span>·· Reserva de expansão</span></div>
+  <div class="card" id="rim-nucleo-detalhe" aria-live="polite">Estoque · 12×11 internos · Centro da base; sem comida; prateleiras após pesquisa.</div>
+  <div class="viz-row" id="rim-nucleo-seletor" aria-label="Detalhes dos cômodos"></div>
+</div>
+<style>
+#rim-nucleo-proposta .rim-nucleo-mapa {display:block;width:100%;margin:12px 0;overflow:visible}
+#rim-nucleo-proposta #rim-nucleo-etapa {margin-top:8px}
+#rim-nucleo-proposta #rim-nucleo-seletor {margin-top:8px}
+#rim-nucleo-proposta .rim-room {touch-action:manipulation}
+#rim-nucleo-proposta .rim-room:focus-visible {outline:2px solid var(--ring)}
+</style>
+<script>
+(() => {
+  const root = document.getElementById('rim-nucleo-proposta');
+  const svg = root.querySelector('.rim-nucleo-mapa');
+  const rooms = [
+    {id:'estoque',name:'Estoque',label:'Estoque',x:23,y:24,w:14,h:13,p:1,door:'w',detail:'Centro da base; sem comida; prateleiras após pesquisa.'},
+    {id:'cozinha',name:'Cozinha',label:'Coz.',x:40,y:17,w:6,h:6,p:1,door:'w',detail:'4×4 internos. Fogão e cadeira; sala limpa sem circulação de passagem; separada do abate por parede.'},
+    {id:'abate',name:'Abate',label:'Abate',x:45,y:17,w:6,h:6,p:1,door:'s',detail:'4×4 internos. Bancada butcher; acesso ao freezer e ao depósito externo de carcaças; nenhuma bancada de abate na cozinha.'},
+    {id:'freezer',name:'Freezer',label:'Frio',x:40,y:22,w:11,h:10,p:2,door:'w',detail:'9×8 internos antes do vestíbulo. −2 °C; só comida, prioridade superior ao estoque; antecâmara no acesso e saída quente para faixa externa sem teto.'},
+    {id:'refeitorio',name:'Refeitório',label:'Refeit.',x:40,y:31,w:15,h:7,p:1,door:'w',detail:'13×5 internos. Mesas e cadeiras; acesso próprio pelo corredor, sem passar pela cozinha. Ligação curta com freezer e recreação.'},
+    {id:'recreacao',name:'Recreação',label:'Recreação',x:40,y:37,w:15,h:7,p:2,door:'w',detail:'13×5 internos. Recreação e decoração; vizinha do refeitório e da ala de quartos; piso completo e espaço para esculturas.'},
+    {id:'roupas',name:'Roupas e armaduras',label:'Roupas',x:23,y:17,w:14,h:8,p:2,door:'n',detail:'12×6 internos. Estoque separado de roupas e armaduras; ligação direta com o estoque geral e com os quartos.'},
+    {id:'armas',name:'Armas',label:'Armas',x:23,y:36,w:14,h:8,p:2,door:'s',detail:'12×6 internos. Prateleiras e reserva de equipamentos; acesso interno próximo da saída defensiva.'},
+    {id:'medicina',name:'Medicamentos',label:'Med.',x:10,y:17,w:10,h:8,p:2,door:'e',detail:'8×6 internos. Reserva de medicina com 2–3 slots em prioridade Critical; restante reservado para apoio hospitalar.'},
+    {id:'hospital',name:'Hospital',label:'Hosp.',x:10,y:24,w:10,h:7,p:2,door:'e',detail:'8×5 internos. Começa com duas camas normais marcadas médicas; espaço para mais camas, iluminação e piso de fácil limpeza; piso estéril quando disponível.'},
+    {id:'baterias',name:'Baterias',label:'Bat.',x:10,y:34,w:10,h:6,p:2,door:'e',detail:'8×4 internos. Compartimento coberto, separado por paredes de pedra; cabos acompanham os corredores.'},
+    {id:'apoio',name:'Apoio futuro',label:'Apoio',x:10,y:39,w:10,h:5,p:3,door:'e',detail:'8×3 internos. Reserva para isolamento ou serviço conforme a necessidade; não precisa ser equipada no início.'},
+    {id:'oficina-n',name:'Oficina norte',label:'Ofic. N',x:38,y:7,w:9,h:7,p:2,door:'s',detail:'7×5 internos. Corte de pedras e produção inicial; depósito de pedras logo ao norte; materiais vêm do estoque central.'},
+    {id:'pesquisa',name:'Pesquisa',label:'Pesq.',x:46,y:7,w:9,h:7,p:2,door:'s',detail:'7×5 internos. Bancada de pesquisa e espaço para evolução; fabricação pode ocupar a oficina sul.'},
+    {id:'oficina-s',name:'Oficina sul',label:'Oficina S',x:38,y:47,w:17,h:7,p:2,door:'n',detail:'15×5 internos. Costura, forja e fabricação conforme pesquisas; sem criar outro polo de produção afastado.'}
+  ];
+  [20,26,32].forEach((x,i)=>rooms.push({id:'q'+(i+1),name:'Quarto '+(i+1),label:'Q'+(i+1),x,y:7,w:7,h:7,p:1,door:'s',bed:true,detail:'5×5 internos. Cama encostada na parede, criado, cômoda e vaso; reserva ao lado para futura cama de casal.'}));
+  [20,26,32].forEach((x,i)=>rooms.push({id:'q'+(i+4),name:'Quarto '+(i+4),label:'Q'+(i+4),x,y:47,w:7,h:7,p:1,door:'n',bed:true,detail:'5×5 internos. Mesmo módulo da ala norte; construir apenas a quantidade necessária de quartos.'}));
+  [[8,7],[14,7],[8,47],[14,47],[54,7],[60,7]].forEach(([x,y],i)=>rooms.push({id:'q'+(i+7),name:'Quarto '+(i+7),label:'Q'+(i+7),x,y,w:7,h:7,p:3,door:y===7?'s':'n',bed:true,detail:'Expansão 5×5 ligada ao mesmo corredor; só construir quando a população exigir. Reserva prevista para até 12 quartos.'}));
+  const corridors = [[8,14,59,3],[20,17,3,27],[37,17,3,27],[8,44,47,3]];
+  const service = [[51,23,8,9],[55,17,5,7],[39,3,8,3],[59,33,7,11]];
+  const paths = [[2,31,18,3],[55,44,3,14],[55,35,4,3]];
+  const stageText = ['','Núcleo: estoque, alimentação e quartos conforme a população.','Serviços adjacentes: frio, medicina, oficinas, pesquisa, conforto e energia.','Planta final: expansão dos quartos, plantações nos quatro cantos e perímetro defensivo.'];
+  let stage = 3, selected = 'estoque';
+  const ns = 'http://www.w3.org/2000/svg';
+  const el = (tag,attrs,parent=svg) => {const n=document.createElementNS(ns,tag);Object.entries(attrs||{}).forEach(([k,v])=>n.setAttribute(k,v));parent.appendChild(n);return n;};
+  const inside = (x,y,r,pad=0)=>x>=r[0]-pad&&x<r[0]+r[2]+pad&&y>=r[1]-pad&&y<r[1]+r[3]+pad;
+  function showDetail() {
+    const r = rooms.find(r=>r.id===selected);
+    root.querySelector('#rim-nucleo-detalhe').textContent = r.name+' · '+(r.w-2)+'×'+(r.h-2)+' internos · '+r.detail;
+  }
+  function draw() {
+    const width = Math.max(280,root.clientWidth), s=(width-16)/72, margin=8, compact=width<450;
+    svg.setAttribute('viewBox','0 0 '+width+' '+(s*62+16)); svg.replaceChildren();
+    const title=el('title'); title.textContent='Base núcleo: crescimento modular do centro para fora';
+    const desc=el('desc'); desc.textContent='Paredes compartilhadas e corredores de três células. Estoque 12 por 11 no centro. Cozinha e abate separados a leste. Hospital a oeste. Quartos nas bordas. Pisos em todos os cômodos. Campos de arroz, tecido, batata e medicina nos quatro cantos.';
+    const defs=el('defs');
+    const pattern=el('pattern',{id:'rim-floor-grid',width:s,height:s,patternUnits:'userSpaceOnUse'},defs);
+    el('path',{d:'M '+s+' 0 L 0 0 0 '+s,fill:'none',stroke:'var(--border)','stroke-width':.5},pattern);
+    const rect=(x,y,w,h,attrs={},parent=svg)=>el('rect',{x:margin+x*s,y:margin+y*s,width:w*s,height:h*s,...attrs},parent);
+    const text=(x,y,value,attrs={},parent=svg)=>{const t=el('text',{x:margin+x*s,y:margin+y*s,fill:'var(--foreground)','font-size':12,'text-anchor':'middle','dominant-baseline':'middle',...attrs},parent);t.textContent=value;return t;};
+    // All remaining plantable exterior cells are assigned by quadrant.
+    for(let y=2;y<58;y++)for(let x=2;x<70;x++) {
+      if(rooms.some(r=>inside(x,y,[r.x,r.y,r.w,r.h],1))||corridors.some(r=>inside(x,y,r))||service.some(r=>inside(x,y,r))||paths.some(r=>inside(x,y,r)))continue;
+      const medicine=x>=36&&y>=30, tone=x<36?(y<30?3:4):(y<30?5:6);
+      rect(x,y,1,1,{fill:'var(--viz-series-'+tone+')',opacity:.17,stroke:'var(--border)','stroke-width':.25});
+      if(medicine&&x>=64&&y>=50)rect(x,y,1,1,{fill:'var(--viz-series-5)',opacity:.35});
+    }
+    corridors.forEach(r=>{rect(...r,{fill:'var(--muted)'});rect(...r,{fill:'url(#rim-floor-grid)'});});
+    paths.forEach(r=>rect(...r,{fill:'var(--muted)',opacity:.6}));
+    rooms.forEach(r=>{
+      const active=r.p<=stage, g=el('g',{'data-room':r.id,class:'rim-room cursor-interaction',role:'button','aria-label':r.name+', '+(r.w-2)+' por '+(r.h-2)+' internos, etapa '+r.p});
+      if(active) {
+        rect(r.x,r.y,r.w,r.h,{fill:'var(--foreground)'},g);
+        rect(r.x+1,r.y+1,r.w-2,r.h-2,{fill:'var(--background)'},g);
+        rect(r.x+1,r.y+1,r.w-2,r.h-2,{fill:'var(--viz-series-'+r.p+')',opacity:.13},g);
+        rect(r.x+1,r.y+1,r.w-2,r.h-2,{fill:'url(#rim-floor-grid)'},g);
+        let dx=r.x+Math.floor(r.w/2),dy=r.y+Math.floor(r.h/2);
+        if(r.door==='n')dy=r.y;if(r.door==='s')dy=r.y+r.h-1;if(r.door==='w')dx=r.x;if(r.door==='e')dx=r.x+r.w-1;
+        rect(dx,dy,1,1,{fill:'var(--viz-series-5)'},g);
+        if(r.bed) {
+          rect(r.x+1,r.y+1,1,2,{fill:'var(--viz-series-2)',stroke:'var(--foreground)','stroke-width':.5},g);
+          rect(r.x+2,r.y+1,1,2,{fill:'none',stroke:'var(--muted-foreground)','stroke-dasharray':'2 2','stroke-width':.5},g);
+          rect(r.x+3,r.y+1,1,1,{fill:'var(--muted-foreground)',opacity:.6},g);
+        }
+      } else rect(r.x,r.y,r.w,r.h,{fill:'none',stroke:'var(--border)','stroke-dasharray':'3 3','stroke-width':1},g);
+      const short={estoque:'EST',cozinha:'C',abate:'A',freezer:'F',refeitorio:'REF',recreacao:'REC',roupas:'R/A',armas:'ARM',medicina:'MED',hospital:'H',baterias:'BAT',apoio:'AP','oficina-n':'O.N',pesquisa:'PES','oficina-s':'O.S'};
+      text(r.x+r.w/2,r.y+r.h/2+(r.bed?1:0),compact?(short[r.id]||r.label):r.label,{},g);
+      g.addEventListener('click',()=>{selected=r.id;showDetail();});
+    });
+    // Direct connections keep rooms usable without crossing the kitchen.
+    if(stage>=1){rect(43,22,1,1,{fill:'var(--viz-series-5)'});rect(48,22,1,1,{fill:'var(--viz-series-5)'});rect(50,19,1,1,{fill:'var(--viz-series-5)'});}
+    if(stage>=2) {
+      rect(48,22,1,1,{fill:'var(--viz-series-5)'});rect(50,19,1,1,{fill:'var(--viz-series-5)'});
+      rect(48,37,1,1,{fill:'var(--viz-series-5)'});
+      // Freezer vestibule occupies part of its nominal interior; venting stays external.
+      rect(41,27,2,3,{fill:'var(--muted)'});rect(41,26,3,1,{fill:'var(--foreground)'});rect(41,30,3,1,{fill:'var(--foreground)'});rect(43,26,1,5,{fill:'var(--foreground)'});rect(43,28,1,1,{fill:'var(--viz-series-5)'});
+      rect(50,25,1,1,{fill:'var(--viz-series-2)'});rect(50,29,1,1,{fill:'var(--viz-series-2)'});
+    }
+    text(6,24,'Arroz');text(63,27,'Linho');text(10,55,'Batata');text(54,55,compact?'Med.':'Medicina');text(66,55,'Hemp',{'font-size':11});
+    rect(55,17,5,7,{fill:'var(--muted)',opacity:.5});text(57.5,20.5,'C',{'font-size':11});
+    text(43,4.5,compact?'Ped.':'Pedras',{'font-size':11});
+    if(stage>=2) {
+      rect(59,33,7,11,{fill:'none',stroke:'var(--foreground)','stroke-width':1});
+      rect(61,35,3,3,{fill:'var(--muted)',stroke:'var(--foreground)','stroke-width':.7});rect(61,40,3,3,{fill:'var(--muted)',stroke:'var(--foreground)','stroke-width':.7});
+      text(62.5,compact?32:38.9,compact?'Ger.':'Energia',{'font-size':11});
+    }
+    if(stage===3) {
+      rect(1,1,70,1,{fill:'var(--foreground)'});rect(1,58,70,1,{fill:'var(--foreground)'});
+      rect(1,1,1,58,{fill:'var(--foreground)'});rect(70,1,1,58,{fill:'var(--foreground)'});
+      rect(1,31,1,3,{fill:'var(--viz-series-5)'});rect(55,58,3,1,{fill:'var(--viz-series-5)'});
+      text(10,32.5,'Defesa',{'font-size':11});text(56.5,60,'Saída de serviço',{'font-size':11});
+    }
+    root.querySelector('#rim-nucleo-etapa').textContent=stageText[stage];
+  }
+  root.querySelectorAll('[data-stage]').forEach(button=>button.addEventListener('click',()=>{
+    stage=Number(button.dataset.stage);root.querySelectorAll('[data-stage]').forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.stage)===stage)));draw();
+  }));
+  const label=document.createElement('label');label.className='form-label';label.textContent='Detalhes do setor';
+  const selector=document.createElement('select');selector.className='form-select';selector.setAttribute('aria-label','Detalhes do setor');
+  rooms.forEach(r=>{const option=document.createElement('option');option.value=r.id;option.textContent=r.name;selector.appendChild(option);});
+  selector.addEventListener('change',()=>{selected=selector.value;showDetail();});label.appendChild(selector);root.querySelector('#rim-nucleo-seletor').appendChild(label);
+  new ResizeObserver(draw).observe(root);draw();showDetail();
+})();
+</script>
