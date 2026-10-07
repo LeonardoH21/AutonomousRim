@@ -14,7 +14,7 @@ namespace AutonomousRim.Execution
             var fire=DefDatabase<ThingDef>.GetNamedSilentFail("Fire");
             return fire!=null && map.listerThings.AllThings.Any(t=>t.def==fire && t.Spawned);
         }
-        public static bool Emergency(Map map,ColonyState state)=>state.HostilePawnCount>0 || HasFire(map) || state.DownedColonists>0;
+        public static bool Emergency(Map map,ColonyState state)=>map.GetComponent<AutonomousRimMapComponent>().SecondarySuspended || state.HostilePawnCount>0 || EmergencyManager.LocalFire(map) || state.DownedColonists>0;
         private static TimeAssignmentDef A(string name)=>DefDatabase<TimeAssignmentDef>.GetNamedSilentFail(name) ?? TimeAssignmentDefOf.Anything;
         private static bool CanMeditate(Pawn pawn)=>pawn.psychicEntropy!=null;
         private static TimeAssignmentDef Normal(Pawn pawn,int hour,float rest,float joy)

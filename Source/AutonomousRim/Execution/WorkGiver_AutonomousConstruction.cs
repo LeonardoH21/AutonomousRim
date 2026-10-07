@@ -15,7 +15,7 @@ namespace AutonomousRim.Execution
         public override bool ShouldSkip(Pawn pawn, bool forced = false)
         {
             var ai = pawn.Map?.GetComponent<AutonomousRimMapComponent>();
-            return ai?.BaseAutomation != true || !WorkPriorityManager.CanWork(pawn) || !pawn.workSettings.Initialized ||
+            return ai?.BaseAutomation != true || ai.ExpansionSuspended || !WorkPriorityManager.CanWork(pawn) || !pawn.workSettings.Initialized ||
                 pawn.WorkTypeIsDisabled(def.workType) || pawn.workSettings.GetPriority(def.workType) == 0 ||
                 pawn.Map.mapPawns.AllPawnsSpawned.Any(p => !p.Dead && !p.Downed && p.HostileTo(Faction.OfPlayer));
         }

@@ -11,7 +11,15 @@ namespace AutonomousRim.Core
     {
         private const int ScanIntervalTicks = 360;
         private const int LootIntervalTicks = 600;
-        private const int ThreatIntervalTicks = 120;
+        private const int ThreatIntervalTicks = 60;
+        private bool emergencyAutomation = true;
+        private EmergencyState emergency = new EmergencyState();
+        public EmergencyState Emergency => emergency;
+        public bool EmergencyAutomation => emergencyAutomation;
+        public bool SecondarySuspended => emergencyAutomation && emergency.BlockSecondary;
+        public bool ExpansionSuspended => emergencyAutomation && emergency.BlockExpansion;
+        public bool EffectiveCombat => combatAutomation || emergencyAutomation && emergency.Phase==EmergencyPhase.Danger;
+        public string EmergencyStatus => $"Emergência: {emergency.Phase}; {emergency.Decision}. Vulneráveis: {CurrentState?.Threat?.Vulnerable.Count ?? 0}; resgates sem rota/cama segura: {emergency.DeferredRescues}; sem abrigo acessível: {emergency.MissingShelters}.";
 
         public ColonyState CurrentState { get; private set; }
         private bool foodAutomation;
@@ -68,6 +76,8 @@ namespace AutonomousRim.Core
         public override void ExposeData()
         {
             base.ExposeData();
+            Scribe_Values.Look(ref emergencyAutomation,"emergencyAutomation",true);
+            Scribe_Deep.Look(ref emergency,"emergency");
             Scribe_Values.Look(ref foodAutomation, "foodAutomation");
             Scribe_Values.Look(ref workAutomation, "workAutomation");
             Scribe_Values.Look(ref scheduleAutomation, "scheduleAutomation", true);
@@ -107,6 +117,7 @@ namespace AutonomousRim.Core
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
             {
                 strategicPlan = strategicPlan ?? new StrategicPlan();
+                emergency = emergency ?? new EmergencyState();
                 combatOrders = combatOrders ?? new List<CombatOrder>();
                 combatExcluded = combatExcluded ?? new List<Pawn>();
                 combatOrders.RemoveAll(o => o.Pawn == null);
@@ -161,6 +172,7 @@ namespace AutonomousRim.Core
 
         public void DisableAll()
         {
+            SetEmergencyAutomation(false);
             SetCombatAutomation(false);
             SetStrategyAutomation(false);
             SetLootAutomation(false);
@@ -172,9 +184,17 @@ namespace AutonomousRim.Core
 
         public void SetCombatAutomation(bool enabled)
         {
+            if(!enabled && emergencyAutomation) SetEmergencyAutomation(false);
             combatAutomation = enabled;
             if (!enabled) { CombatManager.Stop(combatOrders); combatExcluded.Clear(); }
             CombatStatus = enabled ? CombatManager.Apply(map, combatOrders, combatExcluded) : "Combate cooperativo desligado; controle da IA liberado.";
+        }
+
+        public void SetEmergencyAutomation(bool enabled)
+        {
+            emergencyAutomation=enabled;
+            if(!enabled) { EmergencyManager.Stop(emergency); if(!combatAutomation)CombatManager.Stop(combatOrders); }
+            else { CurrentState=ColonyStateScanner.Scan(map); RefreshThreat(Find.TickManager.TicksGame); }
         }
 
         public void SetScheduleAutomation(bool enabled)
@@ -206,7 +226,7 @@ namespace AutonomousRim.Core
         {
             CurrentState = ColonyStateScanner.Scan(map);
             StrategicPlanner.Evaluate(map, CurrentState, baseProjects, strategicPlan, strategyAutomation);
-            if (strategyAutomation && baseAutomation && StrategicInfrastructure.Add(map, baseProjects)) PreviewBase();
+            if (strategyAutomation && baseAutomation && !ExpansionSuspended && StrategicInfrastructure.Add(map, baseProjects)) PreviewBase();
         }
 
         public void EvaluateFailure()
@@ -227,7 +247,7 @@ namespace AutonomousRim.Core
             if (!enabled) EquipmentManager.Stop(equipmentOrders, managedApparel);
             equipmentAutomation = enabled;
             CurrentState = ColonyStateScanner.Scan(map);
-            EquipmentStatus = enabled ? EquipmentManager.Apply(map, CurrentState, equipmentOrders, managedApparel, equipmentExcluded) : "Autoequipamento desativado; equipamentos atuais mantidos.";
+            EquipmentStatus = enabled && !ExpansionSuspended ? EquipmentManager.Apply(map, CurrentState, equipmentOrders, managedApparel, equipmentExcluded) : "Autoequipamento suspenso/desativado; equipamentos atuais mantidos.";
         }
 
         public bool EquipmentAllowedFor(Pawn pawn) => !equipmentExcluded.Contains(pawn);
@@ -277,15 +297,16 @@ namespace AutonomousRim.Core
             base.MapComponentTick();
 
             int ticks = Find.TickManager?.TicksGame ?? 0;
-            if (combatAutomation && ticks > 0 && ticks % CombatManager.Interval == 0)
-                CombatStatus = CombatManager.Apply(map, combatOrders, combatExcluded);
+            if (CurrentState != null && ticks > 0 && ticks % ThreatIntervalTicks == 0) RefreshThreat(ticks);
+            if (EffectiveCombat && ticks > 0 && ticks % CombatManager.Interval == 0)
+                CombatStatus = CombatManager.Apply(map, combatOrders, combatExcluded,emergencyAutomation && emergency.Phase==EmergencyPhase.Danger && EmergencyManager.Retreat(CurrentState.Threat));
+            else if(combatOrders.Count>0 && !EffectiveCombat)CombatManager.Stop(combatOrders);
             if (ticks > 0 && ticks - strategicPlan.LastEvaluation >= 600) EvaluateStrategy();
             if (ticks > 0 && ticks - failureMemory.LastEvaluationTick >= 600) EvaluateFailure();
             if (baseAutomation && ticks > 0 && ticks % BaseConstructionManager.ExecutionInterval == 0) ExecuteConstruction(ticks);
             if (CurrentState != null && ticks > 0 && ticks % ThreatIntervalTicks == 0)
             {
                 if (equipmentAutomation) EquipmentManager.TrackOrders(equipmentOrders, managedApparel);
-                RefreshThreat(ticks);
             }
             if (ticks <= 0 || ticks % ScanIntervalTicks != 0)
             {
@@ -305,6 +326,13 @@ namespace AutonomousRim.Core
 
         private void ManageColony()
         {
+            if(emergencyAutomation && emergency.Phase!=EmergencyPhase.Normal)
+            {
+                EmergencyManager.Apply(map,CurrentState,emergency);
+                if(scheduleAutomation)ScheduleStatus=ScheduleManager.Apply(map,CurrentState,scheduleChanges,true);
+                ManagementStatus="Emergência: trabalho secundário suspenso; recuperação libera medicina e alimentação antes da expansão.";
+                return;
+            }
             if (lootAutomation && CurrentState != null && Find.TickManager.TicksGame - lastLootTick >= LootIntervalTicks)
             {
                 lastLootTick = Find.TickManager.TicksGame;
@@ -332,6 +360,7 @@ namespace AutonomousRim.Core
 
         private void ExecuteConstruction(int ticks)
         {
+            if(ExpansionSuspended) { BaseStatus="Construção/decoração suspensas durante emergência e recuperação."; return; }
             if (lastConstructionTick == ticks) return;
             lastConstructionTick = ticks;
             bool climate = DefDatabase<ResearchProjectDef>.GetNamed("AirConditioning").IsFinished;
@@ -361,6 +390,20 @@ namespace AutonomousRim.Core
             }
             CurrentState.Threat = next;
             CurrentState.HostilePawnCount = next.ActiveCount;
+            var previousPhase=emergency.Phase;
+            emergency.Update(next.Immediate || EmergencyManager.LocalFire(map),EmergencyManager.NeedsCare(map),ticks);
+            if(previousPhase!=emergency.Phase)Log.Message($"[AutonomousRim.Emergency] {previousPhase} → {emergency.Phase}; {next.Classification}");
+            if(emergencyAutomation)
+            {
+                if(emergency.Phase!=EmergencyPhase.Normal)
+                {
+                    FoodManager.CancelHunts(map,ownedHunts); EquipmentManager.CancelPending(equipmentOrders);
+                    ConstructionWorkManager.Stop(constructionOrders);
+                    EmergencyManager.Apply(map,CurrentState,emergency);
+                    if(scheduleAutomation)ScheduleStatus=ScheduleManager.Apply(map,CurrentState,scheduleChanges,true);
+                }
+                else EmergencyManager.Stop(emergency);
+            }
             if (previous.ActiveCount == 0 && next.ActiveCount > 0) FailureAnalyzer.RecordRaidStart(map, CurrentState, failureMemory);
             if (previous.ActiveCount > 0 && next.ActiveCount == 0) FailureAnalyzer.RecordRaidEnd(CurrentState, failureMemory);
             if (foodAutomation && next.ActiveCount > 0) FoodManager.CancelHunts(map, ownedHunts);

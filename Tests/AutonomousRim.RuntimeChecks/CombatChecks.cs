@@ -119,6 +119,7 @@ namespace AutonomousRim.RuntimeChecks
             LordMaker.MakeNewLord(Faction.OfAncientsHostile,new LordJob_AssaultColony(Faction.OfAncientsHostile,false,false,false,false,false),map,enemies);
             if(scenario==3) allies[0].TakeDamage(new DamageInfo(DamageDefOf.Cut,18,0,-1,enemies[0],allies[0].health.hediffSet.GetNotMissingParts().First(b=>b.def==BodyPartDefOf.Leg)));
             component.SetCombatAutomation(true);
+            if(scenario==3)component.SetEmergencyAutomation(true);
             meleeSamples += component.CombatOrders.Count(o=>o.Role=="Interceptar / ajudar aliado");
             Log.Message($"[AutonomousRim.CombatTests] START {scenario}: center={center}; allies=3; enemies={count}; native third speed; no healing during battle; start="+string.Join(" | ",allies.Select(p=>p.Position+"/health="+p.health.summaryHealth.SummaryHealthPercent+"/bleed="+p.health.hediffSet.BleedRateTotal)));
         }

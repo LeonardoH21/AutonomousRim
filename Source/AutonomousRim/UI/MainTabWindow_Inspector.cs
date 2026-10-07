@@ -45,9 +45,11 @@ namespace AutonomousRim.UI
             if (Widgets.ButtonText(new Rect(inRect.x, inRect.y + 206f, half, 30f), $"Agenda dinâmica: {(component.ScheduleAutomation ? "LIGADA" : "DESLIGADA")}"))
                 component.SetScheduleAutomation(!component.ScheduleAutomation);
             if (Widgets.ButtonText(new Rect(inRect.x + half + 8f, inRect.y + 206f, half, 30f), "Analisar risco/falha agora")) component.EvaluateFailure();
-            if (Widgets.ButtonText(new Rect(inRect.x, inRect.y + 240f, inRect.width, 30f), $"Combate cooperativo: {(component.CombatAutomation ? "LIGADO" : "DESLIGADO")}"))
-                component.SetCombatAutomation(!component.CombatAutomation);
-            Rect viewport = new Rect(inRect.x, inRect.y + 278f, inRect.width, inRect.height - 278f);
+            if (Widgets.ButtonText(new Rect(inRect.x, inRect.y + 240f, inRect.width, 30f), $"Combate cooperativo: {(component.CombatAutomation || component.EmergencyAutomation ? "LIGADO" : "DESLIGADO")}"))
+                component.SetCombatAutomation(!(component.CombatAutomation || component.EmergencyAutomation));
+            if (Widgets.ButtonText(new Rect(inRect.x, inRect.y + 274f, inRect.width, 30f), $"Emergência automática: {(component.EmergencyAutomation ? "LIGADA" : "DESLIGADA")}"))
+                component.SetEmergencyAutomation(!component.EmergencyAutomation);
+            Rect viewport = new Rect(inRect.x, inRect.y + 312f, inRect.width, inRect.height - 312f);
             Rect content = new Rect(0f, 0f, viewport.width - 20f, contentHeight);
             Widgets.BeginScrollView(viewport, ref scrollPosition, content);
             var listing = new Listing_Standard();
@@ -55,6 +57,13 @@ namespace AutonomousRim.UI
             listing.Label(state.ToString());
             listing.Label(component.BaseStatus);
             listing.Label(component.CombatStatus);
+            listing.Label(component.EmergencyStatus);
+            if(state.Threat!=null)listing.Label(state.Threat.Classification);
+            if(component.Emergency.Phase!=EmergencyPhase.Normal && state.Threat!=null)
+            {
+                foreach(var source in state.Threat.Sources.Take(20))listing.Label($"Ameaça: {source.LabelShort} em {source.Position}");
+                foreach(var pawn in state.Threat.Colonists)listing.Label($"Colono: {pawn.LabelShort} em {pawn.Position} — {(pawn.Downed ? "incapacitado" : state.Threat.Vulnerable.Contains(pawn) ? "vulnerável" : "combatente")}");
+            }
             foreach (var order in component.CombatOrders) listing.Label($"{order.Pawn?.LabelShort}: {order.Role}");
             listing.Label("Plano em anel: estoque e alimentação primeiro; quartos 5×5 por colono, cozinha e abate 4×4 separados; expansão reservada, energia e perímetro. Planos antigos são preservados.");
             listing.Label("Rota final: " + component.Strategy.VictoryRoute);
@@ -95,7 +104,7 @@ namespace AutonomousRim.UI
             listing.Label($"Threat: {threat.Risk} | Humans: {threat.Humanlikes} | Mechs: {threat.Mechanoids} | Animals: {threat.Animals} | Other: {threat.Other}");
             listing.Label($"Ranged: {threat.Ranged} | Melee/unarmed: {threat.Melee} | Strength heuristic: allies {threat.FriendlyStrength:0.0} / enemies {threat.EnemyStrength:0.0}");
             listing.Label(threat.LastTransition);
-            listing.Label("Threat detection is based on hostile pawns, not raid incidents. Turrets, traps and special abilities are not modeled.");
+            listing.Label("Ameaças são detectadas no mapa: hostis ativos, manhunters, insetos, colmeias e estruturas hostis. Fontes dormentes são monitoradas; habilidades especiais não são modeladas.");
             listing.Label($"Comida armazenada: {state.FoodNutrition:0.0} nutrição / ~{state.EstimatedFoodDays:0.0} dias | Consumo dos colonos: {state.DailyFoodNutrition:0.0}/dia");
             listing.Label($"Reserva de comida: {state.FoodReserveLevel} — {state.FoodReserveStatus}");
             listing.Label($"Cooking: {state.PreferredMeal} | alvo dinâmico {state.CookingTargetCount} refeições | reserva longa {state.StrategicMealTargetCount}");

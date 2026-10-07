@@ -1,9 +1,9 @@
-param([string]$RimWorldDir = 'C:\Users\Administrador\Downloads\RimWorld.v1.6.4633\RimWorld.v1.6.4633\game', [int]$TimeoutSeconds = 900)
+param([string]$RimWorldDir = 'C:\Users\Administrador\Downloads\RimWorld.v1.6.4633\RimWorld.v1.6.4633\game', [int]$TimeoutSeconds = 900, [switch]$EmergencyChecks)
 $ErrorActionPreference='Stop'
 $root=Split-Path $PSScriptRoot -Parent
 $game=(Resolve-Path -LiteralPath $RimWorldDir).Path
 if (Get-Process RimWorldWin64 -ErrorAction SilentlyContinue) { throw 'Close RimWorld before running combat fixtures.' }
-$profile=Join-Path $root '.tools\combat-tests'
+$profile=Join-Path $root $(if($EmergencyChecks){'.tools\emergency-tests'}else{'.tools\combat-tests'})
 New-Item -ItemType Directory -Force -Path "$profile\Config" | Out-Null
 [xml]$config='<ModsConfigData><version>1.6.4633</version><activeMods><li>brrainz.harmony</li><li>ludeon.rimworld</li><li>leonardoh21.autonomousrim</li><li>leonardoh21.autonomousrim.runtimechecks</li></activeMods><knownExpansions /></ModsConfigData>'
 $config.Save("$profile\Config\ModsConfig.xml")
@@ -16,15 +16,16 @@ Set-Content -LiteralPath "$addon\About\About.xml" -Encoding utf8 -Value '<ModMet
 $log=Join-Path $profile ('Player-'+[DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')+'.log')
 $p=$null
 try {
-    $p=Start-Process -FilePath "$game\RimWorldWin64.exe" -ArgumentList @('-batchmode','-quicktest','-autonomousrimcombattest',"-savedatafolder=`"$profile`"",'-logFile',"`"$log`"") -WindowStyle Hidden -PassThru
+    $flag=if($EmergencyChecks){'-autonomousrimemergencytest'}else{'-autonomousrimcombattest'}
+    $p=Start-Process -FilePath "$game\RimWorldWin64.exe" -ArgumentList @('-batchmode','-quicktest',$flag,"-savedatafolder=`"$profile`"",'-logFile',"`"$log`"") -WindowStyle Hidden -PassThru
     Write-Output "PID=$($p.Id) LOG=$log"
     $deadline=[DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
     while([DateTime]::UtcNow -lt $deadline) {
         if($p.HasExited) { throw 'Game exited before combat validation.' }
         if(Test-Path -LiteralPath $log) {
             $body=Get-Content -LiteralPath $log -Raw
-            if($body -match 'CombatTests\] FAIL|Exception ticking|Error in MapComponent') { throw "Combat test failed: $log" }
-            if($body -match 'CombatTests\] PASS 3:') { Select-String -LiteralPath $log -Pattern 'CombatTests\] PASS' | ForEach-Object {$_.Line}; return }
+            if($body -match '(CombatTests|EmergencyTests)\] FAIL|Exception ticking|Error in MapComponent|Exception from long event|Patching exception') { throw "Native test failed: $log" }
+            if((!$EmergencyChecks -and $body -match 'CombatTests\] PASS 3:') -or ($EmergencyChecks -and $body -match 'EmergencyTests\] DONE')) { Select-String -LiteralPath $log -Pattern '(CombatTests|EmergencyTests)\] PASS' | ForEach-Object {$_.Line}; return }
         }
         Start-Sleep -Seconds 2
     }

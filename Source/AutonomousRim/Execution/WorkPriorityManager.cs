@@ -4,11 +4,17 @@ using System.Linq;
 using AutonomousRim.Core;
 using RimWorld;
 using Verse;
+using HarmonyLib;
 
 namespace AutonomousRim.Execution
 {
     public static class WorkPriorityManager
     {
+        // GetPriority masks every enabled priority as 3 in checkbox mode.
+        // Ownership must compare the stored value, preserving future numeric settings.
+        private static readonly AccessTools.FieldRef<Pawn_WorkSettings,DefMap<WorkTypeDef,int>> StoredPriorities =
+            AccessTools.FieldRefAccess<Pawn_WorkSettings,DefMap<WorkTypeDef,int>>("priorities");
+        public static int RawPriority(Pawn pawn,WorkTypeDef work) => StoredPriorities(pawn.workSettings)?[work] ?? pawn.workSettings.GetPriority(work);
         public static bool CanWork(Pawn pawn)
         {
             return !pawn.Dead && !pawn.Downed && !pawn.Drafted && !pawn.InMentalState && pawn.workSettings != null;
@@ -140,7 +146,7 @@ namespace AutonomousRim.Execution
 
         internal static void SetManagedPriority(Pawn pawn, WorkTypeDef work, int desired, List<WorkPriorityChange> changes)
         {
-            int current = pawn.workSettings.GetPriority(work);
+            int current = RawPriority(pawn,work);
             WorkPriorityChange change = changes.FirstOrDefault(c => c.Pawn == pawn && c.Work == work);
             if (change != null)
             {
@@ -161,7 +167,7 @@ namespace AutonomousRim.Execution
         {
             foreach (WorkPriorityChange change in changes)
                 if (change.Pawn?.workSettings != null && change.Work != null && !change.UserOverride &&
-                    !change.Pawn.WorkTypeIsDisabled(change.Work) && change.Pawn.workSettings.GetPriority(change.Work) == change.Applied)
+                    !change.Pawn.WorkTypeIsDisabled(change.Work) && RawPriority(change.Pawn,change.Work) == change.Applied)
                     change.Pawn.workSettings.SetPriority(change.Work, change.Original);
             changes.Clear();
         }

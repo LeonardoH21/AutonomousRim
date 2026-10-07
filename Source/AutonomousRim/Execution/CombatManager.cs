@@ -15,7 +15,7 @@ namespace AutonomousRim.Execution
         public const int Interval = 60;
         public static bool Ranged(Pawn p) => p.equipment?.Primary?.def.IsRangedWeapon == true;
         public static List<Pawn> Enemies(Map map) => map.mapPawns.AllPawnsSpawned
-            .Where(p => !p.Dead && !p.Downed && p.HostileTo(Faction.OfPlayer)).ToList();
+            .Where(ThreatScanner.Active).ToList();
         public static bool Eligible(Pawn p) => p.Spawned && p.Faction == Faction.OfPlayer && p.IsColonist &&
             PawnAnalyzer.IsCombatReady(p) && p.drafter != null && p.equipment?.Primary != null &&
             (p.needs?.rest?.CurLevel ?? 1) > 0.08f &&
@@ -145,7 +145,7 @@ namespace AutonomousRim.Execution
             Log.Message($"[AutonomousRim.Combat] {p.LabelShort}: {role}; {job.def.defName} → {job.targetA}");
             return true;
         }
-        public static string Apply(Map map,List<CombatOrder> orders,List<Pawn> excluded)
+        public static string Apply(Map map,List<CombatOrder> orders,List<Pawn> excluded,bool globalRetreat=false)
         {
             var enemies=Enemies(map);
             if(enemies.Count==0) { Stop(orders); excluded.Clear(); return "Combate: sem ameaças; colonos da IA liberados para a rotina."; }
@@ -171,7 +171,7 @@ namespace AutonomousRim.Execution
                 var p=order.Pawn;
                 if(!PawnAnalyzer.IsCombatReady(p)) continue;
                 var target=Target(p,colonists,enemies);
-                bool danger=Wounded(p)||Overwhelmed(p,allies,enemies);
+                bool danger=globalRetreat||Wounded(p)||Overwhelmed(p,allies,enemies);
                 if(danger && !order.Retreated) { order.Retreated=true; order.RetreatUntilTick=Find.TickManager.TicksGame+600; }
                 if(order.Retreated && !danger && Find.TickManager.TicksGame>order.RetreatUntilTick &&
                     Distance(p.Position,enemies)>10 && enemies.Count<=allies.Count &&
