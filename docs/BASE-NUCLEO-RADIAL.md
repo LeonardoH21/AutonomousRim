@@ -1,5 +1,7 @@
 # Núcleo orgânico — nova referência visual
 
+Direção visual substituída pela [planta compacta com quatro pátios](BASE-NUCLEO-PATIOS.md), baseada na referência mais recente. O usuário também passou a permitir implantação em qualquer área adequada do mapa, sem exigir proximidade de obras existentes.
+
 Proposta aguardando aprovação, baseada na imagem enviada pelo usuário em 6 de outubro de 2026. Substitui a proposta retangular `BASE-NUCLEO-PROPOSTA.md` como direção visual pretendida; não altera o planejador em produção. Desenho: `base-nucleo-radial.html`.
 
 ## Forma

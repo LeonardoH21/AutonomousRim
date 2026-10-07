@@ -37,7 +37,7 @@ The long-term goal is a full autonomous player capable of perceiving the map, ev
 
 New colonies start with base construction, strategic planning, schedule and landing-area Allow enabled; explicit saved toggles and invested layouts remain respected. The approved drawing and priorities are saved in [BASE-ANEL.md](docs/BASE-ANEL.md) and [the floor plan](docs/base-anel.html). Strategic, priority, schedule, failure, upgrade, zone and save-load checks pass; full native construction of the expanded ring base still needs a longer trial.
 
-A [radial nucleus redesign](docs/BASE-NUCLEO-RADIAL.md) is awaiting user approval: an octagonal social core, connected circulation rings, outward modular growth, floors in every room, and an anchor near the colony's existing functional buildings. It follows the user's latest organic base reference and supersedes the rectangular proposal. The production planner remains unchanged until approval and implementation.
+A [compact four-courtyard redesign](docs/BASE-NUCLEO-PATIOS.md) follows the user's latest reference: stepped corners, cross-shaped corridors, central services and outward expansion links. The user permits placement anywhere suitable on firm terrain, with tree cutting and mining to clear obstacles. The drawing precedes technical validation and full construction; the production planner is unchanged at this design stage.
 
 ## Planned architecture
 
