@@ -1,0 +1,110 @@
+<div id="rim-radial">
+<h2>Núcleo orgânico · inspirado na sua referência</h2>
+<div class="viz-controls">
+<button type="button" class="btn" data-stage="1" aria-pressed="false">1 · Centro habitável</button>
+<button type="button" class="btn" data-stage="2" aria-pressed="false">2 · Serviços</button>
+<button type="button" class="btn" data-stage="3" aria-pressed="true">3 · Expansão</button>
+</div>
+<svg class="radial-map" role="img" aria-label="Base com centro octogonal, corredores em anéis e muro arredondado em degraus"></svg>
+<div class="viz-row text-small"><span>▧ Pisos em todos os cômodos</span><span>▯ Portas</span><span>·· Expansão reservada</span></div>
+<label class="form-label">Detalhes do setor<select class="form-select" aria-label="Detalhes do setor"></select></label>
+<div class="card radial-detail" aria-live="polite"></div>
+</div>
+<style>
+#rim-radial .radial-map {display:block;width:100%;margin:12px 0}
+#rim-radial .radial-detail {margin-top:8px}
+</style>
+<script>
+(()=>{
+ const root=document.getElementById('rim-radial'),svg=root.querySelector('svg'),select=root.querySelector('select');
+ const rooms=[
+ {id:'centro',name:'Convivência central',short:'SOC',label:['Refeitório','e recreação'],x:43,y:43,w:14,h:14,cut:3,p:1,door:'n',detail:'Centro octogonal com mesas, cadeiras, recreação e decoração. Piso completo. A cobertura e eventuais apoios serão verificados no projeto técnico.'},
+ {id:'estoque',name:'Estoque',short:'EST',label:['Estoque'],x:43,y:24,w:14,h:13,p:1,door:'s',detail:'12×11 internos. Encostado no núcleo funcional, sem comida. Prateleiras e acesso curto às oficinas. Este conjunto será ancorado nas construções existentes.'},
+ {id:'cozinha',name:'Cozinha',short:'C',label:['Coz.'],x:58,y:28,w:6,h:6,p:1,door:'s',detail:'4×4 internos. Fogão e cadeira em sala limpa e separada do butcher. A cozinha não será corredor de passagem.'},
+ {id:'abate',name:'Abate',short:'A',label:['Abate'],x:64,y:32,w:6,h:6,p:1,door:'w',detail:'4×4 internos. Butcher em outro cômodo, perto do freezer e do depósito externo de carcaças. Sem bancada de abate na cozinha.'},
+ {id:'freezer',name:'Freezer',short:'FRIO',label:['Freezer'],x:62,y:40,w:11,h:10,p:2,door:'w',detail:'9×8 internos antes da antecâmara. −2 °C; só comida em prioridade superior ao estoque; acesso com antecâmara e exaustão para área externa sem teto.'},
+ {id:'hospital',name:'Hospital',short:'HOSP',label:['Hospital'],x:62,y:52,w:10,h:9,p:2,door:'w',detail:'8×7 internos. Duas camas normais marcadas médicas e reserva para ampliação; medicina em 2–3 slots com prioridade Critical dentro da ala.'},
+ {id:'oficina',name:'Oficinas e fabricação',short:'OFIC',label:['Oficinas'],x:55,y:61,w:12,h:9,p:2,door:'n',detail:'10×7 internos. Costura, forja e fabricação conforme pesquisa; materiais próximos do estoque. Bancadas e suas interações serão validadas.'},
+ {id:'pesquisa',name:'Pesquisa',short:'PESQ',label:['Pesquisa'],x:44,y:64,w:12,h:8,p:2,door:'n',detail:'10×6 internos. Pesquisa junto ao núcleo; sem construir um segundo centro de produção distante.'},
+ {id:'armas',name:'Armas e apoio',short:'ARM',label:['Armas','e apoio'],x:31,y:59,w:11,h:9,p:2,door:'e',detail:'9×7 internos. Reserva de armas junto da rota defensiva; espaço de apoio especializado conforme necessidade.'},
+ {id:'roupas',name:'Roupas e armaduras',short:'R/A',label:['Roupas','e armaduras'],x:26,y:43,w:11,h:11,p:2,door:'e',detail:'9×9 internos. Prateleiras de roupas e armaduras próximas dos quartos e do estoque.'}
+ ];
+ [140,160,180,200,220,240,260,280,300,40,60,80].forEach((angle,i)=>{
+  const a=angle*Math.PI/180,cx=Math.round(50+34*Math.cos(a)),cy=Math.round(50+34*Math.sin(a));
+  const dx=cx-50,dy=cy-50,door=Math.abs(dx)>Math.abs(dy)?(dx<0?'e':'w'):(dy<0?'s':'n');
+  rooms.push({id:'q'+(i+1),name:'Quarto '+(i+1),short:'Q'+(i+1),label:['Q'+(i+1)],x:cx-3,y:cy-3,w:7,h:7,p:i<6?1:3,door,bed:true,detail:'5×5 internos. Cama e cabeceira junto à parede, criado, cômoda, vaso e espaço para futura cama de casal. Construir conforme a população, sem erguer todos os quartos de uma vez.'});
+ });
+ let stage=3,selected='centro';
+ const ns='http://www.w3.org/2000/svg';
+ const make=(tag,attrs={},parent=svg)=>{const n=document.createElementNS(ns,tag);Object.entries(attrs).forEach(([k,v])=>n.setAttribute(k,v));parent.appendChild(n);return n;};
+ const door=r=>({x:r.door==='w'?r.x:r.door==='e'?r.x+r.w-1:r.x+Math.floor(r.w/2),y:r.door==='n'?r.y:r.door==='s'?r.y+r.h-1:r.y+Math.floor(r.h/2)});
+ const corridors=new Set(),key=(x,y)=>x+','+y;
+ const rectCells=(x,y,w,h)=>{for(let j=y;j<y+h;j++)for(let i=x;i<x+w;i++)corridors.add(key(i,j));};
+ const line=(a,b)=>{rectCells(Math.min(a.x,b.x),a.y-1,Math.abs(a.x-b.x)+1,3);rectCells(b.x-1,Math.min(a.y,b.y),3,Math.abs(a.y-b.y)+1);};
+ for(let y=0;y<100;y++)for(let x=0;x<100;x++){
+  const r=Math.hypot(x+.5-50,y+.5-50);
+  if(r>=9&&r<=12||r>=27&&r<=30)corridors.add(key(x,y));
+ }
+ [[50,43,50,39],[56,50,61,50],[50,56,50,61],[43,50,38,50]].forEach(([x,y,u,v])=>line({x,y},{x:u,y:v}));
+ rooms.filter(r=>r.id!=='centro').forEach(r=>{
+  const d=door(r),rad=r.bed?28.5:11,dx=d.x-50,dy=d.y-50,dist=Math.hypot(dx,dy);
+  const end={x:Math.round(50+dx/dist*rad),y:Math.round(50+dy/dist*rad)};
+  if(r.id==='abate'){line(d,{x:61,y:35});line({x:61,y:35},{x:61,y:42});}
+  else line(d,end);
+ });
+ rectCells(49,79,3,16);rectCells(79,51,16,3);rectCells(80,46,3,6);
+ rectCells(39,23,3,22);rectCells(22,55,18,3);rectCells(60,50,19,2);rectCells(42,60,2,18);
+ const inRoom=(x,y,r,pad=0)=>x>=r.x-pad&&x<r.x+r.w+pad&&y>=r.y-pad&&y<r.y+r.h+pad;
+ function detail(){const r=rooms.find(r=>r.id===selected);root.querySelector('.radial-detail').textContent=r.name+' · '+(r.w-2)+'×'+(r.h-2)+' internos'+(r.cut?' com cantos chanfrados':'')+' · '+r.detail;select.value=selected;}
+ function draw(){
+  const width=Math.max(280,root.clientWidth),s=(width-16)/100,m=8,compact=width<480;
+  svg.replaceChildren();svg.setAttribute('viewBox','0 0 '+width+' '+(width+8));
+  make('title').textContent='Proposta de núcleo arredondado com crescimento em anéis';
+  make('desc').textContent='Sala comum central octogonal, estoque ao norte, cozinha e abate separados a nordeste, freezer e hospital a leste, oficinas ao sul e quartos ao redor. Campos nos quatro cantos, energia externa e muro circular em degraus. Esquema para aprovação, ainda não executado no jogo.';
+  const defs=make('defs'),pattern=make('pattern',{id:'radial-floor',width:s,height:s,patternUnits:'userSpaceOnUse'},defs);
+  make('path',{d:'M '+s+' 0 L 0 0 0 '+s,fill:'none',stroke:'var(--border)','stroke-width':.5},pattern);
+  const box=(x,y,w,h,attrs={},parent=svg)=>make('rect',{x:m+x*s,y:m+y*s,width:w*s,height:h*s,...attrs},parent);
+  const txt=(x,y,value,attrs={},parent=svg)=>{const t=make('text',{x:m+x*s,y:m+y*s,fill:'var(--foreground)','font-size':12,'text-anchor':'middle','dominant-baseline':'middle',...attrs},parent);t.textContent=value;return t;};
+  const stepped=(r,attrs)=>{for(let y=0;y<100;y++){const dy=y+.5-50;if(Math.abs(dy)>r)continue;const ext=Math.sqrt(r*r-dy*dy),a=Math.ceil(50-ext-.5),b=Math.floor(50+ext-.5);box(a,y,b-a+1,1,attrs);}};
+  for(let y=5;y<95;y++)for(let x=5;x<95;x++){
+   const radius=Math.hypot(x+.5-50,y+.5-50);
+   if(radius>44||radius<30||corridors.has(key(x,y))||rooms.some(r=>inRoom(x,y,r,1))||x>=79&&x<=91&&y>=35&&y<=52||x>=78&&x<82&&y>=31&&y<36)continue;
+   const tone=x<50?(y<50?3:4):(y<50?5:6);
+   box(x,y,1,1,{fill:'var(--viz-series-'+tone+')',opacity:.2,stroke:'var(--border)','stroke-width':.2});
+   if(x>73&&y>73)box(x,y,1,1,{fill:'var(--viz-series-5)',opacity:.3});
+  }
+  corridors.forEach(k=>{const [x,y]=k.split(',').map(Number);box(x,y,1,1,{fill:'var(--muted)'});box(x,y,1,1,{fill:'url(#radial-floor)'});});
+  rooms.forEach(r=>{
+   const g=make('g',{'data-room':r.id,class:'cursor-interaction','aria-label':r.name});
+   const shape=(inset,fill)=>{const cut=Math.max(0,(r.cut||0)-inset);for(let y=r.y+inset;y<r.y+r.h-inset;y++){const row=Math.min(y-r.y-inset,r.y+r.h-inset-1-y),off=Math.max(0,cut-row);box(r.x+inset+off,y,r.w-2*inset-2*off,1,{fill},g);}};
+   if(r.p<=stage){
+    shape(0,'var(--foreground)');shape(1,'var(--background)');shape(1,'color-mix(in oklab, var(--viz-series-'+r.p+') 13%, var(--background))');shape(1,'url(#radial-floor)');
+    const d=door(r);box(d.x,d.y,1,1,{fill:'var(--viz-series-5)'},g);
+    if(r.id==='centro')[[43,50],[56,50],[50,56]].forEach(([x,y])=>box(x,y,1,1,{fill:'var(--viz-series-5)'},g));
+    if(r.bed){box(r.x+1,r.y+1,1,2,{fill:'var(--viz-series-2)'},g);box(r.x+2,r.y+1,1,2,{fill:'none',stroke:'var(--muted-foreground)','stroke-width':.5,'stroke-dasharray':'2 2'},g);box(r.x+3,r.y+1,1,1,{fill:'var(--muted-foreground)'},g);}
+   }else box(r.x,r.y,r.w,r.h,{fill:'none',stroke:'var(--border)','stroke-width':1,'stroke-dasharray':'3 3'},g);
+   const labels=compact?[r.short]:r.label;
+   labels.forEach((label,i)=>txt(r.x+r.w/2,r.y+r.h/2+(r.bed?1:0),label,{dy:(i-(labels.length-1)/2)*14},g));
+   g.addEventListener('click',()=>{selected=r.id;detail();});
+  });
+  if(stage>=2){
+   box(81,37,9,13,{fill:'var(--background)',stroke:'var(--foreground)','stroke-width':1});
+   box(83,40,3,3,{fill:'var(--muted)',stroke:'var(--foreground)','stroke-width':.7});box(83,45,3,3,{fill:'var(--muted)',stroke:'var(--foreground)','stroke-width':.7});
+   txt(85.5,35,compact?'Ger.':'Energia');
+   box(78,31,4,5,{fill:'var(--muted)'});txt(80,33.5,compact?'C':'Carcaças',{'font-size':11});
+  }
+  if(stage===3){
+   for(let y=4;y<96;y++)for(let x=4;x<96;x++){
+    const d=Math.hypot(x+.5-50,y+.5-50);if(d<=45&&[[-1,0],[1,0],[0,-1],[0,1]].some(([dx,dy])=>Math.hypot(x+dx+.5-50,y+dy+.5-50)>45))box(x,y,1,1,{fill:'var(--foreground)'});
+   }
+   box(49,94,3,1,{fill:'var(--viz-series-5)'});box(94,51,1,3,{fill:'var(--viz-series-5)'});
+   txt(50,90,compact?'DEF':'Defesa principal');txt(86,55,compact?'Saída':'Saída de serviço',{'font-size':11});
+  }
+  txt(32,14,'Arroz');txt(68,14,'Linho');txt(32,86,'Batata');txt(68,86,compact?'Med.':'Medicina');txt(83,75,'Hemp',{'font-size':11});
+ }
+ rooms.forEach(r=>{const option=document.createElement('option');option.value=r.id;option.textContent=r.name;select.appendChild(option);});
+ select.addEventListener('change',()=>{selected=select.value;detail();});
+ root.querySelectorAll('[data-stage]').forEach(b=>b.addEventListener('click',()=>{stage=Number(b.dataset.stage);root.querySelectorAll('[data-stage]').forEach(n=>n.setAttribute('aria-pressed',String(Number(n.dataset.stage)===stage)));draw();}));
+ new ResizeObserver(draw).observe(root);draw();detail();
+})();
+</script>

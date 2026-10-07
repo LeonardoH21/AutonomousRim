@@ -1,4 +1,6 @@
-# Base núcleo — proposta aguardando aprovação
+# Base núcleo — proposta retangular anterior
+
+A direção visual desta proposta foi substituída pela [proposta radial](BASE-NUCLEO-RADIAL.md), baseada na nova imagem enviada pelo usuário. A proposta radial ainda aguarda aprovação.
 
 Esta é uma proposta de desenho, não uma alteração do planejador em produção. A construção completa será o objetivo seguinte após aprovação do usuário. Referência: planta em anel enviada anteriormente, com cozinha e abate separados. Desenho interativo: `base-nucleo-proposta.html`.
 
