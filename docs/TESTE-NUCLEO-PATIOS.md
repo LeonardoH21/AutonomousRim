@@ -29,6 +29,8 @@ A fila de apoio prioriza as camas necessárias à população antes de móveis s
 
 Após essas correções, o ponto de retomada próximo do terceiro dia contém 184 elementos concluídos. Estoque, cozinha, abate, apoio inicial, depósito de medicamentos, plantação inicial e despejo foram concluídos. A inspeção do XML confirmou seis camas nativas construídas — cinco requeridas e uma adicional já encomendada antes da mudança de fila. O refeitório e os primeiros quartos continuam em obra. Isso ainda não é a aprovação final da planta.
 
+No quarto dia, a janela nativa `Dialog_NamePlayerFactionAndSettlement` pausou a simulação apesar de a velocidade selecionada continuar em 3×. O observador passou a verificar a pausa real, aceitar os nomes gerados pelo jogo e retomar a velocidade. O log confirmou essa janela no tick 258.200, seguido de novo avanço até 305 elementos e quatro quartos completos. Não houve alteração de recursos ou obras para contornar a pausa.
+
 Esse avanço inicial não comprova conclusão da base nem sobrevivência prolongada. O save final só será entregue após a conferência de todas as obras reais.
 
 ## Repetir ou retomar

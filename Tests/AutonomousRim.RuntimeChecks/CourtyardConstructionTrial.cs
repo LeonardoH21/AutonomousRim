@@ -29,9 +29,12 @@ namespace AutonomousRim.RuntimeChecks
         }
         public override void MapComponentUpdate()
         {
-            if(!started||finished||!GenCommandLine.CommandLineArgPassed("autonomousrimcourtyardtrial")||Find.TickManager.CurTimeSpeed==TimeSpeed.Superfast||
+            if(!started||finished||!GenCommandLine.CommandLineArgPassed("autonomousrimcourtyardtrial")||
+                !Find.TickManager.Paused&&Find.TickManager.CurTimeSpeed==TimeSpeed.Superfast||
                 UnityEngine.Time.realtimeSinceStartup-lastPause<5f)return;
             lastPause=UnityEngine.Time.realtimeSinceStartup;
+            Log.Message("[AutonomousRim.CourtyardTrial] RESUME: tick="+Find.TickManager.TicksGame+"; paused="+Find.TickManager.Paused+
+                "; speed="+Find.TickManager.CurTimeSpeed+"; windows="+string.Join(",",Find.WindowStack.Windows.Where(w=>w.forcePause).Select(w=>w.GetType().Name)));
             foreach(var w in Find.WindowStack.Windows.Where(w=>w.forcePause).ToList())
             {
                 if(w is Dialog_NamePlayerFactionAndSettlement naming)
