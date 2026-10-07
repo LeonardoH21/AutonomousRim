@@ -233,14 +233,24 @@ namespace AutonomousRim.Planning
         }
         public static bool Validate(Map map,List<RoomProject> projects)
         {
+            foreach(var t in projects.SelectMany(p=>p.Furniture).Where(t=>t.Def is TerrainDef))
+            {
+                var need=t.Def.GetTerrainAffordanceNeed(t.Stuff);
+                if(!t.Position.InBounds(map)||need!=null&&!t.Position.GetTerrain(map).affordances.Contains(need))return false;
+            }
             var occupied = new Dictionary<IntVec3,ConstructionTask>();
             foreach(var t in projects.SelectMany(p=>p.Shell.Concat(p.Furniture)).Where(t=>t.Def is ThingDef && t.Def.defName!="PowerConduit").GroupBy(t=>new{t.Def,t.Stuff,t.Position,t.Rotation}).Select(g=>g.First()))
             {
                 foreach(var c in GenAdj.OccupiedRect(t.Position,t.Rotation,t.Def.Size))
-                { if(occupied.ContainsKey(c)) {Log.Message("[AutonomousRim] Ring collision: "+occupied[c].Def.defName+"/"+t.Def.defName+" at "+c);return false;}occupied[c]=t; }
+                {
+                    var need=t.Def.GetTerrainAffordanceNeed(t.Stuff);
+                    if(!c.InBounds(map)||need!=null&&!c.GetTerrain(map).affordances.Contains(need))return false;
+                    if(occupied.ContainsKey(c)) {Log.Message("[AutonomousRim] Ring collision: "+occupied[c].Def.defName+"/"+t.Def.defName+" at "+c);return false;}occupied[c]=t;
+                }
                 var report=GenConstruct.CanPlaceBlueprintAt(t.Def,t.Position,t.Rotation,map,stuffDef:t.Stuff);
                 if(!report && !t.Complete(map) && !t.Position.GetThingList(map).Any(b=>(b is Blueprint || b is Frame) && b.def.entityDefToBuild==t.Def && b.Rotation==t.Rotation) &&
-                    !GenAdj.OccupiedRect(t.Position,t.Rotation,t.Def.Size).Any(c=>c.GetEdifice(map) is Mineable) && !t.Position.GetThingList(map).Any(b=>b.def==ThingDefOf.Wall && t.Def==ThingDefOf.Door && projects.Any(p=>p.ClearCells.Contains(t.Position))))
+                    !GenAdj.OccupiedRect(t.Position,t.Rotation,t.Def.Size).Concat(((ThingDef)t.Def).hasInteractionCell?new[]{t.Position+((ThingDef)t.Def).interactionCellOffset.RotatedBy(t.Rotation)}:Array.Empty<IntVec3>())
+                        .Any(c=>c.GetEdifice(map) is Mineable || projects.Any(p=>p.Kind=="Preparação do terreno"&&(p.ClearCells.Contains(c)||p.PlantCells.Contains(c)))) && !t.Position.GetThingList(map).Any(b=>b.def==ThingDefOf.Wall && t.Def==ThingDefOf.Door && projects.Any(p=>p.ClearCells.Contains(t.Position))))
                 { Log.Message("[AutonomousRim] Ring placement: "+t.Def.defName+" at "+t.Position+": "+report.Reason);return false; }
             }
             foreach(var t in projects.SelectMany(p=>p.Furniture).Where(t=>t.Def is ThingDef def && def.hasInteractionCell))

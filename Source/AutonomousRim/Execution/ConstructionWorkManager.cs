@@ -81,7 +81,7 @@ namespace AutonomousRim.Execution
                                 b.CanReach(task.Pending, PathEndMode.Touch, Danger.None));
                             if (best != null && best != pawn && !target.Project.Stalled) continue;
                         }
-                        Job job = scanner.JobOnThing(pawn, task.Pending, false);
+                        Job job = scanner.HasJobOnThing(pawn,task.Pending,false)?scanner.JobOnThing(pawn, task.Pending, false):null;
                         Area area = pawn.playerSettings?.EffectiveAreaRestrictionInPawnCurrentMap;
                         if (job == null || area != null && job.AnyTargetOutsideArea(area)) continue;
                         if (Start(pawn, job, def, task.Pending, orders)) { assigned = true; issued++; break; }

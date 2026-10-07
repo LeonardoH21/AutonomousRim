@@ -13,7 +13,7 @@ namespace AutonomousRim.Planning
     {
         public static bool AllowedWeapon(Pawn pawn, Thing item, bool considerForbidden = false)
         {
-            if (!PawnAnalyzer.IsCombatReady(pawn) || !item.Spawned || item.Map != pawn.Map || item.Position.Fogged(pawn.Map) || (!considerForbidden && item.IsForbidden(pawn)) ||
+            if (item.def.IsStuff || !PawnAnalyzer.IsCombatReady(pawn) || !item.Spawned || item.Map != pawn.Map || item.Position.Fogged(pawn.Map) || (!considerForbidden && item.IsForbidden(pawn)) ||
                 item.TryGetComp<CompBladelinkWeapon>() != null) return false;
             if (!EquipmentUtility.CanEquip(item, pawn)) return false;
             var biocode = item.TryGetComp<CompBiocodable>();

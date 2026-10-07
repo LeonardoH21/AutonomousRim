@@ -60,7 +60,7 @@ namespace AutonomousRim.Planning
         public int InteriorHeight;
         public bool RequiresRoof = true;
         public bool ReserveDoubleBed;
-        public CellRect DoubleBedSpace => new CellRect(Origin.x + 4, Origin.z + 4, 2, 2);
+        public CellRect DoubleBedSpace => new CellRect(Origin.x + 4, Origin.z + Height - 1, 2, 2);
         public List<ConstructionTask> Shell = new List<ConstructionTask>();
         public List<ConstructionTask> Furniture = new List<ConstructionTask>();
         public List<IntVec3> RoofOrders = new List<IntVec3>();
@@ -71,6 +71,9 @@ namespace AutonomousRim.Planning
         public List<IntVec3> RoofCells = new List<IntVec3>();
         public IEnumerable<IntVec3> RoofArea => RoofCells.Count > 0 ? RoofCells : Interior.Cells;
         public List<IntVec3> MineCells = new List<IntVec3>();
+        public List<IntVec3> PlantCells = new List<IntVec3>();
+        public List<Thing> OwnedPlants = new List<Thing>();
+        public List<IntVec3> NoRoofCells = new List<IntVec3>();
         public List<IntVec3> OwnedMineCells = new List<IntVec3>();
         public List<IntVec3> ClearCells = new List<IntVec3>();
         public List<IntVec3> OwnedClearCells = new List<IntVec3>();
@@ -105,6 +108,9 @@ namespace AutonomousRim.Planning
             Scribe_Values.Look(ref LayoutAnchor, "layoutAnchor");
             Scribe_Collections.Look(ref RoofCells, "roofCells", LookMode.Value);
             Scribe_Collections.Look(ref MineCells, "mineCells", LookMode.Value);
+            Scribe_Collections.Look(ref PlantCells, "plantCells", LookMode.Value);
+            Scribe_Collections.Look(ref OwnedPlants, "ownedPlants", LookMode.Reference);
+            Scribe_Collections.Look(ref NoRoofCells, "noRoofCells", LookMode.Value);
             Scribe_Collections.Look(ref OwnedMineCells, "ownedMineCells", LookMode.Value);
             Scribe_Collections.Look(ref ClearCells, "clearCells", LookMode.Value);
             Scribe_Collections.Look(ref OwnedClearCells, "ownedClearCells", LookMode.Value);
@@ -122,6 +128,7 @@ namespace AutonomousRim.Planning
                 StorageCells = StorageCells ?? new List<IntVec3>();
                 RoofCells = RoofCells ?? new List<IntVec3>();
                 MineCells = MineCells ?? new List<IntVec3>();
+                PlantCells = PlantCells ?? new List<IntVec3>();OwnedPlants = OwnedPlants ?? new List<Thing>();NoRoofCells=NoRoofCells??new List<IntVec3>();
                 OwnedMineCells = OwnedMineCells ?? new List<IntVec3>();
                 ClearCells = ClearCells ?? new List<IntVec3>();
                 OwnedClearCells = OwnedClearCells ?? new List<IntVec3>();

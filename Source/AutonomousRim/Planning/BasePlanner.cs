@@ -182,14 +182,8 @@ namespace AutonomousRim.Planning
 
         public static string Plan(Map map, List<RoomProject> projects)
         {
+            if (projects.Count == 0 || projects.Any(p => p.Kind == CourtyardBasePlanner.ReservationKind)) return CourtyardBasePlanner.Plan(map, projects);
             if (projects.Any(p => p.Kind == RingBasePlanner.ReservationKind)) return RingBasePlanner.Plan(map, projects);
-            if (projects.Count == 0)
-            {
-                string preferred = RingBasePlanner.Plan(map, projects);
-                if (projects.Count > 0) return preferred;
-                // A colony must not idle forever while searching for an enormous
-                // perfect clearing. Use the existing compact/individual-room planner.
-            }
             Pawn anchorPawn = map.mapPawns.FreeColonistsSpawned.FirstOrDefault();
             if (anchorPawn == null) return "Sem colonos neste mapa.";
             int existingBedrooms = map.listerBuildings.AllBuildingsColonistOfClass<Building_Bed>()

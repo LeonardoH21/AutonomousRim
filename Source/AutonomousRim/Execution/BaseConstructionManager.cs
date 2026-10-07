@@ -40,13 +40,30 @@ namespace AutonomousRim.Execution
         }
         public static List<Pawn> Builders(Map map) => map.mapPawns.FreeColonistsSpawned.Where(p => WorkPriorityManager.CanWork(p) &&
             !p.WorkTypeIsDisabled(WorkTypeDefOf.Construction) && p.workSettings.Initialized && p.workSettings.GetPriority(WorkTypeDefOf.Construction) > 0).ToList();
-        public static IEnumerable<ConstructionTask> CurrentStage(Map map, RoomProject p) => p.Shell.All(t => t.Complete(map)) ? p.Furniture : p.Shell;
+        private static bool CourtyardSupport(Map map, RoomProject p) => p.Kind == "Apoio inicial" &&
+            map.GetComponent<Core.AutonomousRimMapComponent>().BaseProjects.Any(r => r.Kind == CourtyardBasePlanner.ReservationKind);
+        private static IEnumerable<ConstructionTask> FurnitureStage(Map map, RoomProject p)
+        {
+            if (!CourtyardSupport(map,p)) return p.Furniture;
+            // Furnish the occupied colony first. Extra bedrooms are still built
+            // by their own projects; their beds must not delay essential shelter.
+            var beds = new HashSet<ConstructionTask>(p.Furniture.Where(t => t.Def == ThingDefOf.Bed)
+                .Take(map.mapPawns.FreeColonistsSpawnedCount));
+            return p.Furniture.Where(t => t.Def != ThingDefOf.Bed || beds.Contains(t))
+                .OrderBy(t => t.Def == ThingDefOf.Bed ? 0 : t.Def.defName == "FueledStove" ? 1 : t.Def.defName == "TableButcher" ? 2 : 3);
+        }
+        public static IEnumerable<ConstructionTask> CurrentStage(Map map, RoomProject p) => p.Shell.All(t => t.Complete(map)) ? FurnitureStage(map,p) : p.Shell;
+        private static int ExecutionRank(Map map, RoomProject p) => CourtyardSupport(map,p) &&
+            FurnitureStage(map,p).Any(t => t.Def == ThingDefOf.Bed && !t.Complete(map)) ? -1 : RingBasePlanner.Rank(p.Kind);
         private static bool DependsOn(Map map, RoomProject p, List<RoomProject> all)
         {
             if (p.Kind == "Plantação inicial") return false;
-            if (p.Kind != "Preparação do terreno" && p.Kind != RingBasePlanner.ReservationKind && all.Any(r => r.Kind == "Preparação do terreno" && !r.Completed)) return true;
+            if (p.Kind != "Preparação do terreno" && p.Kind != RingBasePlanner.ReservationKind && p.Kind != CourtyardBasePlanner.ReservationKind &&
+                all.Any(r => r.Kind == "Preparação do terreno" && !r.Completed) &&
+                (!all.Any(r => r.Kind == CourtyardBasePlanner.ReservationKind) || Tasks(p).Any(t =>
+                    GenAdj.OccupiedRect(t.Position,t.Rotation,t.Def.Size).Any(c => c.GetEdifice(map) is Mineable)))) return true;
             if (p.Crop != null || p.Kind == "Muro externo" || p.Kind == "Roupas" || p.Kind == "Baterias" || p.Kind == "Pesquisa" || p.Kind == "Fabricação" || p.Kind == "Multiuso")
-                return all.Any(r => !r.Completed && (r.Priority == ConstructionPriority.Critical || r.Kind == "Quarto"));
+                return all.Any(r => !r.Completed && (r.Priority == ConstructionPriority.Critical && r.Kind != "Preparação do terreno" || r.Kind == "Quarto"));
             // Population growth can add a second compact block. Its corridors
             // must wait for rooms, never for one another (a dependency cycle).
             if (p.Kind == "Corredor") return all.Where(r => r.RequiresRoof && r.Kind != "Corredor").Any(r => !r.Shell.All(t => t.Complete(map)));
@@ -109,6 +126,7 @@ namespace AutonomousRim.Execution
             foreach (var p in projects)
             {
                 p.BlockReason = null;
+                if(!danger)foreach(var c in p.NoRoofCells)map.areaManager.NoRoof[c]=true;
                 if (p.Kind == "Energia e climatização") p.Priority = (map.mapTemperature.OutdoorTemp < 0 || map.mapTemperature.OutdoorTemp > 35) &&
                     projects.Any(r => r.RequiresRoof && r.Shell.All(t => t.Complete(map))) ? ConstructionPriority.Critical : ConstructionPriority.High;
                 foreach (var t in Tasks(p))
@@ -149,8 +167,26 @@ namespace AutonomousRim.Execution
                         miners.Any(b => r.Position.IsInAllowedArea(b) && b.CanReach(r, PathEndMode.Touch, Danger.None)))
                         .OrderBy(r => miners.Min(b => b.Position.DistanceToSquared(r.Position))).Take(Math.Max(0, 8 - miningPending)))
                     { map.designationManager.AddDesignation(new Designation(rock.Position, DesignationDefOf.Mine)); p.OwnedMineCells.Add(rock.Position); }
-                    p.Completed = rocks.Count == 0; p.State = p.Completed ? ConstructionState.Completed : ConstructionState.Active;
-                    p.BlockReason = p.Completed ? null : "Escavação nativa necessária antes da construção; Mining precisa estar habilitado."; continue;
+                    var debris=p.ClearCells.Select(c=>c.GetEdifice(map)).Where(b=>b!=null).Distinct().ToList();
+                    // Clearing is a one-time preparation task. Regrowing grass
+                    // must not turn the whole plan into an endless clearing loop.
+                    p.PlantCells.RemoveAll(c=>!c.GetThingList(map).OfType<Plant>().Any());
+                    var plants=p.PlantCells.SelectMany(c=>c.GetThingList(map).OfType<Plant>()).Distinct().ToList();
+                    int plantPending=plants.Count(t=>map.designationManager.AllDesignationsOn(t).Any());
+                    foreach(var plant in plants.Where(t=>!map.designationManager.AllDesignationsOn(t).Any()).Take(Math.Max(0,8-plantPending)))
+                    {
+                        var designation=plant.HarvestableNow&&plant.def.plant.harvestedThingDef==ThingDefOf.WoodLog?DesignationDefOf.HarvestPlant:DesignationDefOf.CutPlant;
+                        map.designationManager.AddDesignation(new Designation(plant,designation));p.OwnedPlants.Add(plant);
+                    }
+                    foreach(var building in debris)
+                    {
+                        if(building.Faction!=null||!building.DeconstructibleBy(Faction.OfPlayer))
+                        {p.BlockReason="Obstáculo não removível ou pertencente a outra facção; preservado.";continue;}
+                        if(map.designationManager.DesignationOn(building,DesignationDefOf.Deconstruct)==null)
+                        {map.designationManager.AddDesignation(new Designation(building,DesignationDefOf.Deconstruct));p.OwnedClearCells.Add(building.Position);}
+                    }
+                    p.Completed = rocks.Count == 0 && debris.Count==0 && plants.Count==0; p.State = p.Completed ? ConstructionState.Completed : ConstructionState.Active;
+                    p.BlockReason = p.Completed ? null : $"Limpeza por trabalho normal: {rocks.Count} rochas, {debris.Count} estruturas removíveis, {plants.Count} plantas restantes. Mining, Construction e Plant Cut precisam estar habilitados."; continue;
                 }
                 foreach (var c in p.ClearCells)
                 {
@@ -190,7 +226,7 @@ namespace AutonomousRim.Execution
                         if (!c.Roofed(map) && !map.areaManager.BuildRoof[c]) { map.areaManager.BuildRoof[c] = true; p.RoofOrders.Add(c); }
                     }
                 if (p.BlockReason != null) { p.State = ConstructionState.Blocked; continue; }
-                if (shell && p.Furniture.All(t => t.Complete(map)) && (!p.RequiresRoof || p.RoofArea.All(c => c.Roofed(map)))) { p.Completed = true; p.State = ConstructionState.Completed; continue; }
+                if (shell && FurnitureStage(map,p).All(t => t.Complete(map)) && (!p.RequiresRoof || p.RoofArea.All(c => c.Roofed(map)))) { p.Completed = true; p.State = ConstructionState.Completed; continue; }
                 if (DependsOn(map, p, projects)) { p.State = ConstructionState.Blocked; p.BlockReason = "Aguardando estrutura de outros módulos."; continue; }
                 p.State = Tasks(p).Any(t => t.Pending?.Spawned == true) || shell && p.RequiresRoof && p.RoofArea.Any(c => !c.Roofed(map)) ? ConstructionState.Active : ConstructionState.Planned;
                 if (p.Stalled)
@@ -213,8 +249,8 @@ namespace AutonomousRim.Execution
                 if (budget.ContainsKey(group.Key)) budget[group.Key] -= group.Sum(t => t.stackCount);
             int pendingCount = projects.SelectMany(Tasks).Where(t => t.Pending?.Spawned == true).Select(t => t.Pending).Distinct().Count(), issued = 0, slots = 0;
             var priorityHold = new Dictionary<ThingDef, int>();
-            foreach (var p in projects.Where(p => !p.Completed && p.State != ConstructionState.Paused && p.State != ConstructionState.Blocked).OrderBy(p => p.Priority)
-                .ThenBy(p => RingBasePlanner.Rank(p.Kind)))
+            foreach (var p in projects.Where(p => !p.Completed && Tasks(p).Any() && p.State != ConstructionState.Paused && p.State != ConstructionState.Blocked).OrderBy(p => p.Priority)
+                .ThenBy(p => ExecutionRank(map,p)))
             {
                 if (slots >= Math.Min(MaxActiveProjects, Math.Max(1, builders.Count + 1)))
                 { if (p.State == ConstructionState.Active) { p.State = ConstructionState.Planned; p.BlockReason = "Aguardando um dos três slots; investimento preservado."; } continue; }
@@ -266,6 +302,9 @@ namespace AutonomousRim.Execution
             foreach (var t in tasks.Where(t => cancelled.Contains(t.Pending))) { t.Pending = null; t.Issued = false; t.Owned = false; }
             foreach (var p in projects)
             {
+                foreach(var plant in p.OwnedPlants.Where(t=>t?.Spawned==true))
+                    foreach(var d in map.designationManager.AllDesignationsOn(plant).Where(d=>d.def==DesignationDefOf.HarvestPlant||d.def==DesignationDefOf.CutPlant).ToList())d.Delete();
+                p.OwnedPlants.Clear();
                 foreach (var c in p.OwnedMineCells)
                 { var rock = c.GetEdifice(map); if (rock != null) map.designationManager.DesignationAt(c, DesignationDefOf.Mine)?.Delete(); }
                 foreach (var c in p.OwnedClearCells)

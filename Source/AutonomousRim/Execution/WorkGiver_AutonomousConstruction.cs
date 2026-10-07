@@ -59,9 +59,15 @@ namespace AutonomousRim.Execution
             if (def.workType == WorkTypeDefOf.Construction && pawn.Map.GetComponent<AutonomousRimMapComponent>().BaseProjects
                 .Any(p => p.State != ConstructionState.Paused && p.OwnedClearCells.Contains(t.Position)) &&
                 pawn.Map.designationManager.DesignationOn(t, DesignationDefOf.Deconstruct) != null)
-                return ((WorkGiver_Scanner)DefDatabase<WorkGiverDef>.GetNamed("Deconstruct").Worker).JobOnThing(pawn, t, false);
+            {
+                var native=(WorkGiver_Scanner)DefDatabase<WorkGiverDef>.GetNamed("Deconstruct").Worker;
+                return native.HasJobOnThing(pawn,t,false)?native.JobOnThing(pawn,t,false):null;
+            }
             if (def.workType == WorkTypeDefOf.Hauling && FoodDeliveryNeeded(pawn) && FoodTarget(pawn, t))
-                return ((WorkGiver_Scanner)DefDatabase<WorkGiverDef>.GetNamed("HaulGeneral").Worker).JobOnThing(pawn, t, false);
+            {
+                var native=(WorkGiver_Scanner)DefDatabase<WorkGiverDef>.GetNamed("HaulGeneral").Worker;
+                return native.HasJobOnThing(pawn,t,false)?native.JobOnThing(pawn,t,false):null;
+            }
             var ai = pawn.Map.GetComponent<AutonomousRimMapComponent>();
             var project = ai.BaseProjects.FirstOrDefault(p => BaseConstructionManager.CanContinueExistingWork(p) && BaseConstructionManager.Tasks(p).Any(task => task.Pending == t && task.RetryAfter <= Find.TickManager.TicksGame));
             if (project == null) return null;
@@ -78,7 +84,7 @@ namespace AutonomousRim.Execution
             foreach (string name in names)
             {
                 var giver = (WorkGiver_Scanner)DefDatabase<WorkGiverDef>.GetNamed(name).Worker;
-                Job job = giver.JobOnThing(pawn, t, false);
+                Job job = giver.HasJobOnThing(pawn,t,false)?giver.JobOnThing(pawn, t, false):null;
                 if (job != null) return job;
             }
             return null;

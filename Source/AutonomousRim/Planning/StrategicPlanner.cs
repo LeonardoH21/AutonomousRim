@@ -92,6 +92,7 @@ namespace AutonomousRim.Planning
             target("Smithing",poorWeapons?85:50); target("Machining",poorWeapons?88:60); target("Gunsmithing",poorWeapons?86:60);
             target("DrugProduction",meds<colonists.Count*2?92:55); target("MedicineProduction",meds<colonists.Count*2?89:55);
             target("HospitalBed",state.DownedColonists>0?95:65); target("SolarPanels",energy?55:85); target("GeothermalPower",energy?62:82);
+            target("SolarPanels",74);target("Battery",75);
             target("MicroelectronicsBasics",72); target("MultiAnalyzer",58); target("Fabrication",68);
             target("FlakArmor",70); target("PrecisionRifling",65); target("Hydroponics",foodLow && map.mapTemperature.OutdoorTemp<0?87:35);
             foreach(var name in VictoryResearchNames)target(name,stable?30:5);

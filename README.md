@@ -30,7 +30,7 @@ The long-term goal is a full autonomous player capable of perceiving the map, ev
 - Failure analysis with recoverable-risk detection, categorized causal reports, expected/actual/improvement comparisons, learned adjustments and persisted raid checkpoints
 - Additive incorporation of researched benches/equipment into the approved base after geometry validation
 - Landing-area gradual Allow with a per-cycle cap and expanding radius; manual re-forbids remain protected
-- Approved ring layout with 12×11 storage, separate 4×4 kitchen/butchery, dining, 5×5 bedrooms sized to population, crop corners, power yard and perimeter, using bounded native construction
+- Approved compact four-courtyard layout with shared walls, 6×6 bedrooms sized to population, separate 4×4 kitchen/butchery, a 4×8 battery room, wooden interior floors and concrete open paths, using bounded native construction
 - HUD buttons for base, equipment, food, work priorities, schedule, strategic planning, failure diagnosis, ground-item allow, plan preview and disable-all
 - Hostile composition, heuristic risk and presence transitions checked every 120 ticks
 - Structured project layout for future AI systems
@@ -158,6 +158,8 @@ Three isolated native combat scenarios passed on 06/10/2026: interception (3 aga
 A subsequent five-case mixed-equipment trial with two melee/two ranged colonists, all wearing flak vests and steel helmets, exposed substantial failures: two unresolved battles and three defeats, with 14 downed participants across five independent teams. No complete victory or safe withdrawal occurred. See [the full negative results and equipment/seed records](docs/CINCO-COMBATES-MISTOS.md). Run `scripts/FiveCombatTests.ps1 -Disadvantage` to repeat that configuration. This broader evidence limits the conclusions from the earlier simple passing fixtures; combat is not reliable for those larger engagements.
 
 ## Initial base construction
+
+New colonies now use the [approved four-courtyard core](docs/BASE-NUCLEO-PATIOS.md). It validates firm support for walls and furniture, accepts trees, mineable rocks and neutral deconstructible debris, and clears those obstacles through native colonist work. It reserves future bedrooms and uses shared partitions. Existing ring/compact plans retain their earlier geometry. The [full normal-construction trial](docs/TESTE-NUCLEO-PATIOS.md) is in progress; its geometry passed, but complete construction has not yet been verified. The descriptions of 5×5 bedrooms and older modules below refer to retained legacy plans.
 
 Use **Planejar base** to preview modules without opening construction work. **Base automática** enables execution. New components enable base, strategy, schedule and ground-item access by default; food/work/equipment management have separate toggles. Saved settings are preserved. The controls stay at the top of Rim AI while the inspector scrolls; **Desligar todas** disables every managed function. Hauling remains under native pawn work.
 
