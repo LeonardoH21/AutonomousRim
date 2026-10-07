@@ -31,6 +31,10 @@ Após essas correções, o ponto de retomada próximo do terceiro dia contém 18
 
 No quarto dia, a janela nativa `Dialog_NamePlayerFactionAndSettlement` pausou a simulação apesar de a velocidade selecionada continuar em 3×. O observador passou a verificar a pausa real, aceitar os nomes gerados pelo jogo e retomar a velocidade. O log confirmou essa janela no tick 258.200, seguido de novo avanço até 305 elementos e quatro quartos completos. Não houve alteração de recursos ou obras para contornar a pausa.
 
+A conferência do piso incluiu mais 40 células sob portas internas e entradas do corredor coberto: madeira com custo e trabalho normais. O plano passou a ter 4.961 elementos únicos. A prioridade dos quartos de reserva foi reduzida; freezer, energia, hospital e pesquisa passam a depender dos quartos necessários à população, e não de todos os quartos futuros. Paredes novas nos locais das antigas ruínas deixam a lista de demolição, preservando essas construções e liberando os registros antigos de designações.
+
+No oitavo dia, foram medidos 544 elementos concluídos e cerca de 4,2 dias de comida. Freezer, energia e pesquisa estavam ativos; a coleta nativa já havia aumentado o aço disponível. O teste completo permanece em andamento.
+
 Esse avanço inicial não comprova conclusão da base nem sobrevivência prolongada. O save final só será entregue após a conferência de todas as obras reais.
 
 ## Repetir ou retomar

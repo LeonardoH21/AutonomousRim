@@ -55,6 +55,28 @@ namespace AutonomousRim.Execution
         public static IEnumerable<ConstructionTask> CurrentStage(Map map, RoomProject p) => p.Shell.All(t => t.Complete(map)) ? FurnitureStage(map,p) : p.Shell;
         private static int ExecutionRank(Map map, RoomProject p) => CourtyardSupport(map,p) &&
             FurnitureStage(map,p).Any(t => t.Def == ThingDefOf.Bed && !t.Complete(map)) ? -1 : RingBasePlanner.Rank(p.Kind);
+        private static IEnumerable<RoomProject> NeededBedrooms(Map map, List<RoomProject> all)
+        {
+            var bedrooms=all.Where(p=>p.Kind=="Quarto");
+            return all.Any(p=>p.Kind==CourtyardBasePlanner.ReservationKind)?bedrooms.Take(map.mapPawns.FreeColonistsSpawnedCount):bedrooms;
+        }
+        private static void CompleteDoorFloorPlan(Map map, List<RoomProject> projects)
+        {
+            if (!projects.Any(p => p.Kind == CourtyardBasePlanner.ReservationKind)) return;
+            var floor = projects.FirstOrDefault(p => p.Kind == "Pisos e acabamento");
+            if (floor == null) return;
+            var planned = new HashSet<IntVec3>(floor.Furniture.Where(t => t.Def is TerrainDef).Select(t => t.Position));
+            var wood = DefDatabase<TerrainDef>.GetNamed("WoodPlankFloor");
+            foreach (var cell in projects.Where(p => p.RequiresRoof).SelectMany(p => p.Shell)
+                .Where(t => t.Def == ThingDefOf.Door).Select(t => t.Position).Distinct())
+                if (planned.Add(cell))
+                {
+                    // Doorways are part of the interior path too. These are
+                    // ordinary floor tasks, including native costs and labor.
+                    floor.Furniture.Add(new ConstructionTask { Def = wood, Position = cell, OriginalTerrain = cell.GetTerrain(map) });
+                    floor.Completed = false;
+                }
+        }
         private static bool DependsOn(Map map, RoomProject p, List<RoomProject> all)
         {
             if (p.Kind == "Plantação inicial") return false;
@@ -63,7 +85,8 @@ namespace AutonomousRim.Execution
                 (!all.Any(r => r.Kind == CourtyardBasePlanner.ReservationKind) || Tasks(p).Any(t =>
                     GenAdj.OccupiedRect(t.Position,t.Rotation,t.Def.Size).Any(c => c.GetEdifice(map) is Mineable)))) return true;
             if (p.Crop != null || p.Kind == "Muro externo" || p.Kind == "Roupas" || p.Kind == "Baterias" || p.Kind == "Pesquisa" || p.Kind == "Fabricação" || p.Kind == "Multiuso")
-                return all.Any(r => !r.Completed && (r.Priority == ConstructionPriority.Critical && r.Kind != "Preparação do terreno" || r.Kind == "Quarto"));
+                return all.Any(r => !r.Completed && r.Priority == ConstructionPriority.Critical && r.Kind != "Preparação do terreno") ||
+                    NeededBedrooms(map,all).Any(r=>!r.Completed);
             // Population growth can add a second compact block. Its corridors
             // must wait for rooms, never for one another (a dependency cycle).
             if (p.Kind == "Corredor") return all.Where(r => r.RequiresRoof && r.Kind != "Corredor").Any(r => !r.Shell.All(t => t.Complete(map)));
@@ -72,7 +95,7 @@ namespace AutonomousRim.Execution
             if (p.Kind == "Conforto dos quartos") return all.Where(r => r.Kind == "Quarto").Any(r => !r.Completed);
             if (p.Kind == "Prateleiras") return all.Where(r => r.Kind == "Estoque" || r.Kind == "Freezer" || r.Kind == "Armas").Any(r => !r.Completed);
             if (p.Kind == "Hospital" || p.Kind == "Oficina" || p.Kind == "Armas")
-                return all.Where(r => r.Kind == "Quarto" || r.Kind == "Cozinha" || r.Kind == "Estoque" || r.Kind == "Freezer").Any(r => !r.Completed);
+                return NeededBedrooms(map,all).Concat(all.Where(r => r.Kind == "Cozinha" || r.Kind == "Estoque" || r.Kind == "Freezer")).Any(r => !r.Completed);
             return p.Kind == "Pisos e acabamento" && all.Where(r => r.RequiresRoof).Any(r => !r.Completed);
         }
         private static void Storage(Map map, RoomProject p)
@@ -121,6 +144,13 @@ namespace AutonomousRim.Execution
         {
             int ticks = Find.TickManager.TicksGame;
             bool danger = map.mapPawns.AllPawnsSpawned.Any(p => !p.Dead && !p.Downed && p.HostileTo(Faction.OfPlayer));
+            CompleteDoorFloorPlan(map, projects);
+            if(projects.Any(p=>p.Kind==CourtyardBasePlanner.ReservationKind))
+            {
+                var needed=new HashSet<RoomProject>(NeededBedrooms(map,projects));
+                foreach(var bedroom in projects.Where(p=>p.Kind=="Quarto"))
+                    bedroom.Priority=needed.Contains(bedroom)?ConstructionPriority.High:ConstructionPriority.Low;
+            }
             if (!danger) BasePlanner.RepairUnissuedKitchenConflicts(map, projects);
             var builders = Builders(map);
             foreach (var p in projects)
@@ -167,6 +197,12 @@ namespace AutonomousRim.Execution
                         miners.Any(b => r.Position.IsInAllowedArea(b) && b.CanReach(r, PathEndMode.Touch, Danger.None)))
                         .OrderBy(r => miners.Min(b => b.Position.DistanceToSquared(r.Position))).Take(Math.Max(0, 8 - miningPending)))
                     { map.designationManager.AddDesignation(new Designation(rock.Position, DesignationDefOf.Mine)); p.OwnedMineCells.Add(rock.Position); }
+                    // A later planned wall can occupy a former ruin cell. It
+                    // belongs to the finished build, not to the old demolition.
+                    p.ClearCells.RemoveAll(c=>c.GetEdifice(map)==null ||
+                        projects.SelectMany(Tasks).Any(t=>t.Position==c && t.Complete(map) && t.Def==c.GetEdifice(map).def));
+                    p.OwnedClearCells.RemoveAll(c=>!p.ClearCells.Contains(c));
+                    p.OwnedPlants.RemoveAll(t=>t==null || t.Destroyed || !t.Spawned);
                     var debris=p.ClearCells.Select(c=>c.GetEdifice(map)).Where(b=>b!=null).Distinct().ToList();
                     // Clearing is a one-time preparation task. Regrowing grass
                     // must not turn the whole plan into an endless clearing loop.
