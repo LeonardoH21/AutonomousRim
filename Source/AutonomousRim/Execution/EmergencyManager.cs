@@ -17,13 +17,15 @@ namespace AutonomousRim.Execution
         public static bool LocalFire(Map map) => map.listerThings.AllThings.Any(t=>t is Fire &&
             (map.mapPawns.FreeColonistsSpawned.Any(p=>p.Position.DistanceTo(t.Position)<15) ||
              map.listerBuildings.allBuildingsColonist.Any(b=>b.Position.DistanceTo(t.Position)<12)));
-        public static bool NeedsCare(Map map) => map.mapPawns.FreeColonistsSpawned.Any(p=>p.Downed ||
-            p.health.hediffSet.BleedRateTotal>0.1f || p.health.hediffSet.hediffs.Any(h=>h is Hediff_Injury injury && !injury.IsPermanent() && injury.Severity>0) ||
-            (p.needs?.rest?.CurLevel??1)<0.2f || (p.needs?.mood?.CurLevel??1)<0.2f);
-        private static bool Essential(WorkTypeDef work, bool recovery, bool foodCritical) =>
+        // The colony-wide recovery gate protects patients. Individual
+        // fatigue and mood remain handled by WorkReadiness and
+        // ScheduleManager; they must not disable healthy workers indefinitely.
+        public static bool NeedsCare(Map map) => map.mapPawns.FreeColonistsSpawned.Any(p=>WorkReadiness.SeriousMedicalNeed(p) ||
+            p.health.hediffSet.hediffs.Any(h=>h is Hediff_Injury injury && !injury.IsPermanent() && injury.Severity>0));
+        private static bool Essential(WorkTypeDef work, bool recovery, bool foodCritical, bool foodLow = false) =>
             work==WorkTypeDefOf.Doctor || work.defName=="Patient" || work.defName=="PatientBedRest" || work.defName=="BasicWorker" ||
             work.defName=="Firefighter" || (recovery || foodCritical) && work.defName=="Cooking" ||
-            recovery && (work==WorkTypeDefOf.Hauling || work==WorkTypeDefOf.Cleaning || work==WorkTypeDefOf.Growing);
+            recovery && (work==WorkTypeDefOf.Hauling || work==WorkTypeDefOf.Cleaning || work==WorkTypeDefOf.Growing || foodLow && work==WorkTypeDefOf.Hunting);
 
         public static void RestoreWork(EmergencyState state) => WorkPriorityManager.Restore(state.Work);
         public static void Stop(EmergencyState state)
@@ -118,6 +120,7 @@ namespace AutonomousRim.Execution
             if(state.Phase==EmergencyPhase.Normal) { Stop(state); return; }
             bool recovery=state.Phase==EmergencyPhase.Recovery;
             bool criticalFood=colony.StoredMealCount==0 && colony.EstimatedFoodDays<0.5f;
+            bool foodLow=colony.EstimatedFoodDays<colony.TargetFoodDays;
             var doctor=threat.Colonists.Where(p=>WorkPriorityManager.CanWork(p) && !WorkReadiness.NeedsRecovery(p) &&
                 !p.WorkTypeIsDisabled(WorkTypeDefOf.Doctor)).OrderByDescending(p=>WorkPriorityManager.Score(p,WorkTypeDefOf.Doctor,0)).FirstOrDefault();
             foreach(var pawn in threat.Colonists.Where(p=>p.workSettings!=null && !p.Dead))
@@ -125,7 +128,8 @@ namespace AutonomousRim.Execution
                 pawn.workSettings.EnableAndInitializeIfNotAlreadyInitialized();
                 foreach(var work in DefDatabase<WorkTypeDef>.AllDefsListForReading.Where(w=>!pawn.WorkTypeIsDisabled(w)))
                 {
-                    int desired=Essential(work,recovery,criticalFood)?1:0;
+                    int desired=Essential(work,recovery,criticalFood,foodLow)?1:0;
+                    if(work==WorkTypeDefOf.Hunting && !WorkPriorityManager.CanHunt(pawn))desired=0;
                     if(work==WorkTypeDefOf.Doctor && pawn!=doctor)desired=2;
                     if((work.defName=="Patient" || work.defName=="PatientBedRest") && pawn==doctor && !WorkReadiness.SeriousMedicalNeed(pawn))desired=2;
                     if (WorkReadiness.NeedsRecovery(pawn) && !WorkReadiness.SelfCare(work) &&
@@ -137,7 +141,7 @@ namespace AutonomousRim.Execution
                 var job=pawn.CurJob;
                 if(!pawn.Drafted && job?.playerForced!=true && job!=null &&
                     (job.def==JobDefOf.Wear || job.def==JobDefOf.Equip ||
-                     job.workGiverDef?.workType!=null && !Essential(job.workGiverDef.workType,recovery,criticalFood)))
+                     job.workGiverDef?.workType!=null && !Essential(job.workGiverDef.workType,recovery,criticalFood,foodLow)))
                     pawn.jobs.EndCurrentJob(JobCondition.InterruptForced);
             }
             if(threat.Immediate)Evacuate(state,threat);

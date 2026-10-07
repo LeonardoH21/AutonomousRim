@@ -13,6 +13,10 @@ O teste solicitado usa a planta de `BASE-NUCLEO-PATIOS.md`: paredes compartilhad
 
 ## Executor e observador
 
+Na primeira tentativa prolongada, `SolarPanels` chegou naturalmente aos 600 pontos, mas a construção parou em 879/4.961 elementos durante recuperação. A reserva chegou a zero e Lawman morreu no dia 21. Essa tentativa não passou e foi preservada localmente como `CourtyardFailed-Day21.rws`; nenhum colono foi ressuscitado ou substituído. A segunda tentativa recomeçou de `CourtyardStart`, com os mesmos cinco colonos, recursos e condições iniciais.
+
+As correções seguintes mantêm Cooking, armazenamento e caça segura disponíveis durante recuperação sem ameaças imediatas; roupas continuam suspensas. O bloqueio global de recuperação considera pacientes e ferimentos, enquanto humor e descanso individuais são atendidos por prioridades e agenda pessoais. A pesquisa necessária tem um especialista reservado quando há ao menos dois dias de comida. A fila elétrica prioriza os cabos reais entre geradores e freezer antes dos ramais secundários. Todas essas ações continuam usando trabalho e custos nativos. O observador encerra a tentativa imediatamente se perder um dos cinco colonos e exige exatamente cinco na aprovação final.
+
 `CourtyardBasePlanner` escolhe uma posição de solo firme e valida os locais reais das paredes, móveis e pisos. Árvores, rochas mineráveis e estruturas neutras desmontáveis são aceitas como obstáculos removíveis. Construções e zonas existentes do jogador são preservadas. O plano reserva os setores para permitir crescimento dentro do núcleo.
 
 A execução usa os limites normais do mod: até três projetos ativos, dezoito obras pendentes e seis novos blueprints por ciclo. Coleta, transporte, construção, cobertura, alimentação, descanso e pesquisa continuam sob as regras nativas.

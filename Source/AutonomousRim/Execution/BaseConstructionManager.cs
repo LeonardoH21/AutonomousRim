@@ -44,6 +44,26 @@ namespace AutonomousRim.Execution
             map.GetComponent<Core.AutonomousRimMapComponent>().BaseProjects.Any(r => r.Kind == CourtyardBasePlanner.ReservationKind);
         private static IEnumerable<ConstructionTask> FurnitureStage(Map map, RoomProject p)
         {
+            if(p.LayoutSlot=="courtyard-power")
+            {
+                var projects=map.GetComponent<Core.AutonomousRimMapComponent>().BaseProjects;
+                var reservation=projects.FirstOrDefault(r=>r.Kind==CourtyardBasePlanner.ReservationKind);
+                if(reservation!=null)
+                {
+                    var trunk=CourtyardBasePlanner.At(reservation.LayoutAnchor,50,50);
+                    var essential=new HashSet<IntVec3>();
+                    var targets=p.Furniture.Where(t=>t.Def.defName=="WoodFiredGenerator" ||
+                        t.Def.defName=="Heater" && map.mapTemperature.OutdoorTemp<10)
+                        .Concat(projects.Where(r=>r.Kind=="Freezer").SelectMany(Tasks).Where(t=>t.Def.defName=="Cooler"));
+                    foreach(var t in targets)
+                    {
+                        for(int x=Math.Min(t.Position.x,trunk.x);x<=Math.Max(t.Position.x,trunk.x);x++)essential.Add(new IntVec3(x,0,trunk.z));
+                        for(int z=Math.Min(t.Position.z,trunk.z);z<=Math.Max(t.Position.z,trunk.z);z++)essential.Add(new IntVec3(t.Position.x,0,z));
+                    }
+                    return p.Furniture.OrderBy(t=>t.Def.defName=="WoodFiredGenerator"?0:
+                        t.Def.defName=="PowerConduit" && essential.Contains(t.Position)?1:2);
+                }
+            }
             if (!CourtyardSupport(map,p)) return p.Furniture;
             // Furnish the occupied colony first. Extra bedrooms are still built
             // by their own projects; their beds must not delay essential shelter.

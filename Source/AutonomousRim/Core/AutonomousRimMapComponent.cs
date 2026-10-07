@@ -331,6 +331,8 @@ namespace AutonomousRim.Core
                 EmergencyManager.Apply(map,CurrentState,emergency);
                 if(scheduleAutomation)ScheduleStatus=ScheduleManager.Apply(map,CurrentState,scheduleChanges,true);
                 ManagementStatus="Emergência: trabalho secundário suspenso; recuperação libera medicina e alimentação antes da expansão.";
+                if(emergency.Phase==EmergencyPhase.Recovery && !CurrentState.Threat.Immediate && !EmergencyManager.LocalFire(map) && foodAutomation)
+                    ManagementStatus=FoodManager.Apply(map,CurrentState,ownedHunts,ownedBills,baseProjects,survivalOnly:true)+" Recuperação: produção secundária permanece suspensa.";
                 return;
             }
             if (lootAutomation && CurrentState != null && Find.TickManager.TicksGame - lastLootTick >= LootIntervalTicks)
@@ -397,7 +399,8 @@ namespace AutonomousRim.Core
             {
                 if(emergency.Phase!=EmergencyPhase.Normal)
                 {
-                    FoodManager.CancelHunts(map,ownedHunts); EquipmentManager.CancelPending(equipmentOrders);
+                    if(emergency.Phase!=EmergencyPhase.Recovery || next.Immediate || EmergencyManager.LocalFire(map))FoodManager.CancelHunts(map,ownedHunts);
+                    EquipmentManager.CancelPending(equipmentOrders);
                     ConstructionWorkManager.Stop(constructionOrders);
                     EmergencyManager.Apply(map,CurrentState,emergency);
                     if(scheduleAutomation)ScheduleStatus=ScheduleManager.Apply(map,CurrentState,scheduleChanges,true);

@@ -56,6 +56,7 @@ namespace AutonomousRim.Execution
             bool researchNeeded=strategicResearch && !foodUrgent && !fire && currentResearch!=null &&
                 map.GetComponent<AutonomousRimMapComponent>().BaseProjects.Where(p=>!p.Completed)
                 .SelectMany(BaseConstructionManager.Tasks).Any(t=>t.Def is ThingDef d && d.researchPrerequisites?.Contains(currentResearch)==true && !d.IsResearchFinished);
+            bool reserveResearcher=researchNeeded && state.EstimatedFoodDays>=2f;
             var protectedBuilders = new HashSet<Pawn>();
             if (construction)
                 foreach (var frame in map.listerThings.AllThings.OfType<Frame>().Where(f => f.IsCompleted()))
@@ -93,12 +94,18 @@ namespace AutonomousRim.Execution
             var roles = new Dictionary<WorkTypeDef, List<Pawn>>();
             foreach (var work in types.Where(w => demand[w] > 0)
                 .OrderBy(w => w == WorkTypeDefOf.Doctor && patients > 0 ? 0 :
-                    foodUrgent && (w.defName == "Cooking" || w == WorkTypeDefOf.Growing) ? 1 : urgent.Contains(w) ? 2 : 3)
+                    foodUrgent && (w.defName == "Cooking" || w == WorkTypeDefOf.Growing) ? 1 :
+                    reserveResearcher && w==WorkTypeDefOf.Research ? 2 : urgent.Contains(w) ? 3 : 4)
                 .ThenByDescending(w => demand[w]).ThenByDescending(w => w.naturalPriority))
             {
                 var candidates = available.Where(p => !p.WorkTypeIsDisabled(work) &&
                     (work != WorkTypeDefOf.Hunting || CanHunt(p)) &&
                     (!WorkReadiness.NeedsRecovery(p) || foodUrgent && (work.defName == "Cooking" || work == WorkTypeDefOf.Growing) && WorkReadiness.CanProduceEmergencyFood(p))).ToList();
+                if(reserveResearcher && work!=WorkTypeDefOf.Research && work!=WorkTypeDefOf.Doctor && roles.TryGetValue(WorkTypeDefOf.Research,out var reserved))
+                {
+                    var helpers=candidates.Where(p=>!reserved.Contains(p)).ToList();
+                    if(helpers.Count>0)candidates=helpers;
+                }
                 if(work==WorkTypeDefOf.Research && researchNeeded)
                 {
                     var helpers=candidates.Where(p=>!roles.Any(r=>(r.Key==WorkTypeDefOf.Doctor && patients>0 ||

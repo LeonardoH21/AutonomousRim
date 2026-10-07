@@ -11,7 +11,7 @@ namespace AutonomousRim.Execution
 {
     public static class FoodManager
     {
-        public static string Apply(Map map, ColonyState state, List<Pawn> ownedHunts, List<ManagedFoodBill> ownedBills, IReadOnlyList<RoomProject> baseProjects = null)
+        public static string Apply(Map map, ColonyState state, List<Pawn> ownedHunts, List<ManagedFoodBill> ownedBills, IReadOnlyList<RoomProject> baseProjects = null, bool survivalOnly = false)
         {
             ownedHunts.RemoveAll(p => p == null || !p.Spawned || p.Dead || map.designationManager.DesignationOn(p, DesignationDefOf.Hunt) == null);
             ownedBills.RemoveAll(b => b?.Bill == null || b.Bill.DeletedOrDereferenced || !b.Matches);
@@ -22,7 +22,7 @@ namespace AutonomousRim.Execution
             }
             string foodStatus = EnsureMeals(map, state, ownedBills);
             StoragePolicy.ManageFoodStorage(map, state, baseProjects);
-            EnsureClothes(map, state, ownedBills);
+            if(!survivalOnly)EnsureClothes(map, state, ownedBills);
             bool butcherAvailable = EnsureBill(map, "ButcherCorpseFlesh", state, ownedBills);
             if (state.DailyFoodNutrition <= 0f || state.EstimatedFoodDays >= state.TargetFoodDays)
             {

@@ -66,6 +66,8 @@ namespace AutonomousRim.RuntimeChecks
                 int tick=Find.TickManager.TicksGame;
                 if(startingColonists==null)startingColonists=new List<Pawn>();
                 if(started&&startingColonists.Count==0)startingColonists.AddRange(map.mapPawns.FreeColonistsSpawned);
+                if(started&&startingColonists.Any(p=>p==null||p.Dead))
+                    throw new InvalidOperationException("Starting colonist lost; stop trial rather than replace or resurrect a pawn.");
                 var checkpointRequest=Path.Combine(GenFilePaths.SaveDataFolderPath,"checkpoint-request.txt");
                 if(started&&File.Exists(checkpointRequest))
                 {
@@ -143,7 +145,7 @@ namespace AutonomousRim.RuntimeChecks
                     ai.BaseProjects.Where(p=>p.Crop!=null).All(p=>p.GrowingZone!=null)&&ai.BaseProjects.Where(p=>p.Kind=="Estoque"||p.Kind=="Freezer"||p.Kind=="Medicamentos"||p.Kind=="Despejo"||p.Kind=="Roupas"||p.Kind=="Armas").All(p=>p.Stockpile!=null);
                 if(done)
                 {
-                    if(startingColonists.Count!=5||startingColonists.Any(p=>p==null||p.Dead||p.Downed||!p.Spawned||p.Map!=map))throw new InvalidOperationException("Construction complete but starting colony not intact");
+                    if(startingColonists.Count!=5||map.mapPawns.FreeColonistsSpawnedCount!=5||startingColonists.Any(p=>p==null||p.Dead||p.Downed||!p.Spawned||p.Map!=map))throw new InvalidOperationException("Construction complete but starting colony not intact");
                     finished=true;Find.TickManager.CurTimeSpeed=TimeSpeed.Paused;GameDataSaveLoader.SaveGame("CourtyardFinished");
                     File.WriteAllText(Path.Combine(GenFilePaths.SaveDataFolderPath,"courtyard-result.txt"),"All "+all.Count+" planned task references verified against real objects/terrain; roofs and zones verified. Elapsed ticks="+(tick-startTick));
                     Log.Message("[AutonomousRim.CourtyardTrial] PASS: every planned wall, furniture and floor exists; native construction; final save CourtyardFinished.");
