@@ -20,7 +20,16 @@ namespace AutonomousRim.Execution
         }
         private static void Track(Map map, ConstructionTask task)
         {
-            if (task.Def is TerrainDef && task.OriginalTerrain != null && !task.Complete(map) && task.Position.GetTerrain(map) != task.OriginalTerrain) task.CancelledByPlayer = true;
+            if (task.Def is TerrainDef && task.OriginalTerrain != null && !task.Complete(map) && task.Position.GetTerrain(map) != task.OriginalTerrain)
+            {
+                var current=task.Position.GetTerrain(map);
+                // Mining can replace natural rough rock before a floor has
+                // even been ordered. Refresh that baseline; preserve changes
+                // to already-issued work and newly built player flooring.
+                if(!task.Issued&&!task.WasCompleted&&current.designationCategory==null)
+                {task.OriginalTerrain=current;task.CancelledByPlayer=false;}
+                else task.CancelledByPlayer=true;
+            }
             if (task.Complete(map)) { task.WasCompleted = true; return; }
             if (task.WasCompleted || !task.Issued) return;
             if (task.Pending?.Spawned == true) { if (!Matches(task, task.Pending)) task.CancelledByPlayer = true; return; }
