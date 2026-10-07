@@ -1,7 +1,7 @@
 <div id="rim-patios">
 <h2>Núcleo compacto · quatro pátios</h2>
 <svg class="base-map" role="img" aria-label="Planta compacta com corredores em cruz, quatro cultivos internos, salas centrais e cantos escalonados"></svg>
-<div class="viz-row text-small"><span>▧ Pisos</span><span>▯ Portas</span><span>·· Expansão</span></div>
+<div class="viz-row text-small"><span>▧ Madeira: interiores</span><span>▦ Concreto: caminhos abertos</span><span>▯ Parede única compartilhada</span></div>
 <label class="form-label">Setor<select class="form-select" aria-label="Detalhes do setor"></select></label>
 <div class="card" aria-live="polite"></div>
 </div>
@@ -10,24 +10,29 @@
 (()=>{
 const root=document.getElementById('rim-patios'),svg=root.querySelector('svg'),select=root.querySelector('select');
 const rooms=[
-{id:'estoque',n:'Estoque geral',t:'EST',l:['Estoque geral'],x:23,y:11,w:26,h:10,d:'e',info:'Prateleiras, recursos e materiais. Sem comida. Amplo setor junto das bancadas; expandir conforme o volume armazenado.'},
+{id:'estoque',n:'Estoque geral',t:'EST',l:['Estoque geral'],x:23,y:11,w:26,h:11,d:'e',info:'Prateleiras, recursos e materiais. Sem comida. Amplo setor junto das bancadas; expandir conforme o volume armazenado.'},
 {id:'freezer',n:'Freezer',t:'FRIO',l:['Freezer'],x:52,y:11,w:25,h:10,d:'w',info:'−2 °C, alimentos em prioridade maior que o estoque. Reservar antecâmara, prateleiras e exaustão externa sem teto na planta técnica.'},
-{id:'cozinha',n:'Cozinha',t:'C',l:['Cozinha'],x:52,y:21,w:9,h:9,d:'w',info:'Sala exclusiva do fogão. Parede separa o abate; não usar a cozinha como passagem. Área para bancada, cadeira e circulação.'},
-{id:'abate',n:'Abate',t:'A',l:['Abate'],x:52,y:30,w:9,h:7,d:'w',info:'Butcher em sala separada. Próximo do freezer, com transporte de carcaças pela rota de serviço; sem misturar com a cozinha.'},
-{id:'social',n:'Refeitório',t:'REF',l:['Refeitório'],x:34,y:37,w:15,h:12,d:'s',info:'Mesas e cadeiras no centro da base. Piso e decoração; refeições próximas. Sala principal de convivência.'},
+{id:'cozinha',n:'Cozinha',t:'C',l:['C','4×4'],x:52,y:20,w:6,h:6,d:'w',info:'4×4 internos. Sala exclusiva do fogão; parede única compartilhada com abate e freezer. Sem trânsito de passagem.'},
+{id:'abate',n:'Abate',t:'A',l:['A','4×4'],x:52,y:25,w:6,h:6,d:'w',info:'4×4 internos. Butcher separado da cozinha por uma única parede. Próximo do freezer e da rota de carcaças.'},
+{id:'social',n:'Refeitório',t:'REF',l:['Refeitório'],x:34,y:35,w:15,h:14,d:'s',info:'Mesas e cadeiras no centro da base. Piso de madeira e decoração; refeições próximas. Sala principal de convivência.'},
 {id:'recreacao',n:'Recreação',t:'REC',l:['Recreação'],x:52,y:37,w:15,h:12,d:'s',info:'Recreação central junto do refeitório e dos quartos. Móveis e beleza conforme recursos; sem bloquear acessos.'},
-{id:'hospital',n:'Hospital',t:'HOSP',l:['Hospital'],x:34,y:52,w:15,h:11,d:'n',info:'Camas normais médicas inicialmente; 2–3 slots de medicina em prioridade Critical. Ampliar com pesquisa e necessidade.'},
-{id:'pesquisa',n:'Pesquisa',t:'PESQ',l:['Pesquisa'],x:52,y:52,w:15,h:11,d:'n',info:'Pesquisa no núcleo. Piso completo, espaço livre para bancadas e seus pontos de interação.'},
+{id:'hospital',n:'Hospital',t:'HOSP',l:['Hospital'],x:34,y:52,w:15,h:12,d:'n',info:'Camas normais médicas inicialmente; 2–3 slots de medicina em prioridade Critical. Piso de madeira. Ampliar com pesquisa e necessidade.'},
+{id:'pesquisa',n:'Pesquisa',t:'PESQ',l:['Pesquisa'],x:52,y:52,w:15,h:12,d:'n',info:'Pesquisa no núcleo. Piso de madeira, espaço livre para bancadas e seus pontos de interação.'},
 {id:'oficinas',n:'Oficinas',t:'OFIC',l:['Oficinas'],x:10,y:31,w:11,h:18,d:'e',info:'Costura, pedra e produção junto do estoque. Posicionar bancadas reais conforme tecnologia e espaço livre.'},
 {id:'roupas',n:'Roupas e armaduras',t:'R/A',l:['Roupas','armaduras'],x:10,y:52,w:11,h:17,d:'e',info:'Prateleiras de roupas e armaduras perto dos quartos. Filtros separados de comida, lixo e carcaças.'},
-{id:'energia',n:'Energia e serviço',t:'GER',l:['Energia','e serviço'],x:79,y:31,w:11,h:18,d:'w',open:true,info:'Pátio aberto para geração e manutenção. Separar a área de exaustão do freezer; painéis e geradores dependem da pesquisa.'},
-{id:'baterias',n:'Baterias',t:'BAT',l:['Baterias'],x:79,y:52,w:11,h:17,d:'w',info:'Compartimento coberto, separado dos quartos. Capacidade e instalação dependem da pesquisa.'},
-{id:'armas',n:'Armas e defesa',t:'ARM',l:['Armas','e defesa'],x:23,y:79,w:26,h:10,d:'e',info:'Reserva de armas próxima da entrada defensiva ao sul. Manter rota de fuga e acesso aos combatentes livres.'},
-{id:'fabricacao',n:'Fabricação e expansão',t:'FAB',l:['Fabricação'],x:52,y:79,w:25,h:10,d:'w',info:'Oficina adicional e fabricação quando necessárias. Crescer primeiro conforme a demanda; não construir apenas para preencher salas.'}
+{id:'baterias',n:'Sala de baterias',t:'BAT',l:['BAT','4×8'],x:80,y:39,w:6,h:10,d:'s',info:'4×8 internos, exclusivamente baterias. Piso de madeira e teto. Geradores ficam fora desta sala.'},
+{id:'servico',n:'Depósitos de serviço',t:'DEP',l:['Depósitos','de serviço'],x:80,y:52,w:10,h:17,d:'w',open:true,info:'Área externa para carcaças e pedras com filtros separados. Caminhos de concreto; manter acesso e exaustão livres.'},
+{id:'armas',n:'Armas e defesa',t:'ARM',l:['Armas','e defesa'],x:23,y:77,w:26,h:12,d:'e',info:'Reserva de armas próxima da entrada defensiva ao sul. Manter rota de fuga e acesso aos combatentes livres.'},
+{id:'fabricacao',n:'Fabricação e expansão',t:'FAB',l:['Fabricação'],x:52,y:77,w:25,h:12,d:'w',info:'Oficina adicional e fabricação quando necessárias. Crescer primeiro conforme a demanda; não construir apenas para preencher salas.'}
 ];
-const beds=[[39,21,10,8],[39,29,10,8],[22,37,6,12],[28,37,6,12],[67,37,6,12],[73,37,6,12],[22,52,6,11],[28,52,6,11],[67,52,6,11],[73,52,6,11],[39,63,10,8],[39,71,10,8],[52,63,9,8],[52,71,9,8]];
-beds.forEach(([x,y,w,h],i)=>rooms.push({id:'q'+(i+1),n:'Quarto '+(i+1),t:'Q'+(i+1),l:['Q'+(i+1)],x,y,w,h,d:x===39?'e':x===52?'w':y===37?'s':'n',bed:true,info:'Cama e cabeceira na parede, espaço para cama de casal, cômoda e vaso. Construir conforme população. Dimensões podem variar; manter pelo menos 25 células úteis e validar encaixe dos móveis.'}));
-const patios=[{x:22,y:22,w:16,h:15,n:'Arroz',t:'Arroz',c:3},{x:62,y:22,w:16,h:15,n:'Linho',t:'Linho',c:5},{x:22,y:63,w:16,h:15,n:'Batata',t:'Batata',c:4},{x:62,y:63,w:16,h:15,n:'Medicina + hemp',t:'Med.',c:6}];
+const beds=[[41,21],[41,28],[20,41],[27,41],[66,41],[73,41],[20,52],[27,52],[66,52],[73,52],[41,63],[41,70],[52,63],[52,70]];
+beds.forEach(([x,y],i)=>rooms.push({id:'q'+(i+1),n:'Quarto '+(i+1),t:'Q'+(i+1),l:['Q'+(i+1)],x,y,w:8,h:8,d:x===41?'e':x===52?'w':y===41?'s':'n',bed:true,info:'6×6 internos, piso de madeira. Cama e cabeceira na parede, reserva para cama de casal, cômoda e vaso. Parede única compartilhada; construir conforme população.'}));
+const patios=[{x:21,y:22,w:19,h:16,n:'Arroz',t:'Arroz',c:3},{x:59,y:21,w:21,h:16,n:'Linho',t:'Linho',c:5},{x:21,y:60,w:19,h:17,n:'Batata',t:'Batata',c:4},{x:60,y:60,w:20,h:17,n:'Medicina + hemp',t:'Med.',c:6}];
+const occupied=(x,y)=>rooms.some(r=>x>=r.x&&x<r.x+r.w&&y>=r.y&&y<r.y+r.h);
+// Unique wall coordinates are the construction source of truth for this drawing.
+const walls=new Set(),floors=new Set();
+rooms.forEach(r=>{for(let y=r.y;y<r.y+r.h;y++)for(let x=r.x;x<r.x+r.w;x++)(x===r.x||y===r.y||x===r.x+r.w-1||y===r.y+r.h-1?walls:floors).add(x+','+y);});
+if([...floors].some(k=>walls.has(k)))throw Error('Wall overlaps room interior');
 let selected='social';const saved=window.openai?.widgetState?.privateContent;if(rooms.some(r=>r.id===saved?.selected))selected=saved.selected;
 const ns='http://www.w3.org/2000/svg',make=(tag,a={},parent=svg)=>{const n=document.createElementNS(ns,tag);Object.entries(a).forEach(([k,v])=>n.setAttribute(k,v));parent.appendChild(n);return n;};
 const show=()=>{select.value=selected;const r=rooms.find(r=>r.id===selected);root.querySelector('.card').textContent=r.n+' · '+(r.w-2)+'×'+(r.h-2)+' internos · '+r.info;};
@@ -36,15 +41,17 @@ function draw(){
  const width=Math.max(280,root.clientWidth),s=(width-16)/100,m=8,compact=width<480;svg.replaceChildren();svg.setAttribute('viewBox','0 0 '+width+' '+width);
  make('title').textContent='Base compacta inspirada na última referência';make('desc').textContent='Corredores em cruz, salas de convivência e hospital centrais, quatro pátios agrícolas, quartos e serviços encaixados, perímetro escalonado. Reservas de expansão nas quatro direções. Proposta, não obra executada.';
  const defs=make('defs'),p=make('pattern',{id:'patios-floor',width:s,height:s,patternUnits:'userSpaceOnUse'},defs);make('path',{d:'M '+s+' 0 L 0 0 0 '+s,fill:'none',stroke:'var(--border)','stroke-width':.5},p);
+ const wood=make('pattern',{id:'patios-wood',width:2*s,height:s,patternUnits:'userSpaceOnUse'},defs);make('path',{d:'M 0 0 H '+2*s+' M 0 0 V '+s,fill:'none',stroke:'var(--border)','stroke-width':.5},wood);
  const box=(x,y,w,h,a={},parent=svg)=>make('rect',{x:m+x*s,y:m+y*s,width:w*s,height:h*s,...a},parent);
  const text=(x,y,v,a={},parent=svg)=>{const n=make('text',{x:m+x*s,y:m+y*s,fill:'var(--foreground)','font-size':12,'text-anchor':'middle','dominant-baseline':'middle',...a},parent);n.textContent=v;};
  const outline=[[6,27],[10,27],[10,19],[19,19],[19,10],[27,10],[27,6],[73,6],[73,10],[81,10],[81,19],[90,19],[90,27],[94,27],[94,73],[90,73],[90,81],[81,81],[81,90],[73,90],[73,94],[27,94],[27,90],[19,90],[19,81],[10,81],[10,73],[6,73]];
  const points=outline.map(([x,y])=>[m+x*s,m+y*s].join(',')).join(' ');
  make('polygon',{points,fill:'var(--muted)',stroke:'var(--foreground)','stroke-width':s});make('polygon',{points,fill:'url(#patios-floor)'});
- patios.forEach(r=>{box(r.x,r.y,r.w,r.h,{fill:'color-mix(in oklab, var(--viz-series-'+r.c+') 22%, var(--background))'});box(r.x,r.y,r.w,r.h,{fill:'url(#patios-floor)'});if(r.c===6)box(r.x+r.w-3,r.y,3,r.h,{fill:'var(--viz-series-5)',opacity:.25});text(r.x+r.w/2,r.y+r.h/2,compact?r.t:r.n);});
+ [[49,11,3,78],[10,49,80,3]].forEach(([x,y,w,h])=>{box(x,y,w,h,{fill:'color-mix(in oklab, var(--viz-series-1) 13%, var(--background))'});box(x,y,w,h,{fill:'url(#patios-wood)'});});
+ patios.forEach(r=>{for(let y=r.y;y<r.y+r.h;y++)for(let x=r.x;x<r.x+r.w;x++){if(occupied(x,y))continue;box(x,y,1,1,{fill:'color-mix(in oklab, var(--viz-series-'+(r.c===6&&x>=r.x+r.w-3?5:r.c)+') 22%, var(--background))'});box(x,y,1,1,{fill:'url(#patios-floor)'});}text(r.x+r.w/2,r.y+r.h/2+(r.y===60?3:0),compact?r.t:r.n);});
  rooms.forEach(r=>{
-  const g=make('g',{'data-room':r.id,class:'cursor-interaction','aria-label':r.n});
-  box(r.x,r.y,r.w,r.h,{fill:'var(--foreground)'},g);box(r.x+1,r.y+1,r.w-2,r.h-2,{fill:r.open?'var(--background)':'color-mix(in oklab, var(--viz-series-'+(r.bed?1:2)+') 13%, var(--background))'},g);box(r.x+1,r.y+1,r.w-2,r.h-2,{fill:'url(#patios-floor)'},g);
+  const g=make('g',{'data-room':r.id,'data-inner-width':r.w-2,'data-inner-height':r.h-2,class:'cursor-interaction','aria-label':r.n});
+  box(r.x,r.y,r.w,r.h,{fill:'var(--foreground)'},g);box(r.x+1,r.y+1,r.w-2,r.h-2,{fill:r.open?'var(--background)':'color-mix(in oklab, var(--viz-series-1) 13%, var(--background))'},g);box(r.x+1,r.y+1,r.w-2,r.h-2,{fill:r.open?'url(#patios-floor)':'url(#patios-wood)'},g);
   const dx=r.d==='w'?r.x:r.d==='e'?r.x+r.w-1:r.x+Math.floor(r.w/2),dy=r.d==='n'?r.y:r.d==='s'?r.y+r.h-1:r.y+Math.floor(r.h/2);box(dx,dy,1,1,{fill:'var(--viz-series-5)'},g);
   if(r.bed){box(r.x+1,r.y+1,1,2,{fill:'var(--viz-series-2)'},g);box(r.x+2,r.y+1,1,2,{fill:'none',stroke:'var(--muted-foreground)','stroke-width':.6,'stroke-dasharray':'2 2'},g);}
   const labels=compact?[r.bed?r.t.slice(1):r.t]:r.l;labels.forEach((v,i)=>text(r.x+r.w/2,r.y+r.h/2+(r.bed?1:0),v,{dy:(i-(labels.length-1)/2)*14},g));g.addEventListener('click',()=>{selected=r.id;show();save();});
