@@ -30,14 +30,12 @@ The long-term goal is a full autonomous player capable of perceiving the map, ev
 - Failure analysis with recoverable-risk detection, categorized causal reports, expected/actual/improvement comparisons, learned adjustments and persisted raid checkpoints
 - Additive incorporation of researched benches/equipment into the approved base after geometry validation
 - Landing-area gradual Allow with a per-cycle cap and expanding radius; manual re-forbids remain protected
-- Approved compact four-courtyard layout with shared walls, 6×6 bedrooms sized to population, separate 4×4 kitchen/butchery, a 4×8 battery room, wooden interior floors and concrete open paths, using bounded native construction
+- New-save modular 13×13 planner with shared partitions, 5×5 bedrooms, 11×5 merged rooms, separate kitchen/butchery, wooden floors and three-cell circulation; existing courtyard/ring plans remain compatible
 - HUD buttons for base, equipment, food, work priorities, schedule, strategic planning, failure diagnosis, ground-item allow, plan preview and disable-all
-- Hostile composition, heuristic risk and presence transitions checked every 120 ticks
+- Hostile composition and emergency response checked every 15 ticks, independent of slower colony planning
 - Structured project layout for future AI systems
 
-New colonies start with base construction, strategic planning, schedule and landing-area Allow enabled; explicit saved toggles and invested layouts remain respected. The approved drawing and priorities are saved in [BASE-ANEL.md](docs/BASE-ANEL.md) and [the floor plan](docs/base-anel.html). Strategic, priority, schedule, failure, upgrade, zone and save-load checks pass; full native construction of the expanded ring base still needs a longer trial.
-
-A [compact four-courtyard redesign](docs/BASE-NUCLEO-PATIOS.md) follows the user's latest reference: stepped corners, cross-shaped corridors, central services and outward expansion links. The user permits placement anywhere suitable on firm terrain, with tree cutting and mining to clear obstacles. The drawing precedes technical validation and full construction; the production planner is unchanged at this design stage.
+New colonies start with base construction, strategic planning, schedule and landing-area Allow enabled; explicit saved toggles and invested layouts remain respected. The current construction revision is documented in [REVISAO-MODULAR-13.md](docs/REVISAO-MODULAR-13.md), including native trial results (five furnished bedrooms in 10.51 game hours; initial core with working freezer in 61.37 hours) and remaining scope. Older ring and courtyard design documents describe preserved legacy layouts.
 
 ## Planned architecture
 

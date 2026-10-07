@@ -10,11 +10,11 @@ namespace AutonomousRim.RuntimeChecks
     [StaticConstructorOnStartup]
     public static class CourtyardTrialSetup
     {
-        private static bool Fresh => GenCommandLine.CommandLineArgPassed("autonomousrimcourtyardtrial") &&
+        private static bool Fresh => (GenCommandLine.CommandLineArgPassed("autonomousrimcourtyardtrial") || GenCommandLine.CommandLineArgPassed("autonomousrimmodulartrial")) &&
             !GenCommandLine.CommandLineArgPassed("autonomousrimcourtyardresume") && !GenCommandLine.CommandLineArgPassed("autonomousrimcourtyardfromfailure") && !GenCommandLine.CommandLineArgPassed("autonomousrimcourtyardfromstart");
         static CourtyardTrialSetup()
         {
-            if(!GenCommandLine.CommandLineArgPassed("autonomousrimcourtyardtrial"))return;
+            if(!(GenCommandLine.CommandLineArgPassed("autonomousrimcourtyardtrial") || GenCommandLine.CommandLineArgPassed("autonomousrimmodulartrial")))return;
             var h=new Harmony("leonardoh21.autonomousrim.courtyardtrial.setup");
             h.Patch(AccessTools.Method(typeof(GameInitData),"ChooseRandomStartingTile"),postfix:new HarmonyMethod(typeof(CourtyardTrialSetup),nameof(Tile)));
             h.Patch(AccessTools.Method(typeof(GameInitData),"PrepForMapGen"),prefix:new HarmonyMethod(typeof(CourtyardTrialSetup),nameof(Size)));

@@ -249,7 +249,7 @@ namespace AutonomousRim.Planning
                 }
                 var report=GenConstruct.CanPlaceBlueprintAt(t.Def,t.Position,t.Rotation,map,stuffDef:t.Stuff);
                 if(!report && !t.Complete(map) && !t.Position.GetThingList(map).Any(b=>(b is Blueprint || b is Frame) && b.def.entityDefToBuild==t.Def && b.Rotation==t.Rotation) &&
-                    !GenAdj.OccupiedRect(t.Position,t.Rotation,t.Def.Size).Concat(((ThingDef)t.Def).hasInteractionCell?new[]{t.Position+((ThingDef)t.Def).interactionCellOffset.RotatedBy(t.Rotation)}:Array.Empty<IntVec3>())
+                    !GenAdj.OccupiedRect(t.Position,t.Rotation,t.Def.Size).Concat(t.Def.defName=="Cooler"?new[]{t.Position+t.Rotation.FacingCell,t.Position-t.Rotation.FacingCell}:Array.Empty<IntVec3>()).Concat(((ThingDef)t.Def).hasInteractionCell?new[]{t.Position+((ThingDef)t.Def).interactionCellOffset.RotatedBy(t.Rotation)}:Array.Empty<IntVec3>())
                         .Any(c=>c.GetEdifice(map) is Mineable || projects.Any(p=>p.Kind=="Preparação do terreno"&&(p.ClearCells.Contains(c)||p.PlantCells.Contains(c)))) && !t.Position.GetThingList(map).Any(b=>b.def==ThingDefOf.Wall && t.Def==ThingDefOf.Door && projects.Any(p=>p.ClearCells.Contains(t.Position))))
                 { Log.Message("[AutonomousRim] Ring placement: "+t.Def.defName+" at "+t.Position+": "+report.Reason);return false; }
             }

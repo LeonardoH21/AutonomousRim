@@ -11,7 +11,7 @@ namespace AutonomousRim.Core
     {
         private const int ScanIntervalTicks = 360;
         private const int LootIntervalTicks = 600;
-        private const int ThreatIntervalTicks = 60;
+        private const int ThreatIntervalTicks = 15;
         private bool emergencyAutomation = true;
         private EmergencyState emergency = new EmergencyState();
         public EmergencyState Emergency => emergency;
@@ -42,6 +42,7 @@ namespace AutonomousRim.Core
         public string FailureStatus => failureMemory?.Status ?? "Análise de falha indisponível.";
         private int lastPlanTick = -3600;
         private int lastConstructionTick = -120;
+        private int lastConstructionReview = -120;
         private int plannedPawnCount;
         private bool plannedClimateResearch;
         private List<ConstructionOrder> constructionOrders = new List<ConstructionOrder>();
@@ -165,6 +166,11 @@ namespace AutonomousRim.Core
             if (enabled)
             {
                 PreviewBase();
+                if (lootAutomation && CurrentState != null)
+                {
+                    LootStatus = LootAccessManager.Apply(map, CurrentState, true, baseProjects, managedApparel, EquipmentAllowedFor, releasedLoot, out int released, foodAutomation ? ownedBills : null);
+                    lastLootTick = Find.TickManager.TicksGame;
+                }
                 ExecuteConstruction(Find.TickManager.TicksGame);
             }
             else BaseStatus = "Base automática desligada. Projetos pendentes da IA cancelados; estruturas e obras com materiais mantidas.";
@@ -301,37 +307,37 @@ namespace AutonomousRim.Core
             if (EffectiveCombat && ticks > 0 && ticks % CombatManager.Interval == 0)
                 CombatStatus = CombatManager.Apply(map, combatOrders, combatExcluded,emergencyAutomation && emergency.Phase==EmergencyPhase.Danger && EmergencyManager.Retreat(CurrentState.Threat));
             else if(combatOrders.Count>0 && !EffectiveCombat)CombatManager.Stop(combatOrders);
-            if (ticks > 0 && ticks - strategicPlan.LastEvaluation >= 600) EvaluateStrategy();
-            if (ticks > 0 && ticks - failureMemory.LastEvaluationTick >= 600) EvaluateFailure();
+
+
             if (baseAutomation && ticks > 0 && ticks % BaseConstructionManager.ExecutionInterval == 0) ExecuteConstruction(ticks);
             if (CurrentState != null && ticks > 0 && ticks % ThreatIntervalTicks == 0)
             {
                 if (equipmentAutomation) EquipmentManager.TrackOrders(equipmentOrders, managedApparel);
             }
-            if (ticks <= 0 || ticks % ScanIntervalTicks != 0)
+            // Slow strategy is staggered and never gates approved construction jobs.
+            if (ticks > 0 && ticks % 1200 == 113 && baseAutomation && !ExpansionSuspended) RefreshConstructionPlan(ticks);
+            if (ticks > 0 && ticks % 1800 == 73) EvaluateStrategy();
+            if (ticks > 0 && ticks % 1800 == 173) EvaluateFailure();
+            if (ticks <= 0) return;
+            if (ticks % ScanIntervalTicks == 0)
             {
-                return;
+                string lastTransition = CurrentState?.Threat?.LastTransition;
+                CurrentState = ColonyStateScanner.Scan(map);
+                if (lastTransition != null) CurrentState.Threat.LastTransition = lastTransition;
+                if (Prefs.DevMode) Log.Message($"[AutonomousRim] Scan: {CurrentState}");
             }
-
-            string lastTransition = CurrentState?.Threat?.LastTransition;
-            CurrentState = ColonyStateScanner.Scan(map);
-            if (lastTransition != null) CurrentState.Threat.LastTransition = lastTransition;
-            ManageColony();
-
-            if (Prefs.DevMode)
-            {
-                Log.Message($"[AutonomousRim] Scan: {CurrentState}");
-            }
+            if (ticks % 30 == 0 && CurrentState != null) ManageColony(false);
         }
 
-        private void ManageColony()
+        private void ManageColony(bool force = true)
         {
+            int cycle = Find.TickManager.TicksGame;
             if(emergencyAutomation && emergency.Phase!=EmergencyPhase.Normal)
             {
                 EmergencyManager.Apply(map,CurrentState,emergency);
                 if(scheduleAutomation)ScheduleStatus=ScheduleManager.Apply(map,CurrentState,scheduleChanges,true);
                 ManagementStatus="Emergência: trabalho secundário suspenso; recuperação libera medicina e alimentação antes da expansão.";
-                if(emergency.Phase==EmergencyPhase.Recovery && !CurrentState.Threat.Immediate && !EmergencyManager.LocalFire(map) && foodAutomation)
+                if(emergency.Phase==EmergencyPhase.Recovery && !CurrentState.Threat.Immediate && !EmergencyManager.LocalFire(map) && foodAutomation && (force || cycle % 600 == 60))
                     ManagementStatus=FoodManager.Apply(map,CurrentState,ownedHunts,ownedBills,baseProjects,survivalOnly:true)+" Recuperação: produção secundária permanece suspensa.";
                 return;
             }
@@ -346,18 +352,24 @@ namespace AutonomousRim.Core
                     CurrentState.Threat.LastTransition = transition;
                 }
             }
-            if (workAutomation && Find.PlaySettings.useWorkPriorities) WorkPriorityManager.Apply(map, CurrentState, workChanges,
+            if (workAutomation && Find.PlaySettings.useWorkPriorities && (force || cycle % 180 == 0)) WorkPriorityManager.Apply(map, CurrentState, workChanges,
                 baseAutomation && baseProjects.Exists(p => !p.Completed && p.Priority <= ConstructionPriority.High), constructionGathering.Count > 0, strategyAutomation && Find.ResearchManager.GetProject() != null);
-            if (scheduleAutomation) ScheduleStatus = ScheduleManager.Apply(map, CurrentState, scheduleChanges, true);
-            ManagementStatus = foodAutomation ? FoodManager.Apply(map, CurrentState, ownedHunts, ownedBills, baseProjects) : "Comida / roupas automáticas desativadas.";
-            if (workAutomation) ManagementStatus += Find.PlaySettings.useWorkPriorities
+            if (scheduleAutomation && (force || cycle % 300 == 30)) ScheduleStatus = ScheduleManager.Apply(map, CurrentState, scheduleChanges, true);
+            if (force || cycle % 600 == 60)
+                ManagementStatus = foodAutomation ? FoodManager.Apply(map, CurrentState, ownedHunts, ownedBills, baseProjects) : "Comida / roupas automáticas desativadas.";
+            if (workAutomation && (force || cycle % 600 == 60)) ManagementStatus += Find.PlaySettings.useWorkPriorities
                 ? " Prioridades ativas; alterações manuais do jogador são preservadas."
                 : " Prioridades pausadas: o modo numérico de trabalho foi desligado pelo jogador.";
-            if (equipmentAutomation) EquipmentStatus = EquipmentManager.Apply(map, CurrentState, equipmentOrders, managedApparel, equipmentExcluded);
-            if (baseAutomation)
-            {
-                ExecuteConstruction(Find.TickManager.TicksGame);
-            }
+            if (equipmentAutomation && (force || cycle % 900 == 90)) EquipmentStatus = EquipmentManager.Apply(map, CurrentState, equipmentOrders, managedApparel, equipmentExcluded);
+            if (force && baseAutomation) ExecuteConstruction(cycle);
+        }
+
+        private void RefreshConstructionPlan(int ticks)
+        {
+            bool climate = DefDatabase<ResearchProjectDef>.GetNamed("AirConditioning").IsFinished;
+            if (baseProjects.Count == 0 && ticks - lastPlanTick >= 1200 || plannedPawnCount != map.mapPawns.FreeColonistsSpawnedCount || plannedClimateResearch != climate ||
+                baseProjects.Exists(p => p.Kind == RingBasePlanner.ReservationKind || p.Kind == ModularBasePlanner.ReservationKind) && ticks - lastPlanTick >= 1200)
+                PreviewBase();
         }
 
         private void ExecuteConstruction(int ticks)
@@ -365,12 +377,12 @@ namespace AutonomousRim.Core
             if(ExpansionSuspended) { BaseStatus="Construção/decoração suspensas durante emergência e recuperação."; return; }
             if (lastConstructionTick == ticks) return;
             lastConstructionTick = ticks;
-            bool climate = DefDatabase<ResearchProjectDef>.GetNamed("AirConditioning").IsFinished;
-            if (baseProjects.Count == 0 && ticks - lastPlanTick >= 1200 || plannedPawnCount != map.mapPawns.FreeColonistsSpawnedCount || plannedClimateResearch != climate ||
-                baseProjects.Exists(p => p.Kind == RingBasePlanner.ReservationKind) && ticks - lastPlanTick >= 3600)
-                PreviewBase();
             if (baseProjects.Count == 0) return;
-            BaseStatus = BaseConstructionManager.Apply(map, baseProjects);
+            if (ticks - lastConstructionReview >= BaseConstructionManager.ReviewInterval)
+            {
+                lastConstructionReview = ticks;
+                BaseStatus = BaseConstructionManager.Apply(map, baseProjects);
+            }
             if (ticks % 600 == 0) GatheringStatus = ConstructionResourceManager.Apply(map, baseProjects, constructionGathering);
             ConstructionWorkManager.Apply(map, baseProjects, constructionOrders);
         }

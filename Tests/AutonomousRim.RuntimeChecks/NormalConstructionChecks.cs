@@ -183,7 +183,7 @@ namespace AutonomousRim.RuntimeChecks
                     if (ticks - startTick > 12000) throw new InvalidOperationException("No buildable initial plan: " + component.BaseStatus);
                     return;
                 }
-                if (!baseline && component.BaseProjects.Count(p => p.State == ConstructionState.Active) > 3) throw new InvalidOperationException("More than three active projects.");
+                if (!baseline && component.BaseProjects.Count(p => p.State == ConstructionState.Active && BaseConstructionManager.Tasks(p).Any()) > BaseConstructionManager.MaxActiveProjects) throw new InvalidOperationException("Construction project concurrency limit exceeded.");
                 int now = component.BaseProjects.SelectMany(BaseConstructionManager.Tasks).Count(t => t.Complete(map));
                 if (now != completed) { lastProgressTick = ticks; completed = now; }
                 if (ticks % 3600 == 0)

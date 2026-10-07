@@ -65,7 +65,7 @@ namespace AutonomousRim.Execution
             int issued = 0;
             foreach (Pawn pawn in workers)
             {
-                if (issued >= 3 || orders.Any(o => o.Pending && o.Pawn == pawn) || orders.Any(o => o.Pawn == pawn && Find.TickManager.TicksGame - o.IssuedTick < 180)) continue;
+                if (issued >= 9 || orders.Any(o => o.Pending && o.Pawn == pawn) || orders.Any(o => o.Pawn == pawn && Find.TickManager.TicksGame - o.IssuedTick < 30)) continue;
                 bool assigned = false;
                 foreach (string name in new[] { "ConstructFinishFrames", "DeliverResourcesToFrames", "DeliverResourcesToBlueprints", "ConstructDeliverResourcesToFrames", "ConstructDeliverResourcesToBlueprints" })
                 {

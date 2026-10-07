@@ -182,7 +182,8 @@ namespace AutonomousRim.Planning
 
         public static string Plan(Map map, List<RoomProject> projects)
         {
-            if (projects.Count == 0 || projects.Any(p => p.Kind == CourtyardBasePlanner.ReservationKind)) return CourtyardBasePlanner.Plan(map, projects);
+            if (projects.Count == 0 || projects.Any(p => p.Kind == ModularBasePlanner.ReservationKind)) return ModularBasePlanner.Plan(map, projects);
+            if (projects.Any(p => p.Kind == CourtyardBasePlanner.ReservationKind)) return CourtyardBasePlanner.Plan(map, projects);
             if (projects.Any(p => p.Kind == RingBasePlanner.ReservationKind)) return RingBasePlanner.Plan(map, projects);
             Pawn anchorPawn = map.mapPawns.FreeColonistsSpawned.FirstOrDefault();
             if (anchorPawn == null) return "Sem colonos neste mapa.";

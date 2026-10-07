@@ -26,8 +26,8 @@ namespace AutonomousRim.Execution
             owned.RemoveAll(t => t == null || t.Destroyed || !t.Spawned || !Designated(map, t));
             var budget = BaseConstructionManager.Available(map);
             bool essentialsPending = projects.Any(p => !p.Completed && p.Priority <= ConstructionPriority.High && p.State != ConstructionState.Paused);
-            var forecast = projects.Where(p => !p.Completed && BaseConstructionManager.Tasks(p).Any() && (p.Priority <= ConstructionPriority.High || !essentialsPending || BaseConstructionManager.CanContinueExistingWork(p)) && p.State != ConstructionState.Paused)
-                .OrderBy(p => p.Priority).Take(3).ToList();
+            var forecast = projects.Where(p => !p.Completed && BaseConstructionManager.Tasks(p).Any() && (p.Priority <= ConstructionPriority.High || !essentialsPending || BaseConstructionManager.CanContinueExistingWork(p)) && p.State != ConstructionState.Paused && p.State != ConstructionState.Blocked)
+                .OrderBy(p => p.Priority).Take(BaseConstructionManager.MaxActiveProjects).ToList();
             var costs = forecast.SelectMany(p => BaseConstructionManager.CurrentStage(map, p))
                 .Where(t => !t.Complete(map) && t.Pending?.Spawned != true)
                 .GroupBy(t => new { t.Position, t.Def, t.Stuff, t.Rotation }).Select(g => g.First()).SelectMany(t => CostListCalculator.CostListAdjusted(t.Def, t.Stuff))

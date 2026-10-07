@@ -92,6 +92,15 @@ namespace AutonomousRim.Execution
             // Assign high-demand roles first; assigned work limits subsequent specialists.
             // Preserve an existing suitable specialist through a small tie-breaking bonus.
             var roles = new Dictionary<WorkTypeDef, List<Pawn>>();
+            // Keep one healthy builder dedicated while approved essential work exists.
+            // Imminent food/medical danger still takes precedence; manual overrides remain owned by the player.
+            Pawn primaryBuilder = construction && !foodUrgent && patients == 0 && !fire && available.Count >= 3
+                ? available.Where(p => !p.WorkTypeIsDisabled(WorkTypeDefOf.Construction) &&
+                    !changes.Any(c => c.Pawn == p && c.Work == WorkTypeDefOf.Construction && c.UserOverride))
+                    .OrderByDescending(p => Score(p, WorkTypeDefOf.Construction, 0) +
+                        (changes.Any(c => c.Pawn == p && c.Work == WorkTypeDefOf.Construction && c.Applied == 1) ? 3f : 0f)).FirstOrDefault()
+                : null;
+            if (primaryBuilder != null) protectedBuilders.Add(primaryBuilder);
             foreach (var work in types.Where(w => demand[w] > 0)
                 .OrderBy(w => w == WorkTypeDefOf.Doctor && patients > 0 ? 0 :
                     foodUrgent && (w.defName == "Cooking" || w == WorkTypeDefOf.Growing) ? 1 :
@@ -101,6 +110,8 @@ namespace AutonomousRim.Execution
                 var candidates = available.Where(p => !p.WorkTypeIsDisabled(work) &&
                     (work != WorkTypeDefOf.Hunting || CanHunt(p)) &&
                     (!WorkReadiness.NeedsRecovery(p) || foodUrgent && (work.defName == "Cooking" || work == WorkTypeDefOf.Growing) && WorkReadiness.CanProduceEmergencyFood(p))).ToList();
+                if (primaryBuilder != null && work != WorkTypeDefOf.Construction && work != WorkTypeDefOf.Doctor)
+                    candidates.Remove(primaryBuilder);
                 if(reserveResearcher && work!=WorkTypeDefOf.Research && work!=WorkTypeDefOf.Doctor && roles.TryGetValue(WorkTypeDefOf.Research,out var reserved))
                 {
                     var helpers=candidates.Where(p=>!reserved.Contains(p)).ToList();
@@ -122,6 +133,7 @@ namespace AutonomousRim.Execution
                 int desired = Math.Min(candidates.Count, Math.Max(1, Math.Min((available.Count + 1) / 2,
                     (demand[work] + unit - 1) / unit)));
                 var selected = new List<Pawn>();
+                if (work == WorkTypeDefOf.Construction && primaryBuilder != null) { selected.Add(primaryBuilder); load[primaryBuilder]++; }
                 while (selected.Count < desired)
                 {
                     var next = candidates.Where(p => !selected.Contains(p)).OrderByDescending(p => Score(p, work, load[p]) +
@@ -151,6 +163,8 @@ namespace AutonomousRim.Execution
                 if(researchNeeded && roles.TryGetValue(WorkTypeDefOf.Research,out var researchers) && researchers.Contains(pawn) &&
                     !survivalRole && !WorkReadiness.SelfCare(work) && work!=WorkTypeDefOf.Research && work!=WorkTypeDefOf.Doctor && work.defName!="Firefighter")
                     priority=Math.Max(priority,2);
+                if (pawn == primaryBuilder && !WorkReadiness.SelfCare(work) && work != WorkTypeDefOf.Doctor && work.defName != "Firefighter")
+                    priority = work == WorkTypeDefOf.Construction ? 1 : Math.Max(2, priority);
                 if (recovering && !WorkReadiness.SelfCare(work) && !(assigned && foodUrgent &&
                     (work.defName == "Cooking" || work == WorkTypeDefOf.Growing) && WorkReadiness.CanProduceEmergencyFood(pawn))) priority = 0;
                 SetManagedPriority(pawn, work, priority, changes);

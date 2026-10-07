@@ -12,7 +12,7 @@ namespace AutonomousRim.Execution
     // draft/order; excluded pawns stay manual until this engagement ends.
     public static class CombatManager
     {
-        public const int Interval = 60;
+        public const int Interval = 15;
         public static bool Ranged(Pawn p) => p.equipment?.Primary?.def.IsRangedWeapon == true;
         public static List<Pawn> Enemies(Map map) => map.mapPawns.AllPawnsSpawned
             .Where(ThreatScanner.Active).ToList();

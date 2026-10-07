@@ -10,7 +10,7 @@ namespace AutonomousRim.Execution
 {
     public static class BaseConstructionManager
     {
-        public const int MaxActiveProjects = 3, MaxPending = 18, MaxPerCycle = 6, ExecutionInterval = 120, StallTicks = 1800;
+        public const int MaxActiveProjects = 9, MaxPending = 90, MaxPerCycle = 24, ExecutionInterval = 30, ReviewInterval = 120, StallTicks = 1800;
         public static IEnumerable<ConstructionTask> Tasks(RoomProject p) => p.Shell.Concat(p.Furniture);
         public static bool CanContinueExistingWork(RoomProject p) => p.State == ConstructionState.Active || p.State == ConstructionState.WaitingMaterials;
         public static bool Matches(ConstructionTask task, Thing thing)
@@ -81,8 +81,13 @@ namespace AutonomousRim.Execution
             return p.Furniture.Where(t => t.Def != ThingDefOf.Bed || beds.Contains(t))
                 .OrderBy(t => t.Def == ThingDefOf.Bed ? 0 : t.Def.defName == "FueledStove" ? 1 : t.Def.defName == "TableButcher" ? 2 : 3);
         }
-        public static IEnumerable<ConstructionTask> CurrentStage(Map map, RoomProject p) => p.Shell.All(t => t.Complete(map)) ? FurnitureStage(map,p) : p.Shell;
-        private static int ExecutionRank(Map map, RoomProject p) => CourtyardSupport(map,p) &&
+        public static IEnumerable<ConstructionTask> CurrentStage(Map map, RoomProject p)
+        {
+            if (p.Shell.Any(t => !t.Complete(map))) return p.Shell;
+            var floors = p.Furniture.Where(t => t.Def is TerrainDef).ToList();
+            return floors.Any(t => !t.Complete(map)) ? floors : FurnitureStage(map, p);
+        }
+        private static int ExecutionRank(Map map, RoomProject p) => ModularBasePlanner.IsModular(p) ? ModularBasePlanner.Rank(p.Kind) : CourtyardSupport(map,p) &&
             FurnitureStage(map,p).Any(t => t.Def == ThingDefOf.Bed && !t.Complete(map)) ? -1 : RingBasePlanner.Rank(p.Kind);
         private static IEnumerable<RoomProject> NeededBedrooms(Map map, List<RoomProject> all)
         {
@@ -108,6 +113,19 @@ namespace AutonomousRim.Execution
         }
         private static bool DependsOn(Map map, RoomProject p, List<RoomProject> all)
         {
+            if (all.Any(r => r.Kind == ModularBasePlanner.ReservationKind))
+            {
+                // Finish habitable bedrooms before spending their materials on secondary shells.
+                // Sibling bedrooms still progress independently when one lacks materials.
+                if (p.Kind != "Preparação do terreno" && p.Kind != ModularBasePlanner.ReservationKind && p.Kind != "Quarto" &&
+                    all.Any(r => r.Kind == "Quarto" && !r.Completed && r.State != ConstructionState.Paused)) return true;
+                if (p.Kind == "Corredor" && all.Any(r => ModularBasePlanner.IsModular(r) && r.Crop == null && !r.Completed)) return true;
+                // Validate obstacles per task below. A rock under one wall or
+                // workbench must not hold every other funded wall in its room.
+                // Service rooms share a ranked queue, so a blocked butcher
+                // room cannot prevent a clear stockpile from progressing.
+                return false;
+            }
             if (p.Kind == "Plantação inicial") return false;
             if (p.Kind != "Preparação do terreno" && p.Kind != RingBasePlanner.ReservationKind && p.Kind != CourtyardBasePlanner.ReservationKind &&
                 all.Any(r => r.Kind == "Preparação do terreno" && !r.Completed) &&
@@ -218,6 +236,12 @@ namespace AutonomousRim.Execution
                 if (danger) { p.State = ConstructionState.Paused; p.BlockReason = "Hostis no mapa."; continue; }
                 if (p.Kind == "Preparação do terreno")
                 {
+                    if (p.LayoutSlot?.StartsWith("prep:mod:") == true)
+                    {
+                        var owner = projects.FirstOrDefault(r => "prep:" + r.LayoutSlot == p.LayoutSlot);
+                        if (owner != null && owner.Kind != "Quarto" && projects.Any(r => r.Kind == "Quarto" && !r.Completed))
+                        { p.State = ConstructionState.Blocked; p.BlockReason = "Limpeza aguarda os quartos essenciais."; continue; }
+                    }
                     var rocks = p.MineCells.Select(c => c.GetEdifice(map)).Where(t => t is Mineable).ToList();
                     var miners = map.mapPawns.FreeColonistsSpawned.Where(b => WorkPriorityManager.CanWork(b) && b.workSettings.Initialized &&
                         !b.WorkTypeIsDisabled(WorkTypeDefOf.Mining) && b.workSettings.GetPriority(WorkTypeDefOf.Mining) > 0).ToList();
@@ -291,6 +315,8 @@ namespace AutonomousRim.Execution
                     p.Completed = true; p.State = ConstructionState.Completed; continue;
                 }
                 if (builders.Count == 0) { p.State = ConstructionState.Blocked; p.BlockReason = "Nenhum construtor com Construction habilitado."; continue; }
+                if (projects.Any(r => r.Kind == ModularBasePlanner.ReservationKind) && DependsOn(map, p, projects))
+                { p.State = ConstructionState.Blocked; p.BlockReason = "Aguardando quartos habitáveis, alimentação ou limpeza local."; continue; }
                 Storage(map, p);
                 if (p.BlockReason != null) { p.State = ConstructionState.Blocked; continue; }
                 bool shell = p.Shell.All(t => t.Complete(map));
@@ -327,8 +353,8 @@ namespace AutonomousRim.Execution
             foreach (var p in projects.Where(p => !p.Completed && Tasks(p).Any() && p.State != ConstructionState.Paused && p.State != ConstructionState.Blocked).OrderBy(p => p.Priority)
                 .ThenBy(p => ExecutionRank(map,p)))
             {
-                if (slots >= Math.Min(MaxActiveProjects, Math.Max(1, builders.Count + 1)))
-                { if (p.State == ConstructionState.Active) { p.State = ConstructionState.Planned; p.BlockReason = "Aguardando um dos três slots; investimento preservado."; } continue; }
+                if (slots >= Math.Min(MaxActiveProjects, Math.Max(1, builders.Count * 2)))
+                { continue; } // Limit new commitments, never suspend already funded native work.
                 bool active = p.State == ConstructionState.Active; string missing = null; int roomIssued = 0;
                 int roomPending = Tasks(p).Where(t => t.Pending?.Spawned == true).Select(t => t.Pending).Distinct().Count();
                 foreach (var t in CurrentStage(map, p).Where(t => !t.Complete(map) && t.Pending?.Spawned != true))
@@ -338,7 +364,7 @@ namespace AutonomousRim.Execution
                     if (!builders.Any(b => b.skills.GetSkill(SkillDefOf.Construction).Level >= t.Def.constructionSkillPrerequisite && t.Position.IsInAllowedArea(b) && b.CanReach(t.Position, PathEndMode.Touch, Danger.None))) { missing = "Sem acesso ou habilidade: " + t.Def.label; continue; }
                     Thing shared = t.Position.GetThingList(map).FirstOrDefault(b => (b is Blueprint_Build || b is Frame) && Matches(t, b));
                     if (shared != null) { t.Pending = shared; t.Issued = true; t.Owned = projects.SelectMany(Tasks).Any(o => o.Pending == shared && o.Owned); active = true; continue; }
-                    if (issued >= MaxPerCycle || roomIssued >= 2 || roomPending >= 6 || pendingCount >= MaxPending) break;
+                    if (issued >= MaxPerCycle || roomIssued >= 12 || roomPending >= 24 || pendingCount >= MaxPending) break;
                     // Stuff and explicit cost may name the same resource (butcher
                     // tables need wood both ways). Fund their combined native cost.
                     var costs = CostListCalculator.CostListAdjusted(t.Def, t.Stuff)
@@ -364,7 +390,7 @@ namespace AutonomousRim.Execution
                 else if (missing != null) p.State = missing.StartsWith("Aguardando material") ? ConstructionState.WaitingMaterials : ConstructionState.Blocked;
                 p.BlockReason = missing ?? p.BlockReason;
             }
-            return $"Construção: {slots}/3 projetos ativos; {issued} blueprints novos, {pendingCount}/{MaxPending} pendentes. Etapas por lote; bloqueios não param a fila.";
+            return $"Construção: {slots}/{MaxActiveProjects} projetos ativos; {issued} blueprints novos, {pendingCount}/{MaxPending} pendentes. Etapas por lote; bloqueios não param a fila.";
         }
         private static int SafetyReserve(Map map, RoomProject p, ThingDef d) => p.Priority <= ConstructionPriority.High || p.RequiresRoof && p.Shell.Any(t => !t.Complete(map)) ? 0 :
             d == ThingDefOf.WoodLog ? 60 : d == ThingDefOf.Steel ? 50 : d == ThingDefOf.ComponentIndustrial ? 2 : 0;
