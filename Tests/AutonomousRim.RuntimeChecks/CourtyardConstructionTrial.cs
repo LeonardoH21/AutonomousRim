@@ -20,6 +20,14 @@ namespace AutonomousRim.RuntimeChecks
         private float lastPause;
         private List<Pawn> startingColonists = new List<Pawn>();
         public CourtyardConstructionTrial(Map map):base(map){}
+        public override void FinalizeInit()
+        {
+            base.FinalizeInit();
+            // Configure the permitted starting colony before the default map
+            // automation can create a smaller plan and its storage/crop zones.
+            if(!started&&GenCommandLine.CommandLineArgPassed("autonomousrimcourtyardtrial"))
+                map.GetComponent<AutonomousRimMapComponent>().SetBaseAutomation(false);
+        }
         public override void ExposeData()
         {
             Scribe_Values.Look(ref started,"courtyardStarted");Scribe_Values.Look(ref finished,"courtyardFinished");
@@ -80,6 +88,17 @@ namespace AutonomousRim.RuntimeChecks
                     var projects=(List<RoomProject>)AccessTools.Field(typeof(AutonomousRimMapComponent),"baseProjects").GetValue(ai);
                     if(projects.SelectMany(BaseConstructionManager.Tasks).All(t=>!t.Issued))
                     {
+                        // Migration for our original isolated tick-120 start:
+                        // its earlier setup discarded the first plan's zone
+                        // references. No player actions occurred in that save.
+                        // Deleting zones leaves terrain, items and plants intact.
+                        if(GenCommandLine.CommandLineArgPassed("autonomousrimcourtyardfromstart")&&startTick==120)
+                        {
+                            int zones=map.zoneManager.AllZones.Count;
+                            foreach(var zone in map.zoneManager.AllZones.ToList())zone.Delete();
+                            projects.Clear();ai.PreviewBase();
+                            Log.Message("[AutonomousRim.CourtyardTrial] SETUP MIGRATION: deleted "+zones+" obsolete initial zones through native zone deletion; replanned before any construction.");
+                        }
                         var anchor=projects.First(p=>p.Kind==CourtyardBasePlanner.ReservationKind).LayoutAnchor;
                         var revised=CourtyardBasePlanner.Create(map,anchor,14);
                         if(!RingBasePlanner.Validate(map,revised))throw new InvalidOperationException("Refined initial drawing placement failed");

@@ -25,6 +25,8 @@ O observador de teste apenas configura os cinco colonos inicialmente, acompanha 
 
 ## Estado da validação
 
+A segunda tentativa expôs um problema na inicialização do observador: a automação padrão executava um ciclo antes da configuração dos cinco colonos e criava sete zonas de um plano menor. Ao substituir as referências pelo plano completo, essas zonas ficavam órfãs e geravam transporte e plantio longe do núcleo. A inicialização agora desliga a construção antes desse primeiro ciclo. Para o save inicial isolado antigo, uma migração usa a exclusão nativa de zonas e refaz o plano antes de emitir qualquer obra; itens, plantas, terreno, colonos e pesquisas permanecem como estavam. O log confirmou a retirada das sete zonas e a retomada com os mesmos cinco colonos. O checkpoint da segunda tentativa foi preservado, e a aprovação final continua pendente.
+
 Em 07/10/2026, a geometria completa passou na validação nativa: medidas internas, partições compartilhadas sem conflito, colocação de móveis e células de interação. A compilação passou sem erros/avisos e os 35 testes existentes de políticas passaram.
 
 A construção prolongada está em andamento. O primeiro ponto de retomada contém 73 dos 4.921 elementos únicos concluídos após meio dia de jogo. Uma disputa de reservas durante desmontagem levou à inclusão da verificação nativa `HasJobOnThing` antes de solicitar trabalhos. A retomada também foi corrigida para manter 3× após carregar o save.
