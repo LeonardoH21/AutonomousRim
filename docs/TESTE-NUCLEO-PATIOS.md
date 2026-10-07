@@ -25,6 +25,8 @@ O observador de teste apenas configura os cinco colonos inicialmente, acompanha 
 
 ## Estado da validação
 
+No reteste com o posicionamento corrigido, o log mediu 371/4.961 elementos, 18/41 projetos e 4,8 dias de comida no dia 4,43, com os cinco colonos vivos. O XML também registrou refeições simples e finas de carne produzidas pelos colonos. A preparação ainda continha três células nas quais a grama havia sido substituída por arroz entre ciclos; agora reconhece o cultivo escolhido na zona e retira essas células da limpeza. Após instalar a correção e retomar o mesmo checkpoint, foram conferidas 282 plantas de arroz e nenhuma delas na fila de limpeza. A construção completa continua pendente; esses resultados não são a aprovação final.
+
 A segunda tentativa expôs um problema na inicialização do observador: a automação padrão executava um ciclo antes da configuração dos cinco colonos e criava sete zonas de um plano menor. Ao substituir as referências pelo plano completo, essas zonas ficavam órfãs e geravam transporte e plantio longe do núcleo. A inicialização agora desliga a construção antes desse primeiro ciclo. Para o save inicial isolado antigo, uma migração usa a exclusão nativa de zonas e refaz o plano antes de emitir qualquer obra; itens, plantas, terreno, colonos e pesquisas permanecem como estavam. O log confirmou a retirada das sete zonas e a retomada com os mesmos cinco colonos. O checkpoint da segunda tentativa foi preservado, e a aprovação final continua pendente.
 
 Em 07/10/2026, a geometria completa passou na validação nativa: medidas internas, partições compartilhadas sem conflito, colocação de móveis e células de interação. A compilação passou sem erros/avisos e os 35 testes existentes de políticas passaram.

@@ -226,7 +226,17 @@ namespace AutonomousRim.Execution
                     var debris=p.ClearCells.Select(c=>c.GetEdifice(map)).Where(b=>b!=null).Distinct().ToList();
                     // Clearing is a one-time preparation task. Regrowing grass
                     // must not turn the whole plan into an endless clearing loop.
-                    p.PlantCells.RemoveAll(c=>!c.GetThingList(map).OfType<Plant>().Any());
+                    var cultivated=p.PlantCells.Where(c=>c.GetZone(map) is Zone_Growing zone &&
+                        c.GetThingList(map).OfType<Plant>().Any(plant=>plant.def==zone.GetPlantDefToGrow())).ToHashSet();
+                    // Growing can replace cleared grass between execution ticks.
+                    // The new crop is not the original obstacle to remove.
+                    foreach(var plant in p.OwnedPlants.OfType<Plant>().Where(plant=>cultivated.Contains(plant.Position)).ToList())
+                    {
+                        var cut=map.designationManager.DesignationOn(plant,DesignationDefOf.CutPlant);
+                        if(cut!=null)map.designationManager.RemoveDesignation(cut);
+                        p.OwnedPlants.Remove(plant);
+                    }
+                    p.PlantCells.RemoveAll(c=>cultivated.Contains(c)||!c.GetThingList(map).OfType<Plant>().Any());
                     var plants=p.PlantCells.SelectMany(c=>c.GetThingList(map).OfType<Plant>()).Distinct().ToList();
                     int plantPending=plants.Count(t=>map.designationManager.AllDesignationsOn(t).Any());
                     foreach(var plant in plants.Where(t=>!map.designationManager.AllDesignationsOn(t).Any()).Take(Math.Max(0,8-plantPending)))
