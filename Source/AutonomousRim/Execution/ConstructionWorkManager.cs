@@ -40,6 +40,7 @@ namespace AutonomousRim.Execution
                 p.needs.food?.CurCategory >= HungerCategory.Hungry || p.needs.rest?.CurLevel < 0.35f || p.needs.joy?.CurLevel < 0.25f ||
                 p.timetable?.CurrentAssignment == TimeAssignmentDefOf.Sleep || p.timetable?.CurrentAssignment == TimeAssignmentDefOf.Joy) return false;
             Job current = p.CurJob;
+            if(current?.def==JobDefOf.Refuel || current?.def==JobDefOf.RefuelAtomic) return false;
             if (current?.def.joyKind != null || current?.def.joyGainRate > 0 || current?.workGiverDef?.workType == WorkTypeDefOf.Construction ||
                 current?.targetA.Thing is Frame || current?.targetB.Thing is Frame || current?.targetA.Thing is Blueprint_Build || current?.targetB.Thing is Blueprint_Build) return false;
             if (current?.workGiverDef?.workType != null)

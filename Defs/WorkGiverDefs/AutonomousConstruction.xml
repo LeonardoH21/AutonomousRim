@@ -1,6 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Defs>
   <WorkGiverDef>
+    <defName>AutonomousRimRefuelEssential</defName>
+    <label>refuel essential colony equipment</label>
+    <giverClass>AutonomousRim.Execution.WorkGiver_EssentialRefuel</giverClass>
+    <workType>BasicWorker</workType>
+    <priorityInType>130</priorityInType>
+    <verb>refuel</verb>
+    <gerund>refueling</gerund>
+    <requiredCapacities><li>Manipulation</li></requiredCapacities>
+  </WorkGiverDef>
+  <WorkGiverDef>
     <defName>AutonomousRimDeliverConstruction</defName>
     <label>deliver to active AI construction</label>
     <giverClass>AutonomousRim.Execution.WorkGiver_AutonomousConstruction</giverClass>
