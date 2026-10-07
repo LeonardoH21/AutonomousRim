@@ -118,12 +118,18 @@ namespace AutonomousRim.Execution
             if(state.Phase==EmergencyPhase.Normal) { Stop(state); return; }
             bool recovery=state.Phase==EmergencyPhase.Recovery;
             bool criticalFood=colony.StoredMealCount==0 && colony.EstimatedFoodDays<0.5f;
+            var doctor=threat.Colonists.Where(p=>WorkPriorityManager.CanWork(p) && !WorkReadiness.NeedsRecovery(p) &&
+                !p.WorkTypeIsDisabled(WorkTypeDefOf.Doctor)).OrderByDescending(p=>WorkPriorityManager.Score(p,WorkTypeDefOf.Doctor,0)).FirstOrDefault();
             foreach(var pawn in threat.Colonists.Where(p=>p.workSettings!=null && !p.Dead))
             {
                 pawn.workSettings.EnableAndInitializeIfNotAlreadyInitialized();
                 foreach(var work in DefDatabase<WorkTypeDef>.AllDefsListForReading.Where(w=>!pawn.WorkTypeIsDisabled(w)))
                 {
                     int desired=Essential(work,recovery,criticalFood)?1:0;
+                    if(work==WorkTypeDefOf.Doctor && pawn!=doctor)desired=2;
+                    if((work.defName=="Patient" || work.defName=="PatientBedRest") && pawn==doctor && !WorkReadiness.SeriousMedicalNeed(pawn))desired=2;
+                    if (WorkReadiness.NeedsRecovery(pawn) && !WorkReadiness.SelfCare(work) &&
+                        !(criticalFood && work.defName=="Cooking" && WorkReadiness.CanProduceEmergencyFood(pawn))) desired=0;
                     // Urgent cooking is permitted only at a safe, enclosed location.
                     if(!recovery && work.defName=="Cooking" && (!Safe(map,pawn.Position,threat) || pawn.Position.GetRoom(map)?.PsychologicallyOutdoors!=false))desired=0;
                     WorkPriorityManager.SetManagedPriority(pawn,work,desired,state.Work);

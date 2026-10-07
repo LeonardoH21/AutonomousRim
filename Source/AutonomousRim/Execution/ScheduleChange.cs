@@ -11,6 +11,7 @@ namespace AutonomousRim.Execution
         public List<TimeAssignmentDef> Applied = new List<TimeAssignmentDef>();
         public List<bool> UserOverride = new List<bool>();
         public bool Recovery;
+        public bool PersonalRecovery;
         public int RecoveryUntil;
         public string LastReason;
         public void ExposeData()
@@ -20,6 +21,7 @@ namespace AutonomousRim.Execution
             Scribe_Collections.Look(ref Applied,"applied",LookMode.Def);
             Scribe_Collections.Look(ref UserOverride,"userOverride",LookMode.Value);
             Scribe_Values.Look(ref Recovery,"recovery"); Scribe_Values.Look(ref RecoveryUntil,"recoveryUntil");
+            Scribe_Values.Look(ref PersonalRecovery,"personalRecovery");
             Scribe_Values.Look(ref LastReason,"lastReason");
             if(Scribe.mode==LoadSaveMode.PostLoadInit)
             {

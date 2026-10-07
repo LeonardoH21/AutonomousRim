@@ -38,7 +38,13 @@ namespace AutonomousRim.RuntimeChecks
                     p=PawnGenerator.GeneratePawn(new PawnGenerationRequest(PawnKindDefOf.Colonist,faction,forceGenerateNewPawn:true,canGeneratePawnRelations:false));
                 foreach(var old in p.equipment.AllEquipmentListForReading.ToList())p.equipment.Remove(old);
             }
-            GenSpawn.Spawn(p,cell,map); return p;
+            GenSpawn.Spawn(p,cell,map);
+            if(faction==Faction.OfPlayer)
+            {
+                foreach(var h in p.health.hediffSet.hediffs.ToList())p.health.RemoveHediff(h);
+                p.needs.rest.CurLevel=1; p.needs.joy.CurLevel=1; p.needs.food.CurLevel=1; p.needs.mood.CurLevel=1;
+            }
+            return p;
         }
         private void Detection(string kind,int category)
         {
@@ -116,6 +122,11 @@ namespace AutonomousRim.RuntimeChecks
                 }
                 if(!renewed && ai.Emergency.Phase==EmergencyPhase.Recovery)
                 {
+                    helper.needs.rest.CurLevel=0.1f;
+                    EmergencyManager.Apply(map,ai.CurrentState,ai.Emergency);
+                    Check(WorkPriorityManager.RawPriority(helper,WorkTypeDefOf.Hauling)==0,"Exhausted helper resumed hauling during recovery.");
+                    helper.needs.rest.CurLevel=1;
+                    EmergencyManager.Apply(map,ai.CurrentState,ai.Emergency);
                     Check(helper.workSettings.GetPriority(WorkTypeDefOf.Hauling)>0 && helper.workSettings.GetPriority(WorkTypeDefOf.Research)==0,"Recovery did not restore work gradually: haul="+helper.workSettings.GetPriority(WorkTypeDefOf.Hauling)+" research="+helper.workSettings.GetPriority(WorkTypeDefOf.Research)+" changes="+string.Join(" | ",ai.Emergency.Work.Where(c=>c.Pawn==helper).Select(c=>c.Work.defName+":"+c.Original+"/"+c.Applied+"/manual="+c.UserOverride)));
                     enemy=Spawn("Colonist",Faction.OfAncientsHostile,center+new IntVec3(35,0,0));
                     ai.SetEmergencyAutomation(true);
