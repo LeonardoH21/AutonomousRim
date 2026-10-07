@@ -35,6 +35,10 @@ A conferência do piso incluiu mais 40 células sob portas internas e entradas d
 
 No oitavo dia, foram medidos 544 elementos concluídos e cerca de 4,2 dias de comida. Freezer, energia e pesquisa estavam ativos; a coleta nativa já havia aumentado o aço disponível. O teste completo permanece em andamento.
 
+O teste também expôs espera por pesquisas. A rota passou a incluir os pré-requisitos reais dos objetos planejados e pode trocar uma pesquisa escolhida pela própria IA para liberar uma obra, mantendo o progresso anterior e respeitando escolhas manuais. Um especialista saudável pode dedicar-se a essa pesquisa enquanto outro atende pacientes; urgências de comida, incêndios e recuperação continuam protegidas. O identificador nativo `Batteries` foi corrigido no alvo complementar.
+
+No décimo segundo dia, trabalhos nativos `Research` foram observados e o save registrou 168,47 pontos efetivamente estudados em `SolarPanels`, com 838 elementos construídos. Nenhuma pesquisa foi concluída artificialmente. Ainda faltam obras, pesquisas e acabamento antes de exportar o save final.
+
 Esse avanço inicial não comprova conclusão da base nem sobrevivência prolongada. O save final só será entregue após a conferência de todas as obras reais.
 
 ## Repetir ou retomar

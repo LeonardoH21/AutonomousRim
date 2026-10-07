@@ -52,6 +52,10 @@ namespace AutonomousRim.Execution
                 .SelectMany(t => t.BillStack.Bills).Count(b => b.recipe.workSkill == SkillDefOf.Cooking && b.ShouldDoNow());
             bool mealsLow = bills > 0 && state.StoredMealCount < Math.Max(4, state.ColonistCount * 2);
             var tables = map.listerThings.AllThings.OfType<Building_WorkTable>().Where(t => t.Faction == Faction.OfPlayer).ToList();
+            var currentResearch=Find.ResearchManager.GetProject();
+            bool researchNeeded=strategicResearch && !foodUrgent && !fire && currentResearch!=null &&
+                map.GetComponent<AutonomousRimMapComponent>().BaseProjects.Where(p=>!p.Completed)
+                .SelectMany(BaseConstructionManager.Tasks).Any(t=>t.Def is ThingDef d && d.researchPrerequisites?.Contains(currentResearch)==true && !d.IsResearchFinished);
             var protectedBuilders = new HashSet<Pawn>();
             if (construction)
                 foreach (var frame in map.listerThings.AllThings.OfType<Frame>().Where(f => f.IsCompleted()))
@@ -74,7 +78,7 @@ namespace AutonomousRim.Execution
                 else if (work == WorkTypeDefOf.Mining) { count = mines; high = gathering && mines > 0; }
                 else if (work == WorkTypeDefOf.PlantCutting) { count = cuts; high = gathering && cuts > 0; }
                 else if (work == WorkTypeDefOf.Hunting) { count = hunts; high = foodUrgent && hunts > 0; }
-                else if (work == WorkTypeDefOf.Research) { count = strategicResearch && !foodUrgent && patients == 0 ? 1 : 0; }
+                else if (work == WorkTypeDefOf.Research) { count = strategicResearch && !foodUrgent && (patients == 0 || researchNeeded) ? 1 : 0; high=researchNeeded; }
                 else
                 {
                     var stations = DefDatabase<WorkGiverDef>.AllDefsListForReading.Where(g => g.workType == work && g.fixedBillGiverDefs != null)
@@ -95,6 +99,12 @@ namespace AutonomousRim.Execution
                 var candidates = available.Where(p => !p.WorkTypeIsDisabled(work) &&
                     (work != WorkTypeDefOf.Hunting || CanHunt(p)) &&
                     (!WorkReadiness.NeedsRecovery(p) || foodUrgent && (work.defName == "Cooking" || work == WorkTypeDefOf.Growing) && WorkReadiness.CanProduceEmergencyFood(p))).ToList();
+                if(work==WorkTypeDefOf.Research && researchNeeded)
+                {
+                    var helpers=candidates.Where(p=>!roles.Any(r=>(r.Key==WorkTypeDefOf.Doctor && patients>0 ||
+                        r.Key.defName=="Cooking" && (foodLow || mealsLow) || r.Key==WorkTypeDefOf.Growing && foodLow) && r.Value.Contains(p))).ToList();
+                    if(helpers.Count>0)candidates=helpers;
+                }
                 if (!foodUrgent && (work.defName == "Cooking" || work == WorkTypeDefOf.Mining || work == WorkTypeDefOf.PlantCutting))
                 {
                     var helpers = candidates.Where(p => !protectedBuilders.Contains(p)).ToList();
@@ -131,6 +141,9 @@ namespace AutonomousRim.Execution
                     work.defName != "Cooking" && work != WorkTypeDefOf.Growing && work.defName != "Firefighter")
                     priority = Math.Max(priority, 2);
                 if (construction && builds > 0 && work == WorkTypeDefOf.Hauling && !survivalRole) priority = 2;
+                if(researchNeeded && roles.TryGetValue(WorkTypeDefOf.Research,out var researchers) && researchers.Contains(pawn) &&
+                    !survivalRole && !WorkReadiness.SelfCare(work) && work!=WorkTypeDefOf.Research && work!=WorkTypeDefOf.Doctor && work.defName!="Firefighter")
+                    priority=Math.Max(priority,2);
                 if (recovering && !WorkReadiness.SelfCare(work) && !(assigned && foodUrgent &&
                     (work.defName == "Cooking" || work == WorkTypeDefOf.Growing) && WorkReadiness.CanProduceEmergencyFood(pawn))) priority = 0;
                 SetManagedPriority(pawn, work, priority, changes);

@@ -87,12 +87,22 @@ namespace AutonomousRim.Planning
                 : $"Estabilidade limitada ({stability}/100): manter comida, saúde, defesa e infraestrutura antes de acelerar tecnologia/vitória.";
             var priorities=new List<Tuple<string,int>>();
             void target(string id,int score)=>priorities.Add(Tuple.Create(id,score));
+            var constructionResearch=new HashSet<ResearchProjectDef>();
+            foreach(var room in rooms.Where(r=>!r.Completed))
+                foreach(var task in BaseConstructionManager.Tasks(room).Where(t=>t.Def is ThingDef && !t.Def.IsResearchFinished))
+                    foreach(var research in ((ThingDef)task.Def).researchPrerequisites.Where(r=>!r.IsFinished))
+                    {
+                        constructionResearch.Add(research);
+                        bool ready=room.Shell.All(t=>t.Complete(map));
+                        target(research.defName,room.Priority<=ConstructionPriority.High || ready?97:80);
+                    }
+            constructionResearch.UnionWith(ResearchRoute(constructionResearch.ToList()));
             target("Electricity",energy?55:100); target("AirConditioning",foodLow?98:65); target("Batteries",energy?55:90);
             target("ComplexFurniture",beds<colonists.Count?85:45); target("Stonecutting",state.Resources.TryGetValue("Steel",out int steel) && steel<colonists.Count*25?88:75); target("ComplexClothing",70);
             target("Smithing",poorWeapons?85:50); target("Machining",poorWeapons?88:60); target("Gunsmithing",poorWeapons?86:60);
             target("DrugProduction",meds<colonists.Count*2?92:55); target("MedicineProduction",meds<colonists.Count*2?89:55);
             target("HospitalBed",state.DownedColonists>0?95:65); target("SolarPanels",energy?55:85); target("GeothermalPower",energy?62:82);
-            target("SolarPanels",74);target("Battery",75);
+            target("SolarPanels",74);target("Batteries",75);
             target("MicroelectronicsBasics",72); target("MultiAnalyzer",58); target("Fabrication",68);
             target("FlakArmor",70); target("PrecisionRifling",65); target("Hydroponics",foodLow && map.mapTemperature.OutdoorTemp<0?87:35);
             foreach(var name in VictoryResearchNames)target(name,stable?30:5);
@@ -130,7 +140,7 @@ namespace AutonomousRim.Planning
                 plan.MountainCells=terrain.MountainCells; plan.MountainOpenCells=terrain.OpenCells; plan.MountainEntrances=terrain.Entrances;
                 plan.LastTerrainEvaluation=tick;
             }
-            if(executeResearch)ManageResearch(map,plan,state.HostilePawnCount>0);
+            if(executeResearch)ManageResearch(map,plan,state.HostilePawnCount>0,constructionResearch);
             else plan.ResearchStatus=plan.ProgressionAllowed
                 ? "Planejamento disponível; pesquisa automática desligada."
                 : "Planejamento disponível; pesquisa automática desligada e avanço de vitória aguardando estabilidade.";
@@ -151,7 +161,7 @@ namespace AutonomousRim.Planning
             foreach(var recipe in DefDatabase<RecipeDef>.AllDefsListForReading.Where(r=>r.researchPrerequisite!=null && r.researchPrerequisite.IsFinished))
                 plan.Unlocks.Add("Receita: "+recipe.LabelCap+" — disponível; execução depende de bancada, ingredientes, habilidades e automação de produção.");
         }
-        private static void ManageResearch(Map map,StrategicPlan plan,bool danger)
+        private static void ManageResearch(Map map,StrategicPlan plan,bool danger,HashSet<ResearchProjectDef> constructionResearch)
         {
             if(map!=Find.Maps.FirstOrDefault(m=>m.IsPlayerHome)) {plan.ResearchStatus="Pesquisa global gerenciada pelo primeiro mapa da colônia.";return;}
             var current=Find.ResearchManager.GetProject();
@@ -161,6 +171,12 @@ namespace AutonomousRim.Planning
             if(danger){plan.ResearchStatus="Seleção suspensa por hostis; progresso atual preservado.";return;}
             if(current!=null && !current.IsFinished)
             {
+                var required=plan.Route.FirstOrDefault(r=>(plan.ProgressionAllowed || !IsVictoryResearch(r)) && r.CanStartNow);
+                if(current==plan.OwnedResearch && required!=null && required!=current && constructionResearch.Contains(required))
+                {
+                    plan.PreviousResearch=current;plan.OwnedResearch=required;Find.ResearchManager.SetCurrentProject(required);
+                    plan.ResearchStatus="Obra planejada aguardando tecnologia: pesquisando "+required.LabelCap+"; progresso anterior preservado.";return;
+                }
                 if(!plan.ProgressionAllowed && IsVictoryResearch(current) && current==plan.OwnedResearch)
                 {
                     var recovery=plan.Route.FirstOrDefault(r=>!IsVictoryResearch(r) && r.CanStartNow);
