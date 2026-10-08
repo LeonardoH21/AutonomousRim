@@ -98,17 +98,23 @@ namespace AutonomousRim.Planning
             constructionResearch.UnionWith(ResearchRoute(constructionResearch.ToList()));
             target("Electricity",energy?55:100); target("AirConditioning",foodLow?98:65); target("Batteries",energy?55:90);
             target("ComplexFurniture",beds<colonists.Count?85:45); target("Stonecutting",state.Resources.TryGetValue("Steel",out int steel) && steel<colonists.Count*25?88:75); target("ComplexClothing",70);
-            target("Smithing",poorWeapons?85:50); target("Machining",poorWeapons?88:60); target("Gunsmithing",poorWeapons?86:60);
+            // Offensive research comes exclusively from the current equipment checkpoint.
             target("DrugProduction",meds<colonists.Count*2?92:55); target("MedicineProduction",meds<colonists.Count*2?89:55);
             target("HospitalBed",state.DownedColonists>0?95:65); target("SolarPanels",energy?55:85); target("GeothermalPower",energy?62:82);
             target("SolarPanels",74);target("Batteries",75);
-            target("MicroelectronicsBasics",72); target("MultiAnalyzer",58); target("Fabrication",68);
-            target("FlakArmor",70); target("PrecisionRifling",65); target("Hydroponics",foodLow && map.mapTemperature.OutdoorTemp<0?87:35);
-            foreach(var name in DefenseProductionPlan.Research(map)) target(name, 93);
+            target("MicroelectronicsBasics",72); target("MultiAnalyzer",58);
+            target("Hydroponics",foodLow && map.mapTemperature.OutdoorTemp<0?87:35);
+            int equipmentStage=DefenseProductionPlan.Stage(map);
+            var checkpoint=LoadoutProgression.Analyze(map,equipmentStage);
+            plan.EquipmentStatus=checkpoint.Status+" Materiais estimados: "+string.Join(", ",checkpoint.Materials.Select(p=>p.Key+" "+p.Value));
+            bool advancedReady=state.EstimatedFoodDays>=3 && energy && colonists.Any(p=>
+                p.skills?.GetSkill(SkillDefOf.Crafting).Level>=8 && !p.WorkTypeIsDisabled(DefDatabase<WorkTypeDef>.GetNamed("Smithing")));
+            if((stable && (equipmentStage<3 || advancedReady)) || equipmentStage==0 && state.EstimatedFoodDays>=1 && state.HostilePawnCount==0)
+                foreach(var name in DefenseProductionPlan.Research(map)) target(name, 78);
+            else if(equipmentStage>=3)plan.EquipmentStatus+=" Etapa avançada aguarda energia funcional, reserva de 3 dias e fabricante 8+.";
             var targets=priorities.OrderByDescending(p=>p.Item2).ThenBy(p=>p.Item1,StringComparer.Ordinal).Select(p=>DefDatabase<ResearchProjectDef>.GetNamedSilentFail(p.Item1)).Where(r=>r!=null).ToList();
             plan.Route=ResearchRoute(targets);
-            // Never stop progressing just because the curated route is exhausted.
-            if(plan.Route.Count==0)plan.Route=ResearchRoute(DefDatabase<ResearchProjectDef>.AllDefsListForReading.Where(r=>!IsVictoryResearch(r) && !r.IsFinished && r.CanStartNow).OrderBy(r=>r.baseCost).ThenBy(r=>r.defName));
+            // An exhausted curated route waits for construction/production/equipment instead of researching the entire tree.
             plan.Goals.Clear();
             void goal(string id,string horizon,int priority,string description,bool done,string blocker,string resource,string risk)
                 =>plan.Goals.Add(new StrategicGoal{Id=id,Horizon=horizon,Priority=priority,Description=description,Completed=done,Blocker=done?null:blocker,ResourceNeed=resource,Risk=risk,Status=done?"Atendido":blocker});
@@ -122,15 +128,17 @@ namespace AutonomousRim.Planning
             goal("agriculture","Médio",foodLow?90:60,"Culturas e armazenagem por finalidade",rooms.Count(r=>r.GrowingZone!=null)>=5,"Essenciais/quartos e solo fértil; semeadura segue habilidade nativa.","Arroz, linho, batata, medicina e hemp","Clima, pragas e distância podem reduzir a colheita.");
             bool reservePlanned=rooms.Any(r=>r.Kind==RingBasePlanner.ReservationKind);
             goal("expansion","Médio",stable?55:72,"Base modular, corredores, energia e perímetro",reservePlanned,"Reservar módulos e validar terreno antes de expandir.","Clareira, materiais e rotas de fuga","Expansão prematura cria distância e gargalos.");
-            for (int stage = 0; stage < 4; stage++)
+            for (int stage = 0; stage < 5; stage++)
                 goal("defense-checkpoint-" + (stage + 1), "Médio", 96 - stage,
-                    stage == 0 ? "Primeiro conjunto de aço: capacete, armadura de placas, espada e roupas" : stage == 1 ? "Equipar interceptores e atiradores: roupas, armas, armadura e capacetes" :
-                    stage == 2 ? "Conjuntos marine completos e escudos para melee" : "Conjuntos cataphract quando a expansão estiver disponível",
-                    DefenseProductionPlan.Equipped(map, stage), "Pesquisar, construir bancadas, fabricar e equipar; pesquisa sozinha não conclui o checkpoint.",
+                    stage == 0 ? "Conjunto de aço e armas iniciais por função" : stage == 1 ? "Heavy SMG, flak e interceptores protegidos" :
+                    stage == 2 ? "Assault Rifle ou arma equivalente/melhor" : stage == 3 ? "Charge Rifle, marine e escudos melee" : "Cataphract opcional quando disponível",
+                    DefenseProductionPlan.Equipped(map, stage), stage==equipmentStage?plan.EquipmentStatus:"Pesquisar, construir bancadas, fabricar e equipar; pesquisa sozinha não conclui o checkpoint.",
                     "Aço, tecidos/couro, componentes, plasteel e componentes avançados", "Priorizar sobrevivência; nunca usar roupas contaminadas.");
             bool winter = AutonomousRim.Perception.FoodReservePolicy.PreparingForWinter(map);
             goal("winter", "Curto", winter ? 103 : 60, "Preparar inverno: reserva de 15 dias, roupas quentes e combustível",
-                !winter || state.EstimatedFoodDays >= 15 && colonists.All(p => p.apparel.WornApparel.Any(a => a.def.defName == "Apparel_Parka")) &&
+                !winter || state.EstimatedFoodDays >= 15 && new[]{"Apparel_Parka","Apparel_Tuque"}.All(name=>
+                    items.Count(t=>t.def.defName==name && DefenseProductionPlan.Usable(t))+
+                    colonists.Sum(p=>p.apparel.WornApparel.Count(a=>a.def.defName==name && DefenseProductionPlan.Usable(a)))>=colonists.Count) &&
                     state.Resources.TryGetValue("WoodLog", out int winterWood) && winterWood >= colonists.Count * 100,
                 "Acumular alimentos conserváveis, fabricar parkas e reservar madeira antes do frio.", "15 dias de alimento; 100 madeiras por colono como margem inicial", "Aquecimento começa após nove cômodos fechados; combustível exige reposição.");
             plan.Goals=plan.Goals.OrderByDescending(g=>g.Priority).ToList();
@@ -197,7 +205,7 @@ namespace AutonomousRim.Planning
             var next=plan.Route.FirstOrDefault(r=>!IsVictoryResearch(r) && r.CanStartNow);
             if(next==null)
             {
-                plan.ResearchStatus=plan.Route.Count==0?"Rota tecnológica concluída; metas de execução continuam.":!plan.ProgressionAllowed
+                plan.ResearchStatus=plan.Route.Count==0?"Checkpoints pesquisados: aguardar bancadas, materiais, fabricação e equipamento antes da próxima etapa.":!plan.ProgressionAllowed
                     ?"Pesquisa de longo prazo aguardando estabilidade; necessidades imediatas continuam como foco."
                     :"Pesquisa bloqueada por bancada, instalação ou requisito especial: "+plan.Route[0].LabelCap;return;
             }

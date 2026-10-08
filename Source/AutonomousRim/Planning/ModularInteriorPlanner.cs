@@ -42,12 +42,11 @@ namespace AutonomousRim.Planning
                 }
                 if (room.Kind == "Refeitório e recreação")
                 {
-                    add("Table2x2c", 3, 3);
-                    add("DiningChair", 2, 3, Rot4.East); add("DiningChair", 2, 4, Rot4.East);
-                    add("DiningChair", 5, 3, Rot4.West); add("DiningChair", 5, 4, Rot4.West);
-                    add("DiningChair", 3, 2); add("DiningChair", 4, 2);
-                    add("ChessTable", 8, 3);
-                    add("DiningChair", 7, 3, Rot4.East); add("DiningChair", 9, 3, Rot4.West);
+                    add("Table3x3c", 6, 3);
+                    for(int z=2;z<=4;z++){add("DiningChair",4,z,Rot4.East);add("DiningChair",8,z,Rot4.West);}
+                    for(int x=5;x<=7;x++){add("DiningChair",x,1,Rot4.North);add("DiningChair",x,5,Rot4.South);}
+                    add("ChessTable", 2, 3);
+                    add("DiningChair", 1, 3, Rot4.East); add("DiningChair", 3, 3, Rot4.West);
                     add("PlantPot", 1, 5);
                 }
                 if (room.Kind == "Hospital")

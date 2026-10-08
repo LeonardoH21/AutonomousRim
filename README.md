@@ -143,6 +143,8 @@ The test add-on is installed temporarily and removed when the smoke test ends. I
 
 ## Status
 
+The 9–19 colony progression revision adds equipped-loadout checkpoints, measured crafting/material deficits, staged ranged/melee goals, capacity-driven shelf upgrades, native stone-block reserves and gradual owned-wall replacement, population-based winter clothing, cotton/medicine plots and a continuous farmer with hauling fallback. [Implemented rules and native validation](docs/EVOLUCAO-COLONIA-9-19.md) distinguish the passing controlled fixtures from the still-pending full natural economy trial. Run `scripts/CombatTest.ps1 -ProgressionChecks` for the new isolated fixture.
+
 Early development. Optional food/work/equipment management and compact base construction include bedrooms, stockroom, kitchen, social room, corridors, comfort/floors, medical beds/medicine storage, workshop, weapons storage and researched electric climate/power/lighting. Native food/clothing bills, researched freezers and construction resource gathering are included. Optional cooperative combat includes cover, melee interception and protected withdrawal. Agriculture and perimeter/killbox remain on the roadmap.
 
 ## Cooperative combat

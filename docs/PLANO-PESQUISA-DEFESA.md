@@ -1,5 +1,7 @@
 # Progressão da colônia: pesquisa, oficina, equipamento e inverno
 
+**Atualização 08/10/2026:** a revisão [Evolução da colônia 9–19](EVOLUCAO-COLONIA-9-19.md) substitui a antiga sequência de quatro checkpoints abaixo por cinco referências (inicial, Heavy SMG/flak, Assault Rifle, Charge Rifle/marine e cataphract opcional), com avaliação de equivalentes, reservas, materiais e equipamentos realmente vestidos. Prateleiras passam a lotes de duas conforme capacidade; acrescentadas tuques, algodão e medicina. O histórico de testes naturais abaixo permanece preservado e não foi convertido em aprovação.
+
 A nave foi retirada da seleção automática desta etapa. Pesquisas manuais continuam sendo respeitadas.
 
 ## Checkpoints de defesa

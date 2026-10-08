@@ -114,6 +114,11 @@ namespace AutonomousRim.Execution
                         (changes.Any(c => c.Pawn == p && c.Work == WorkTypeDefOf.Construction && c.Applied == 1) ? 3f : 0f)).FirstOrDefault()
                 : null;
             if (primaryBuilder != null) protectedBuilders.Add(primaryBuilder);
+            Pawn farmer=map.zoneManager.AllZones.OfType<Zone_Growing>().Any() && !fire && !foodUrgent ?
+                available.Where(p=>p!=primaryBuilder && !p.WorkTypeIsDisabled(WorkTypeDefOf.Growing) &&
+                    !changes.Any(c=>c.Pawn==p && c.Work==WorkTypeDefOf.Growing && c.UserOverride))
+                .OrderByDescending(p=>!p.WorkTypeIsDisabled(WorkTypeDefOf.Hauling))
+                .ThenByDescending(p=>Score(p,WorkTypeDefOf.Growing,0)).FirstOrDefault():null;
             foreach (var work in types.Where(w => demand[w] > 0)
                 .OrderBy(w => w == WorkTypeDefOf.Doctor && patients > 0 ? 0 :
                     foodUrgent && (w.defName == "Cooking" || w == WorkTypeDefOf.Growing) ? 1 :
@@ -125,6 +130,8 @@ namespace AutonomousRim.Execution
                     (!WorkReadiness.NeedsRecovery(p) || WorkReadiness.CanBuildRecoveryFurniture(p) || foodUrgent && (work.defName == "Cooking" || work == WorkTypeDefOf.Growing || work == WorkTypeDefOf.Hunting) && WorkReadiness.CanProduceEmergencyFood(p))).ToList();
                 if (primaryBuilder != null && work != WorkTypeDefOf.Construction && work != WorkTypeDefOf.Doctor)
                     candidates.Remove(primaryBuilder);
+                if(farmer!=null && work!=WorkTypeDefOf.Growing && work!=WorkTypeDefOf.Doctor &&
+                    !(work.defName=="Cooking" && (foodLow || mealsLow)))candidates.Remove(farmer);
                 if (reserveMiner && work != WorkTypeDefOf.Mining && work != WorkTypeDefOf.Doctor && clearanceMiners.Count > 0)
                 {
                     var helpers = candidates.Where(p => !clearanceMiners.Contains(p)).ToList();
@@ -160,6 +167,7 @@ namespace AutonomousRim.Execution
                 if (reserveProduction && productionWorks.Contains(work)) desired = Math.Min(1, desired);
                 if (reserveMiner && work == WorkTypeDefOf.Mining) desired = Math.Min(1, desired);
                 var selected = new List<Pawn>();
+                if(work==WorkTypeDefOf.Growing && farmer!=null){selected.Add(farmer);load[farmer]++;}
                 if (work == WorkTypeDefOf.Construction && primaryBuilder != null) { selected.Add(primaryBuilder); load[primaryBuilder]++; }
                 while (selected.Count < desired)
                 {
@@ -198,6 +206,9 @@ namespace AutonomousRim.Execution
                     priority = productionWorks.Contains(work) && assigned ? 1 : Math.Max(2, priority);
                 if (clearanceMiners.Contains(pawn) && !WorkReadiness.SelfCare(work) && work != WorkTypeDefOf.Doctor && work.defName != "Firefighter")
                     priority = work == WorkTypeDefOf.Mining ? 1 : Math.Max(2, priority);
+                if(pawn==farmer && !WorkReadiness.SelfCare(work) && work!=WorkTypeDefOf.Doctor && work.defName!="Firefighter" &&
+                    !roles.Any(r=>(r.Key==WorkTypeDefOf.Doctor && patients>0 || r.Key.defName=="Cooking" && (foodLow || mealsLow)) && r.Value.Contains(pawn)))
+                    priority=work==WorkTypeDefOf.Growing?(crops>0?1:2):work==WorkTypeDefOf.Hauling?(crops>0?2:1):Math.Max(3,priority);
                 if (recovering && !WorkReadiness.SelfCare(work) && !(assigned && work == WorkTypeDefOf.Construction && WorkReadiness.CanBuildRecoveryFurniture(pawn)) && !(assigned && foodUrgent &&
                     (work.defName == "Cooking" || work == WorkTypeDefOf.Growing || work == WorkTypeDefOf.Hunting) && WorkReadiness.CanProduceEmergencyFood(pawn))) priority = 0;
                 SetManagedPriority(pawn, work, priority, changes);

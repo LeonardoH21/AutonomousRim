@@ -72,6 +72,8 @@ namespace AutonomousRim.UI
             listing.Label("Foco atual: " + component.Strategy.CurrentFocus);
             listing.Label("Próximo foco: " + component.Strategy.NextFocus);
             listing.Label(component.Strategy.ResearchStatus);
+            listing.Label(component.Strategy.EquipmentStatus);
+            listing.Label(component.StorageStatus);
             listing.Label(component.Strategy.TerrainStatus);
             listing.Label(component.Strategy.MountainPlanStatus);
             listing.Label(component.ScheduleStatus);

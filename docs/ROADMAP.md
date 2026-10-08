@@ -1,5 +1,7 @@
 # Roadmap
 
+Latest colony progression revision: [equipment checkpoints, storage, stone production, winter clothing and continuous farming (items 9–19)](EVOLUCAO-COLONIA-9-19.md). Controlled native checks passed; a full natural economy run through spacer equipment remains pending. The historical milestone notes below describe earlier stages.
+
 ## Milestone 0 — Bootstrap
 - [x] Mod metadata
 - [x] C# project

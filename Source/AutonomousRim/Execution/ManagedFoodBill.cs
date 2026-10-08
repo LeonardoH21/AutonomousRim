@@ -11,8 +11,11 @@ namespace AutonomousRim.Execution
         public bool Matches => Bill != null && !Bill.DeletedOrDereferenced && Signature == Describe(Bill);
 
         public static string Describe(Bill_Production bill)
+            =>Describe(bill,true);
+        private static string Describe(Bill_Production bill,bool includeRanges)
         {
             return $"{bill.repeatMode?.defName}|{bill.targetCount}|{bill.suspended}|{bill.ingredientSearchRadius}|{bill.allowedSkillRange}|{bill.pauseWhenSatisfied}|{bill.unpauseWhenYouHave}|{bill.includeTainted}|{bill.includeEquipped}|" +
+                (includeRanges?bill.hpRange.min.ToString("R",System.Globalization.CultureInfo.InvariantCulture)+","+bill.hpRange.max.ToString("R",System.Globalization.CultureInfo.InvariantCulture)+"|"+(int)bill.qualityRange.min+","+(int)bill.qualityRange.max+"|":"")+
                 string.Join(",", bill.ingredientFilter.AllowedThingDefs.Where(d => bill.recipe.fixedIngredientFilter?.Allows(d) != false).Select(d => d.defName).OrderBy(n => n));
         }
 
@@ -31,6 +34,7 @@ namespace AutonomousRim.Execution
                         .Select(name => DefDatabase<ThingDef>.GetNamedSilentFail(name)).Where(d => d != null && Bill.recipe.fixedIngredientFilter?.Allows(d) != false)
                         .Select(d => d.defName).OrderBy(n => n));
                 if (Signature == LegacyDescribe(Bill)) Signature = Describe(Bill);
+                if (Signature == Describe(Bill,false)) Signature = Describe(Bill);
             }
         }
 

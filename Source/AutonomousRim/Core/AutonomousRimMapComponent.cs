@@ -81,6 +81,7 @@ namespace AutonomousRim.Core
         public string EquipmentStatus { get; private set; } = "Autoequipamento desativado.";
         private List<Pawn> ownedHunts = new List<Pawn>();
         private List<ManagedFoodBill> defenseBills = new List<ManagedFoodBill>();
+        private List<ManagedFoodBill> infrastructureBills = new List<ManagedFoodBill>();
         private List<ManagedFoodBill> ownedBills = new List<ManagedFoodBill>();
         private List<WorkPriorityChange> workChanges = new List<WorkPriorityChange>();
         private List<ScheduleChange> scheduleChanges = new List<ScheduleChange>();
@@ -89,6 +90,7 @@ namespace AutonomousRim.Core
         public bool ScheduleAutomation => scheduleAutomation;
         public string ScheduleStatus { get; private set; } = "Agenda automática aguardando a primeira avaliação.";
         public string ManagementStatus { get; private set; } = "Automação desativada neste mapa.";
+        public string StorageStatus { get; private set; } = "Armazenamento aguardando avaliação.";
 
         public override void ExposeData()
         {
@@ -129,6 +131,7 @@ namespace AutonomousRim.Core
             Scribe_Collections.Look(ref equipmentExcluded, "equipmentExcluded", LookMode.Reference);
             Scribe_Collections.Look(ref ownedHunts, "ownedHunts", LookMode.Reference);
             Scribe_Collections.Look(ref defenseBills, "defenseBills", LookMode.Deep);
+            Scribe_Collections.Look(ref infrastructureBills,"infrastructureBills",LookMode.Deep);
             Scribe_Collections.Look(ref ownedBills, "ownedBills", LookMode.Deep);
             Scribe_Collections.Look(ref workChanges, "workChanges", LookMode.Deep);
             Scribe_Collections.Look(ref scheduleChanges, "scheduleChanges", LookMode.Deep);
@@ -143,6 +146,7 @@ namespace AutonomousRim.Core
                 failureMemory = failureMemory ?? new FailureMemory();
                 ownedHunts = ownedHunts ?? new List<Pawn>();
                 defenseBills = defenseBills ?? new List<ManagedFoodBill>();
+                infrastructureBills=infrastructureBills??new List<ManagedFoodBill>();
                 ownedBills = ownedBills ?? new List<ManagedFoodBill>();
                 workChanges = workChanges ?? new List<WorkPriorityChange>();
                 scheduleChanges = scheduleChanges ?? new List<ScheduleChange>();
@@ -179,6 +183,14 @@ namespace AutonomousRim.Core
                 ConstructionWorkManager.Stop(constructionOrders);
                 ConstructionResourceManager.Stop(map, constructionGathering);
                 BaseConstructionManager.Stop(map, baseProjects);
+                FoodManager.RemoveOwnedBills(infrastructureBills);
+                foreach(var task in baseProjects.SelectMany(p=>p.Shell).Where(t=>t.UpgradeFrom?.Spawned==true && t.UpgradeMaterial!=null))
+                {
+                    map.designationManager.DesignationOn(task.UpgradeFrom,DesignationDefOf.Deconstruct)?.Delete();
+                    StoneProductionManager.CancelDemolition(map,task.UpgradeFrom);
+                    task.Stuff=task.UpgradeFrom.Stuff;task.UpgradeMaterial=null;task.UpgradeFrom=null;
+                    task.UpgradeDeclined=true;task.WasCompleted=true;
+                }
             }
             baseAutomation = enabled;
             if (enabled)
@@ -384,7 +396,9 @@ namespace AutonomousRim.Core
             if (workAutomation && (force || cycle % 600 == 60)) ManagementStatus += Find.PlaySettings.useWorkPriorities
                 ? " Prioridades ativas; alterações manuais do jogador são preservadas."
                 : " Prioridades pausadas: o modo numérico de trabalho foi desligado pelo jogador.";
-            if (baseAutomation && (force || cycle % 300 == 150)) StoragePolicy.ManageFoodStorage(map, CurrentState, baseProjects);
+            if (baseAutomation && (force || cycle % 300 == 150)) StorageStatus=StoragePolicy.ManageFoodStorage(map, CurrentState, baseProjects);
+            if (baseAutomation && (force || cycle % 1200 == 150)) AgriculturePlanner.Add(map,baseProjects);
+            if (baseAutomation && (force || cycle % 600 == 150)) StoneProductionManager.Apply(map,CurrentState,baseProjects,infrastructureBills);
             if (equipmentAutomation && (force || cycle % 600 == 120)) DefenseProductionPlan.Apply(map, CurrentState, defenseBills);
             if (equipmentAutomation && (force || cycle % 900 == 90)) EquipmentStatus = EquipmentManager.Apply(map, CurrentState, equipmentOrders, managedApparel, equipmentExcluded);
             if (force && baseAutomation) ExecuteConstruction(cycle);

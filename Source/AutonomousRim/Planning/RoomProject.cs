@@ -11,6 +11,9 @@ namespace AutonomousRim.Planning
         public BuildableDef Def;
         public TerrainDef OriginalTerrain;
         public ThingDef Stuff;
+        public ThingDef UpgradeMaterial;
+        public Thing UpgradeFrom;
+        public bool UpgradeDeclined;
         public IntVec3 Position;
         public Rot4 Rotation = Rot4.North;
         public Thing Pending;
@@ -33,6 +36,9 @@ namespace AutonomousRim.Planning
             Scribe_Defs.Look(ref thingDef, "def"); Scribe_Defs.Look(ref floorDef, "floorDef");
             Def = (BuildableDef)thingDef ?? floorDef;
             Scribe_Defs.Look(ref Stuff, "stuff");
+            Scribe_Defs.Look(ref UpgradeMaterial,"upgradeMaterial");
+            Scribe_References.Look(ref UpgradeFrom,"upgradeFrom");
+            Scribe_Values.Look(ref UpgradeDeclined,"upgradeDeclined");
             Scribe_Defs.Look(ref OriginalTerrain, "originalTerrain");
             Scribe_Values.Look(ref Position, "position"); Scribe_Values.Look(ref Rotation, "rotation");
             Scribe_References.Look(ref Pending, "pending");
@@ -49,7 +55,8 @@ namespace AutonomousRim.Planning
             Scribe_Values.Look(ref LastFailure, "lastFailure");
         }
         public bool Complete(Map map) => Position.InBounds(map) && (Def is TerrainDef terrain ? Position.GetTerrain(map) == terrain : Position.GetThingList(map).Exists(t =>
-            t.def == Def && t.Position == Position && t.Rotation == Rotation && t.Faction == Faction.OfPlayer));
+            t.def == Def && t.Position == Position && t.Rotation == Rotation && t.Faction == Faction.OfPlayer &&
+            (UpgradeMaterial==null || t.Stuff==UpgradeMaterial)));
     }
 
     public sealed class RoomProject : IExposable

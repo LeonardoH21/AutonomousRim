@@ -53,21 +53,37 @@ namespace AutonomousRim.Execution
             }
             int generalStacks = map.listerThings.AllThings.Count(t => t.Spawned && t.def.EverStorable(false) &&
                 t.def.category == ThingCategory.Item && !IsFood(t.def) && !t.def.IsCorpse && !t.Position.Fogged(map));
-            QueueShelves(map, general, Math.Min(36, Math.Max(6, (generalStacks + 2) / 3)), projects);
-            QueueShelves(map, freezer, state.FreezerNearFull ? 8 : 4, projects);
+            int shelfTarget(RoomProject room,int stacks)
+            {
+                if(room==null)return 0;
+                int current=room.Furniture.Count(t=>t.Def?.defName=="ShelfSmall");
+                int floor=room.StorageCells.Count;
+                int reserve=(int)Math.Ceiling(stacks*1.25f);
+                // A shelf replaces one floor cell and adds two additional stack positions.
+                int pressure=Math.Max(0,(reserve-floor+1)/2);
+                bool established=Find.TickManager.TicksGame>=3*GenDate.TicksPerDay;
+                int desired=Math.Max(pressure,established && stacks>=6?3:0);
+                return Math.Min(current+2,Math.Min(36,desired));
+            }
+            int foodStacks=map.listerThings.AllThings.Count(t=>t.Spawned && IsFood(t.def) && !t.Position.Fogged(map) && !t.IsForbidden(Faction.OfPlayer));
+            QueueShelves(map,general,shelfTarget(general,generalStacks),projects);
+            QueueShelves(map,freezer,shelfTarget(freezer,foodStacks),projects);
+            int builtShelves=general?.Furniture.Count(t=>t.Def?.defName=="ShelfSmall" && t.Complete(map))??0;
+            int capacity=(general?.StorageCells.Count??0)+builtShelves*2;
+            string depot=$" Depósito: {generalStacks} pilhas conhecidas, {capacity} posições estimadas; {builtShelves} prateleiras prontas.";
+            if(generalStacks>capacity && capacity>0)depot+=" Capacidade insuficiente: mobiliário interno prioritário; preservar corredores.";
 
             if (state.FreezerCapacityCells <= 0)
-                return "Sem freezer funcional; alimentos perecíveis aguardam refrigeração.";
+                return "Sem freezer funcional; alimentos perecíveis aguardam refrigeração."+depot;
             if (state.FreezerNearFull)
-                return "Freezer quase cheio: prioridade Critical para entrada, produção excessiva pausada e prateleiras/expansão avaliadas.";
-            return $"Freezer organizado: {state.FreezerFillRatio:P0} ocupado; comida aceita no frio e estoque geral mantém filtro sem refeições.";
+                return "Freezer quase cheio: prioridade Critical para entrada, produção excessiva pausada e prateleiras/expansão avaliadas."+depot;
+            return $"Freezer organizado: {state.FreezerFillRatio:P0} ocupado; comida aceita no frio e estoque geral mantém filtro sem refeições."+depot;
         }
 
         private static void QueueShelves(Map map, RoomProject freezer, int desired, IReadOnlyList<RoomProject> projects)
         {
             // Upgrade completed rooms only; preserve player cancellations and room access.
-            if (freezer == null || !freezer.Completed || freezer.State == ConstructionState.Paused ||
-                freezer.Furniture.Any(t => t.CancelledByPlayer)) return;
+            if (freezer == null || !freezer.Completed || freezer.State == ConstructionState.Paused) return;
             ThingDef shelf = DefDatabase<ThingDef>.GetNamedSilentFail("ShelfSmall");
             if (shelf == null) return; // Planned prerequisites feed the normal research planner.
             int existing = freezer.Furniture.Count(t => t.Def?.defName == shelf.defName);

@@ -29,6 +29,7 @@ namespace AutonomousRim.Planning
         public string StabilityStatus = "Estabilidade ainda não avaliada.";
         public string CurrentFocus = "Aguardando avaliação.";
         public string NextFocus = "Aguardando avaliação.";
+        public string EquipmentStatus = "Equipamento aguardando avaliação.";
         public IntVec3 Landing = IntVec3.Invalid;
         public int HorizonDays = DefaultHorizonDays;
         public int EstimatedDaysRemaining = DefaultHorizonDays;
@@ -55,6 +56,7 @@ namespace AutonomousRim.Planning
             Scribe_Values.Look(ref StabilityStatus,"stabilityStatus","Estabilidade ainda não avaliada.");
             Scribe_Values.Look(ref CurrentFocus,"currentFocus","Aguardando avaliação.");
             Scribe_Values.Look(ref NextFocus,"nextFocus","Aguardando avaliação.");
+            Scribe_Values.Look(ref EquipmentStatus,"equipmentStatus","Equipamento aguardando avaliação.");
             Scribe_Values.Look(ref Landing,"landing",IntVec3.Invalid);
             Scribe_Values.Look(ref HorizonDays,"horizonDays",DefaultHorizonDays);
             Scribe_Values.Look(ref EstimatedDaysRemaining,"estimatedDaysRemaining",DefaultHorizonDays);

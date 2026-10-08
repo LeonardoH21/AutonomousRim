@@ -253,13 +253,23 @@ namespace AutonomousRim.Execution
         private static void EnsureClothes(Map map, ColonyState state, List<ManagedFoodBill> ownedBills)
         {
             string outer = state.OutdoorTemperature < 10 || AutonomousRim.Perception.FoodReservePolicy.PreparingForWinter(map) ? "Apparel_Parka" : "Apparel_Duster";
-            foreach (string product in new[] { "Apparel_Pants", "Apparel_CollarShirt", outer })
+            bool winter=outer=="Apparel_Parka";
+            foreach (string product in winter?new[] { "Apparel_Pants", "Apparel_CollarShirt", outer,"Apparel_Tuque" }:new[] { "Apparel_Pants", "Apparel_CollarShirt", outer })
             {
                 RecipeDef recipe = map.listerBuildings.AllBuildingsColonistOfClass<Building_WorkTable>()
                     .Where(t => !t.IsForbidden(Faction.OfPlayer)).SelectMany(t => t.def.AllRecipes).FirstOrDefault(r =>
                         r.products?.Any(p => p.thingDef.defName == product) == true &&
                         (r.researchPrerequisites == null || r.researchPrerequisites.All(p => p.IsFinished)));
-                if (recipe != null) EnsureBill(map, recipe.defName, state, ownedBills, 3);
+                if (recipe==null || !recipe.AvailableNow)continue;
+                bool reserve=product=="Apparel_Parka" || product=="Apparel_Tuque";
+                EnsureBill(map,recipe.defName,state,ownedBills,reserve?Math.Max(1,state.ColonistCount):3);
+                foreach(var owned in ownedBills.Where(b=>b.Matches && b.Bill.recipe==recipe))
+                {
+                    owned.Bill.includeEquipped=reserve;owned.Bill.includeTainted=false;
+                    owned.Bill.hpRange=new FloatRange(.51f,1);
+                    owned.Bill.suspended=state.EstimatedFoodDays<1;
+                    owned.Signature=ManagedFoodBill.Describe(owned.Bill);
+                }
             }
         }
 
