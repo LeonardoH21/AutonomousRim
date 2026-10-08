@@ -21,7 +21,7 @@ namespace AutonomousRim.Execution
         public static List<Pawn> Enemies(Map map) => map.mapPawns.AllPawnsSpawned
             .Where(ThreatScanner.Active).ToList();
         public static bool Eligible(Pawn p) => p.Spawned && p.Faction == Faction.OfPlayer && p.IsColonist &&
-            PawnAnalyzer.IsCombatReady(p) && !MedicalRescueManager.Reserved(p) && p.drafter != null && p.equipment?.Primary != null &&
+            PawnAnalyzer.IsCombatReady(p) && !MedicalRescueManager.Reserved(p) && !PrisonManager.Reserved(p) && p.drafter != null && p.equipment?.Primary != null &&
             (p.needs?.rest?.CurLevel ?? 1) > 0.08f &&
             (p.equipment.Primary.TryGetComp<CompEquippable>()?.PrimaryVerb?.verbProps.defaultProjectile?.projectile?.explosionRadius ?? 0) <= 0;
 

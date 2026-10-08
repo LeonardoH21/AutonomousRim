@@ -17,7 +17,7 @@ namespace AutonomousRim.Execution
         public static int RawPriority(Pawn pawn,WorkTypeDef work) => StoredPriorities(pawn.workSettings)?[work] ?? pawn.workSettings.GetPriority(work);
         public static bool CanWork(Pawn pawn)
         {
-            return !pawn.Dead && !pawn.Downed && !pawn.Drafted && !pawn.InMentalState && pawn.workSettings != null &&
+            return !PrisonManager.Reserved(pawn) && !pawn.Dead && !pawn.Downed && !pawn.Drafted && !pawn.InMentalState && pawn.workSettings != null &&
                 (pawn.Map==null || !CommerceCaravanManager.Reserved(pawn.Map.GetComponent<AutonomousRimMapComponent>().Commerce,pawn));
         }
 
@@ -39,6 +39,8 @@ namespace AutonomousRim.Execution
             var available = pawns.Where(p => !WorkReadiness.NeedsRecovery(p) || WorkReadiness.CanBuildRecoveryFurniture(p) || foodUrgent && WorkReadiness.CanProduceEmergencyFood(p)).ToList();
             var load = available.ToDictionary(p => p, p => 0);
             int patients = Math.Max(state.DownedColonists, map.mapPawns.FreeColonistsSpawned.Count(p => p.Downed || HealthAIUtility.ShouldSeekMedicalRest(p)));
+            var prisoners=map.mapPawns.AllPawnsSpawned.Where(p=>p.IsPrisonerOfColony).ToList();
+            patients+=prisoners.Count(p=>p.health.HasHediffsNeedingTend());
             bool fire = EmergencyManager.LocalFire(map);
             int builds = map.listerThings.AllThings.Count(t => t is Frame || t is Blueprint_Build);
             int mines = map.designationManager.SpawnedDesignationsOfDef(DesignationDefOf.Mine).Count();
@@ -84,6 +86,7 @@ namespace AutonomousRim.Execution
                 int count = 0;
                 bool high = false;
                 if (work == WorkTypeDefOf.Doctor) { count = patients; high = patients > 0; }
+                else if(work==WorkTypeDefOf.Warden) { count=prisoners.Count>0?1:0; high=prisoners.Any(p=>(p.needs?.food?.CurLevel??1)<.3f); }
                 else if (work.defName == "Cooking") { count = Math.Max(bills, foodLow ? 1 : 0); high = foodLow || mealsLow; }
                 else if (work == WorkTypeDefOf.Growing) { count = Math.Max(crops, foodLow ? 1 : 0); high = foodLow; }
                 else if (work == WorkTypeDefOf.Construction) { count = builds; high = construction && builds > 0; }

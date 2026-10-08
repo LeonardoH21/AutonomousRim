@@ -1,6 +1,6 @@
 # Próxima sessão — prisão, captura, conversão e recrutamento
 
-Status: plano solicitado em 08/10/2026, sem implementação ou testes nesta etapa. Complementa [comércio e economia](PLANO-COMERCIO-AUTONOMO.md). Usar ações, tratamento e interações nativas; não alterar lealdade, ideologia, resistência, saúde ou facção artificialmente.
+Status: módulo implementado em 08/10/2026; compilação confirmada, testes de jogo adiados. Complementa [comércio e economia](PLANO-COMERCIO-AUTONOMO.md). Usar ações, tratamento e interações nativas; não alterar lealdade, ideologia, resistência, saúde ou facção artificialmente.
 
 ## Ordem de execução
 
@@ -25,6 +25,6 @@ Fluxo: sobrevivente elegível → captura segura → tratamento → decisão →
 
 ## Limitações e validação futura
 
-Não garantir sobrevivência de todo inimigo derrotado, sucesso de toda conversão/recrutamento ou melhora de relações com todas as facções. Confirmar APIs, interações, critérios de liberação e comportamento de DLCs/mods na instalação local. Testes continuam adiados conforme pedido anterior; plano não equivale a funcionalidade implementada.
+Não garantir sobrevivência de todo inimigo derrotado, sucesso de toda conversão/recrutamento ou melhora de relações com todas as facções. Confirmar APIs, interações, critérios de liberação e comportamento de DLCs/mods na instalação local. Testes continuam adiados conforme pedido anterior. Os detalhes da implementação e as limitações atuais estão em [PRISAO-AUTONOMA.md](PRISAO-AUTONOMA.md); compilação não confirma funcionamento no jogo.
 
 Referências: [Prisoner](https://rimworldwiki.com/wiki/Prisoners), [Factions](https://rimworldwiki.com/wiki/Factions).

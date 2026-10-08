@@ -76,6 +76,12 @@ namespace AutonomousRim.UI
             listing.Label(component.Strategy.ResearchStatus);
             listing.Label(component.Strategy.EquipmentStatus);
             listing.Label(component.StorageStatus);
+            if(listing.ButtonText($"Prisão automática: {(component.PrisonAutomation?"LIGADA":"DESLIGADA")}"))component.SetPrisonAutomation(!component.PrisonAutomation);
+            listing.Label(component.Prison.Status);
+            if(listing.ButtonText($"Meta da população: {component.Prison.PopulationTarget} (aumentar)"))component.Prison.PopulationTarget=System.Math.Min(20,component.Prison.PopulationTarget+1);
+            if(listing.ButtonText("Reduzir meta da população"))component.Prison.PopulationTarget=System.Math.Max(3,component.Prison.PopulationTarget-1);
+            foreach(var prisoner in component.Prison.Prisoners.Where(r=>!r.Completed))listing.Label($"Prisioneiro {prisoner.Pawn?.LabelShort}: {prisoner.Status}");
+            foreach(var record in component.Prison.History.AsEnumerable().Reverse().Take(3))listing.Label("Prisão: "+record);
             listing.Label(component.Commerce.Status);
             if(listing.ButtonText($"Expedições comerciais: {(component.Commerce.ExpeditionsEnabled?"LIGADAS":"DESLIGADAS")}"))
                 component.Commerce.ExpeditionsEnabled=!component.Commerce.ExpeditionsEnabled;

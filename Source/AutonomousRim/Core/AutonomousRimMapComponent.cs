@@ -28,6 +28,23 @@ namespace AutonomousRim.Core
         private bool scheduleAutomation = true;
         private bool equipmentAutomation;
         private bool combatAutomation;
+        private bool prisonAutomation;
+        private PrisonState prison = new PrisonState();
+        public PrisonState Prison => prison;
+        public bool PrisonAutomation => prisonAutomation;
+        public void SetPrisonAutomation(bool enabled)
+        {
+            prisonAutomation=enabled;
+            var projects=baseProjects.Where(p=>p.LayoutSlot?.StartsWith("prison:")==true).ToList();
+            if(!enabled){PrisonManager.Stop(prison);BaseConstructionManager.Stop(map,projects);}
+            else
+            {
+                foreach(var project in projects.Where(p=>p.State==ConstructionState.Paused && !p.Completed))project.State=ConstructionState.Planned;
+                PrisonManager.Resume(prison);
+                prison.LastPlan=-600;
+                if(CurrentState!=null)PrisonManager.Apply(map,CurrentState,baseProjects,prison,baseAutomation);
+            }
+        }
         private bool commerceAutomation;
         private CommerceState commerce = new CommerceState();
         public bool CommerceAutomation => commerceAutomation;
@@ -121,6 +138,8 @@ namespace AutonomousRim.Core
             Scribe_Values.Look(ref scheduleAutomation, "scheduleAutomation", true);
             Scribe_Values.Look(ref equipmentAutomation, "equipmentAutomation");
             Scribe_Values.Look(ref combatAutomation, "combatAutomation");
+            Scribe_Values.Look(ref prisonAutomation,"prisonAutomation");
+            Scribe_Deep.Look(ref prison,"prison");
             Scribe_Values.Look(ref commerceAutomation,"commerceAutomation");
             Scribe_Deep.Look(ref commerce,"commerce");
             Scribe_Collections.Look(ref combatOrders, "combatOrders", LookMode.Deep);
@@ -161,6 +180,7 @@ namespace AutonomousRim.Core
                 strategicPlan = strategicPlan ?? new StrategicPlan();
                 emergency = emergency ?? new EmergencyState();
                 commerce=commerce??new CommerceState();
+                prison=prison??new PrisonState();
                 combatOrders = combatOrders ?? new List<CombatOrder>();
                 combatExcluded = combatExcluded ?? new List<Pawn>();
                 combatOrders.RemoveAll(o => o.Pawn == null);
@@ -230,6 +250,7 @@ namespace AutonomousRim.Core
 
         public void DisableAll()
         {
+            SetPrisonAutomation(false);
             SetCommerceAutomation(false);
             SetEmergencyAutomation(false);
             SetCombatAutomation(false);
@@ -386,6 +407,8 @@ namespace AutonomousRim.Core
                 if (Prefs.DevMode) Log.Message($"[AutonomousRim] Scan: {CurrentState}");
             }
             if (ticks % 30 == 0 && CurrentState != null) ManageColony(false);
+            if(prisonAutomation && CurrentState!=null && ticks%60==45)
+                PrisonManager.Apply(map,CurrentState,baseProjects,prison,baseAutomation);
             if(commerceAutomation && CurrentState!=null && ticks%600==210)
                 CommerceManager.Apply(map,CurrentState,baseProjects,commerce,baseAutomation);
             if(CurrentState!=null && ticks%600==240 && (commerceAutomation || commerce.ExpeditionPawns.Count>0))

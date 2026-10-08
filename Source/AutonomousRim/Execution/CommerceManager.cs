@@ -17,7 +17,7 @@ namespace AutonomousRim.Execution
         public static bool Safe(Map map)=>map.GetComponent<AutonomousRimMapComponent>().CurrentState?.Threat?.Immediate!=true &&
             !map.GetComponent<AutonomousRimMapComponent>().SecondarySuspended && !EmergencyManager.LocalFire(map);
         public static bool Available(Pawn p)=>WorkPriorityManager.CanWork(p) && !WorkReadiness.NeedsRecovery(p) &&
-            p.CurJob?.playerForced!=true && p.jobs.jobQueue.Count==0 && p.GetLord()==null &&
+            p.CurJob?.playerForced!=true && p.CurJob?.workGiverDef?.workType!=WorkTypeDefOf.Warden && p.jobs.jobQueue.Count==0 && p.GetLord()==null &&
             p.health.capacities.CapableOf(PawnCapacityDefOf.Talking) && p.skills?.GetSkill(SkillDefOf.Social).TotallyDisabled==false &&
             !HealthAIUtility.ShouldSeekMedicalRest(p) && !p.WorkTypeIsDisabled(WorkTypeDefOf.Warden);
         public static void Apply(Map map,ColonyState colony,List<RoomProject> projects,CommerceState commerce,bool build)

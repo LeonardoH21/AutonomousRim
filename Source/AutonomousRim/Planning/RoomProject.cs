@@ -24,6 +24,7 @@ namespace AutonomousRim.Planning
         public float TargetTemperature = -999f;
         public bool TemperatureConfigured;
         public bool MedicalBed;
+        public bool PrisonerBed;
         public string StorageKind;
         public bool SettingsConfigured;
         public int RetryAfter;
@@ -48,6 +49,7 @@ namespace AutonomousRim.Planning
             Scribe_Values.Look(ref TargetTemperature, "targetTemperature", -999f);
             Scribe_Values.Look(ref TemperatureConfigured, "temperatureConfigured");
             Scribe_Values.Look(ref MedicalBed, "medicalBed");
+            Scribe_Values.Look(ref PrisonerBed,"prisonerBed");
             Scribe_Values.Look(ref StorageKind, "storageKind");
             Scribe_Values.Look(ref SettingsConfigured, "settingsConfigured");
             Scribe_Values.Look(ref RetryAfter, "retryAfter");

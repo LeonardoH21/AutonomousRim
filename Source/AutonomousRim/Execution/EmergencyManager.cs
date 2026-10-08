@@ -25,7 +25,7 @@ namespace AutonomousRim.Execution
         private static bool Essential(WorkTypeDef work, bool recovery, bool foodCritical, bool foodLow = false) =>
             work==WorkTypeDefOf.Doctor || work.defName=="Patient" || work.defName=="PatientBedRest" || work.defName=="BasicWorker" ||
             work.defName=="Firefighter" || (recovery || foodCritical) && work.defName=="Cooking" ||
-            recovery && (work==WorkTypeDefOf.Hauling || work==WorkTypeDefOf.Cleaning || work==WorkTypeDefOf.Growing || foodLow && work==WorkTypeDefOf.Hunting);
+            recovery && (work==WorkTypeDefOf.Warden || work==WorkTypeDefOf.Hauling || work==WorkTypeDefOf.Cleaning || work==WorkTypeDefOf.Growing || foodLow && work==WorkTypeDefOf.Hunting);
 
         public static void RestoreWork(EmergencyState state) => WorkPriorityManager.Restore(state.Work);
         public static void Stop(EmergencyState state)

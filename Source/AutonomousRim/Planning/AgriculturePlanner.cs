@@ -78,10 +78,10 @@ namespace AutonomousRim.Planning
                 occupied.UnionWith(cells);
             }
             int population=map.mapPawns.FreeColonistsSpawnedCount;
-            crop("Plant_Rice",Math.Max(36,population*24),"Plantação de comida");
+            crop("Plant_Rice",Math.Max(36,(population+map.mapPawns.AllPawnsSpawned.Count(p=>p.IsPrisonerOfColony))*24),"Plantação de comida");
             var cotton=DefDatabase<ThingDef>.GetNamed("Plant_Cotton");
             crop("Plant_Cotton",Math.Max(36,(int)Math.Ceiling(ClothDemand(map)/Math.Max(1f,cotton.plant.harvestYield))),"Plantação de algodão");
-            crop("Plant_Healroot",Math.Max(24,population*6),"Plantação medicinal");
+            crop("Plant_Healroot",Math.Max(24,(population+map.mapPawns.AllPawnsSpawned.Count(p=>p.IsPrisonerOfColony))*6),"Plantação medicinal");
         }
     }
 }

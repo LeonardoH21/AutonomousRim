@@ -6,6 +6,7 @@ namespace AutonomousRim.Core
     {
         public int Tick { get; set; }
         public int ColonistCount { get; set; }
+        public int PrisonerCount { get; set; }
         public int CombatCapableColonists { get; set; }
         public int HostilePawnCount { get; set; }
         public int DownedColonists { get; set; }

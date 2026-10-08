@@ -36,6 +36,8 @@ namespace AutonomousRim.Execution
             if(candidates.Count<2)return;
             var team=new List<Pawn>{candidates[0],candidates.Skip(1).OrderByDescending(p=>p.skills.GetSkill(SkillDefOf.Shooting).Level+p.skills.GetSkill(SkillDefOf.Melee).Level).First()};
             var remaining=healthy.Except(team).ToList();
+            if(colony.PrisonerCount>0 && (!remaining.Any(p=>!p.WorkTypeIsDisabled(WorkTypeDefOf.Warden)) ||
+                map.mapPawns.AllPawnsSpawned.Any(p=>p.IsPrisonerOfColony && p.health.HasHediffsNeedingTend())))return;
             if(!remaining.Any(p=>!p.WorkTypeIsDisabled(WorkTypeDefOf.Growing)) || !remaining.Any(p=>!p.WorkTypeIsDisabled(DefDatabase<WorkTypeDef>.GetNamed("Cooking"))))return;
             if(map.mapTemperature.OutdoorTemp<0 || map.mapTemperature.OutdoorTemp>32)
             {state.CaravanStatus="Caravana aguarda clima ameno; viagem não deve consumir preparo de inverno.";return;}
@@ -70,7 +72,7 @@ namespace AutonomousRim.Execution
                 foreach(var medicine in reachable.Where(t=>t.def.IsMedicine).Take(2))
                 {
                     int count=Math.Min(2,medicine.stackCount);
-                    if(reachable.Where(t=>t.def.IsMedicine).Sum(t=>t.stackCount)-count-quantities.Where(q=>q.Key.def.IsMedicine).Sum(q=>q.Value)<colony.ColonistCount*2)continue;
+                    if(reachable.Where(t=>t.def.IsMedicine).Sum(t=>t.stackCount)-count-quantities.Where(q=>q.Key.def.IsMedicine).Sum(q=>q.Value)<(colony.ColonistCount+colony.PrisonerCount)*2)continue;
                     quantities[medicine]=count;mass+=medicine.GetStatValue(StatDefOf.Mass)*count;
                 }
                 int cash=state.Budget;

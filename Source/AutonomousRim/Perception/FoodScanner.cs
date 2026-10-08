@@ -12,7 +12,8 @@ namespace AutonomousRim.Perception
     {
         public static void Scan(Map map, ColonyState state)
         {
-            var eaters = map.mapPawns.FreeColonistsSpawned.Where(p => p.needs?.food != null).ToList();
+            state.PrisonerCount=map.mapPawns.AllPawnsSpawned.Count(p=>p.IsPrisonerOfColony);
+            var eaters = map.mapPawns.FreeColonistsSpawned.Concat(map.mapPawns.AllPawnsSpawned.Where(p=>p.IsPrisonerOfColony)).Where(p => p.needs?.food != null).Distinct().ToList();
             var personalSupplies = eaters.ToDictionary(p => p, p => 0f);
             state.TargetFoodDays = FoodReservePolicy.TargetDays(map, eaters.Count);
             state.StrategicReserveDays = Math.Max(1.5f, state.TargetFoodDays * 0.5f);

@@ -55,9 +55,9 @@ namespace AutonomousRim.Planning
                 need(def,pair.Value+extra,70,"Conjunto militar da etapa "+(checkpoint.Stage+1));
             }
             if(colony.EstimatedFoodDays<2)
-                need(ThingDefOf.MealSimple,Math.Max(8,colony.ColonistCount*6),100,"Reserva de alimentação urgente");
+                need(ThingDefOf.MealSimple,Math.Max(8,(colony.ColonistCount+colony.PrisonerCount)*6),100,"Reserva de alimentação urgente");
             int meds=map.listerThings.AllThings.Where(t=>t.Spawned && t.def.IsMedicine && !t.IsForbidden(Faction.OfPlayer) && !t.Position.Fogged(map)).Sum(t=>t.stackCount);
-            if(meds<colony.ColonistCount*2)need(ThingDefOf.MedicineIndustrial,Stock(map,ThingDefOf.MedicineIndustrial)+colony.ColonistCount*2-meds,95,"Reserva médica");
+            if(meds<(colony.ColonistCount+colony.PrisonerCount)*2)need(ThingDefOf.MedicineIndustrial,Stock(map,ThingDefOf.MedicineIndustrial)+(colony.ColonistCount+colony.PrisonerCount)*2-meds,95,"Reserva médica");
             commerce.Needs=commerce.Needs.OrderByDescending(n=>n.Priority).ThenBy(n=>n.Def.defName,StringComparer.Ordinal).ToList();
             commerce.Silver=Stock(map,ThingDefOf.Silver);
             commerce.Reserve=Math.Max(150,colony.ColonistCount*50);

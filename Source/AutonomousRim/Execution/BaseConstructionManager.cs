@@ -114,6 +114,8 @@ namespace AutonomousRim.Execution
         }
         private static bool DependsOn(Map map, RoomProject p, List<RoomProject> all)
         {
+            if(p.LayoutSlot?.StartsWith("prison:finish:")==true && all.Any(r=>r.LayoutSlot==p.LayoutSlot.Replace("prison:finish:","prison:cell:") && !r.Completed))return true;
+            if(p.LayoutSlot?.StartsWith("prison:")==true && p.Kind!="Preparação do terreno" && all.Any(r=>r.Kind=="Quarto" && !r.Completed && r.State!=ConstructionState.Paused))return true;
             if (all.Any(r => r.Kind == ModularBasePlanner.ReservationKind))
             {
                 // Finish habitable bedrooms before spending their materials on secondary shells.
@@ -129,7 +131,7 @@ namespace AutonomousRim.Execution
             }
             if (p.Kind == "Plantação inicial") return false;
             if (p.Kind != "Preparação do terreno" && p.Kind != RingBasePlanner.ReservationKind && p.Kind != CourtyardBasePlanner.ReservationKind &&
-                all.Any(r => r.Kind == "Preparação do terreno" && !r.Completed) &&
+                all.Any(r => r.Kind == "Preparação do terreno" && !r.Completed && r.LayoutSlot?.StartsWith("prison:")!=true) &&
                 (!all.Any(r => r.Kind == CourtyardBasePlanner.ReservationKind) || Tasks(p).Any(t =>
                     GenAdj.OccupiedRect(t.Position,t.Rotation,t.Def.Size).Any(c => c.GetEdifice(map) is Mineable)))) return true;
             if (p.Crop != null || p.Kind == "Muro externo" || p.Kind == "Roupas" || p.Kind == "Baterias" || p.Kind == "Pesquisa" || p.Kind == "Fabricação" || p.Kind == "Multiuso")
@@ -213,9 +215,15 @@ namespace AutonomousRim.Execution
                     // already configured/player-adjusted thermostats remain intact.
                     if (p.Kind == "Freezer" && t.Def.defName == "Cooler" && !t.TemperatureConfigured) t.TargetTemperature = -2f;
                     Track(map, t);
-                    if (!t.SettingsConfigured && t.Complete(map) && (t.MedicalBed || t.StorageKind != null))
+                    if (!t.SettingsConfigured && t.Complete(map) && (t.MedicalBed || t.PrisonerBed || t.StorageKind != null))
                     {
                         var building = t.Position.GetThingList(map).First(b => b.def == t.Def && b.Position == t.Position);
+                        if(t.PrisonerBed && building is Building_Bed prisonerBed)
+                        {
+                            if(!t.Owned || !p.Shell.All(s=>s.Complete(map)) || prisonerBed.GetRoom()?.PsychologicallyOutdoors!=false ||
+                                prisonerBed.GetRoom().ContainedBeds.Any(b=>b!=prisonerBed && !b.ForPrisoners))continue;
+                            prisonerBed.ForPrisoners=true;
+                        }
                         if (t.MedicalBed && building is Building_Bed bed) bed.Medical = true;
                         if (t.StorageKind != null && building is Building_Storage storage) StoragePolicy.Configure(storage.GetStoreSettings(), t.StorageKind, shelf: true);
                         t.SettingsConfigured = true;

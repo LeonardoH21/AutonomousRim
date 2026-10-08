@@ -90,7 +90,7 @@ namespace AutonomousRim.Planning
                 if (!projects.Where(IsModular).Any(p => Math.Abs(int.Parse(p.LayoutSlot.Split(':')[1]) - grid.x) + Math.Abs(int.Parse(p.LayoutSlot.Split(':')[2]) - grid.z) <= 2)) continue;
                 var origin = root + new IntVec3(grid.x * Stride, 0, grid.z * Stride);
                 var rect = new CellRect(origin.x, origin.z, Size, Size);
-                if (!Site(map, rect) || rect.Any(c => c.GetEdifice(map) != null || c.Roofed(map) || c.GetTerrain(map).fertility < rice.plant.fertilityMin)) continue;
+                if (projects.Any(p=>p.LayoutSlot=="prison:reserve" && p.Footprint.ExpandedBy(2).Overlaps(rect)) || !Site(map, rect) || rect.Any(c => c.GetEdifice(map) != null || c.Roofed(map) || c.GetTerrain(map).fertility < rice.plant.fertilityMin)) continue;
                 projects.Add(new RoomProject { Kind = "Plantação inicial", LayoutSlot = prefix + "15", LayoutAnchor = root, Origin = origin,
                     InteriorSize = 11, Crop = rice, RequiresRoof = false, StorageCells = rect.Cells.ToList(), NoRoofCells = rect.Cells.ToList(), Priority = ConstructionPriority.High });
                 break;
@@ -107,7 +107,7 @@ namespace AutonomousRim.Planning
                 var origin = anchor + new IntVec3(grid.x * Stride, 0, grid.z * Stride);
                 if (existing.Count == 0 && projects.Any(IsModular) && !projects.Where(IsModular).Any(p =>
                     Math.Abs(int.Parse(p.LayoutSlot.Split(':')[1]) - grid.x) + Math.Abs(int.Parse(p.LayoutSlot.Split(':')[2]) - grid.z) <= 2)) continue;
-                if (existing.Count == 0 && !Site(map, new CellRect(origin.x, origin.z, Size, Size))) continue;
+                if (projects.Any(p=>p.LayoutSlot=="prison:reserve" && p.Footprint.ExpandedBy(2).Overlaps(new CellRect(origin.x,origin.z,Size,Size))) || existing.Count == 0 && !Site(map, new CellRect(origin.x, origin.z, Size, Size))) continue;
                 foreach (int mask in parts == 4 ? new[] { 15 } : parts == 2 ? new[] { 3, 12 } : new[] { 1, 2, 4, 8 })
                 {
                     if ((used & mask) != 0) continue;
@@ -205,7 +205,7 @@ namespace AutonomousRim.Planning
             foreach (var path in projects.Where(p => p.Kind == "Corredor"))
                 path.Furniture.RemoveAll(t => t.Def is TerrainDef floor && !t.Issued && !t.WasCompleted &&
                     !t.Position.GetTerrain(map).affordances.Contains(floor.terrainAffordanceNeeded));
-            while (projects.Count(p => p.Kind == "Quarto") < map.mapPawns.FreeColonistsSpawnedCount)
+            while (projects.Count(p => p.Kind == "Quarto") < PrisonManager.HousingTarget(map))
                 if (!AddRoom(map, projects, root, "Quarto", 1)) return "Sem módulo acessível disponível para novos quartos.";
             foreach (var kind in new[] { "Cozinha", "Abate", "Estoque", "Freezer", "Energia e climatização" })
                 if (!projects.Any(p => p.Kind == kind)) AddRoom(map, projects, root, kind, kind == "Estoque" ? 4 : kind == "Freezer" ? 2 : 1);

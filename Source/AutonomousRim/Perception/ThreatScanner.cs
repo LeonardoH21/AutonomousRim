@@ -12,7 +12,7 @@ namespace AutonomousRim.Perception
         public static bool Active(Pawn pawn) => pawn.Spawned && !pawn.Dead && !pawn.Downed &&
             pawn.HostileTo(Faction.OfPlayer) &&
             (pawn.canBeDormant==null || pawn.canBeDormant.Awake) &&
-            (pawn.MentalStateDef==MentalStateDefOf.Manhunter || pawn.MentalStateDef==MentalStateDefOf.ManhunterPermanent ||
+            (PrisonBreakUtility.IsPrisonBreaking(pawn) || pawn.MentalStateDef==MentalStateDefOf.Manhunter || pawn.MentalStateDef==MentalStateDefOf.ManhunterPermanent ||
              GenHostility.IsActiveThreatTo(pawn,Faction.OfPlayer,false,true));
         public static ThreatState Scan(Map map, ColonyState colony)
         {

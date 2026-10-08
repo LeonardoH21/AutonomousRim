@@ -54,7 +54,7 @@ namespace AutonomousRim.Execution
             !p.InBed() && !p.WorkTagIsDisabled(WorkTags.Caring) && !p.WorkTagIsDisabled(WorkTags.Hauling) &&
             !p.WorkTypeIsDisabled(WorkTypeDefOf.Doctor) && p.health.summaryHealth.SummaryHealthPercent>.8f &&
             p.health.hediffSet.BleedRateTotal<.1f && (p.needs?.rest?.CurLevel??1)>.25f &&
-            !ai.Emergency.Excluded.Contains(p) && !Reserved(p) && ai.CanAssignMedical(p);
+            !ai.Emergency.Excluded.Contains(p) && !PrisonManager.Reserved(p) && !Reserved(p) && ai.CanAssignMedical(p);
         private static void Release(EmergencyState state,MedicalOrder order,bool cancel)
         {
             Log.Message($"[AutonomousRim.Medical] Liberar {order.Helper?.LabelShort}: {order.Stage}; cancel={cancel}; job={order.Helper?.CurJob?.def.defName}; bleed={order.Patient?.health.hediffSet.BleedRateTotal}");
