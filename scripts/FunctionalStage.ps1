@@ -4,6 +4,7 @@ param(
  [Parameter(Mandatory=$true)][ValidatePattern('^autonomousrim[a-z]+$')][string]$Flag,
  [Parameter(Mandatory=$true)][string]$SuccessMarker,
  [ValidatePattern('^autonomousrim[a-z0-9]+$')][string[]]$ExtraFlags=@(),
+ [string]$ResumeSave,
  [ValidateRange(60,3600)][int]$TimeoutSeconds=600
 )
 $ErrorActionPreference='Stop'
@@ -31,10 +32,15 @@ try {
  New-Item -ItemType Directory -Path "$addon\About","$addon\Assemblies" -Force|Out-Null
  Copy-Item -LiteralPath "$root\.tools\runtime-checks\Assemblies\AutonomousRim.RuntimeChecks.dll" -Destination "$addon\Assemblies\AutonomousRim.RuntimeChecks.dll"
  Set-Content -LiteralPath "$addon\About\About.xml" -Encoding utf8 -Value '<ModMetaData><name>AutonomousRim Runtime Checks</name><author>AutonomousRim</author><packageId>leonardoh21.autonomousrim.runtimechecks</packageId><supportedVersions><li>1.6</li></supportedVersions><loadAfter><li>leonardoh21.autonomousrim</li></loadAfter></ModMetaData>'
- $manifest=[ordered]@{stage=$Stage;flag=$Flag;sourceCommit=(git -C $root rev-parse HEAD);dllHash=(Get-FileHash "$game\Mods\AutonomousRim\1.6\Assemblies\AutonomousRim.dll").Hash;runtimeHash=(Get-FileHash "$addon\Assemblies\AutonomousRim.RuntimeChecks.dll").Hash;result='RUNNING';profile=$profile}
+ $manifest=[ordered]@{stage=$Stage;flag=$Flag;extraFlags=@($ExtraFlags);resumeSaveHash=$(if($ResumeSave){(Get-FileHash -LiteralPath $ResumeSave).Hash}else{$null});sourceCommit=(git -C $root rev-parse HEAD);dllHash=(Get-FileHash "$game\Mods\AutonomousRim\1.6\Assemblies\AutonomousRim.dll").Hash;runtimeHash=(Get-FileHash "$addon\Assemblies\AutonomousRim.RuntimeChecks.dll").Hash;result='RUNNING';profile=$profile}
  $manifest|ConvertTo-Json|Set-Content -LiteralPath "$profile\manifest.json" -Encoding utf8
  $arguments=@('-batchmode','-quicktest',('-'+$Flag),'-autonomousrimstagedtest',('-savedatafolder="'+$profile+'"'),'-logFile',('"'+$log+'"'))
  foreach($extraFlag in $ExtraFlags){$arguments+=('-'+$extraFlag)}
+ if($ResumeSave){
+  New-Item -ItemType Directory -Path "$profile\Saves" -Force|Out-Null
+  Copy-Item -LiteralPath $ResumeSave -Destination "$profile\Saves\ModularResume.rws"
+  $arguments+='-autonomousrimprogressionresume'
+ }
  $p=Start-Process -FilePath "$game\RimWorldWin64.exe" -ArgumentList $arguments -WindowStyle Hidden -PassThru
  Write-Output "STAGE=$Stage PID=$($p.Id) LOG=$log"
  $deadline=[DateTime]::UtcNow.AddSeconds($TimeoutSeconds)

@@ -30,9 +30,9 @@ namespace AutonomousRim.RuntimeChecks
                     Check(!string.IsNullOrEmpty(ai.Strategy.StabilityStatus) && !string.IsNullOrEmpty(ai.Strategy.CurrentFocus),"Stability/focus state missing on load.");
                     Check(!string.IsNullOrEmpty(ai.Strategy.MountainPlanStatus),"Mountain planning status missing on load.");
                     Check(ai.Strategy.ResearchOverride,"Manual research override missing on load.");
-                    Check(ai.Strategy.Goals.Any(g=>g.Id=="ship-launch" && g.Status.Contains("Pendente")),"Unimplemented ending reported as achieved.");
+                    Check(!ai.Strategy.Route.Any(StrategicPlanner.IsVictoryResearch) && ai.Strategy.Goals.Count(g=>g.Id.StartsWith("defense-checkpoint-"))==5,"Automatic strategy lost defense checkpoints or advanced to ship research.");
                     Check(ai.BaseProjects.SelectMany(BaseConstructionManager.Tasks).Any(t=>t.Def.defName=="HiTechResearchBench"),"Advanced upgrade missing on load.");
-                    stage=99;Log.Message("[AutonomousRim.StrategyTests] PASS: native prerequisite DAG including hidden edges, ship research route, needs and goals, native research selection without free progress, manual ownership, additive validated upgrades without duplication, initial bounded allow/reprohibition and native save/load.");return;
+                    stage=99;Log.Message("[AutonomousRim.StrategyTests] PASS: prerequisite DAG including hidden edges, defense checkpoints before ship research, needs and goals, native research selection without free progress, manual ownership, additive validated upgrades without duplication, bounded allow/reprohibition and native save/load.");return;
                 }
                 Check(ai.StrategyAutomation && ai.LootAutomation,"New colony strategy/initial allow defaults disabled.");
                 ai.DisableAll();
@@ -90,13 +90,13 @@ namespace AutonomousRim.RuntimeChecks
                 ai.SetStrategyAutomation(false);Check(Find.ResearchManager.GetProject()==manual,"Disable removed manual research.");
                 ai.Strategy.Landing=pawn.Position;
                 var supplies=new List<Thing>();
-                for(int i=0;i<10;i++)
+                for(int i=0;i<20;i++)
                 {var t=ThingMaker.MakeThing(ThingDefOf.Steel);t.stackCount=10;GenSpawn.Spawn(t,pawn.Position+new IntVec3(i+1,0,0),map);t.SetForbidden(true,false);supplies.Add(t);}
                 var far=ThingMaker.MakeThing(ThingDefOf.Steel);GenSpawn.Spawn(far,pawn.Position+new IntVec3(35,0,0),map);far.SetForbidden(true,false);
-                var history=new List<Thing>();
+                var history=map.listerThings.AllThings.Where(t=>t.def.category==ThingCategory.Item && !supplies.Contains(t) && t!=far).ToList();
                 LootAccessManager.Apply(map,ColonyStateScanner.Scan(map),false,new List<RoomProject>(),new List<ManagedApparel>(),p=>true,history,out int released);
-                Check(released==8 && far.IsForbidden(Faction.OfPlayer),"Initial allow cap or landing radius failed.");
-                var reblocked=history.First();reblocked.SetForbidden(true,false);
+                Check(released==LootAccessManager.MaxStacksPerCycle && supplies.Count(t=>!t.IsForbidden(Faction.OfPlayer))==released && far.IsForbidden(Faction.OfPlayer),"Initial allow cap or landing radius failed.");
+                var reblocked=supplies.First(t=>!t.IsForbidden(Faction.OfPlayer));reblocked.SetForbidden(true,false);
                 LootAccessManager.Apply(map,ColonyStateScanner.Scan(map),false,new List<RoomProject>(),new List<ManagedApparel>(),p=>true,history,out released);
                 Check(reblocked.IsForbidden(Faction.OfPlayer),"Manual reprohibition overridden.");
                 foreach(string n in new[]{"Electricity","Batteries","AirConditioning","ComplexFurniture","ComplexClothing","Stonecutting","MicroelectronicsBasics","MultiAnalyzer","Fabrication","DrugProduction","Machining","Smithing"})
@@ -111,7 +111,8 @@ namespace AutonomousRim.RuntimeChecks
                 Check(RingBasePlanner.Validate(map,rooms),"Upgrade geometry overlaps.");
                 AccessTools.Field(typeof(AutonomousRimMapComponent),"baseProjects").SetValue(ai,rooms);
                 ai.EvaluateStrategy();
-                Check(ai.Strategy.Goals.Any(g=>g.Horizon=="Curto") && ai.Strategy.Goals.Any(g=>g.Horizon=="Médio") && ai.Strategy.Goals.Any(g=>g.Horizon=="Longo"),"Missing planning horizon.");
+                Check(ai.Strategy.Goals.Any(g=>g.Horizon=="Curto") && ai.Strategy.Goals.Any(g=>g.Horizon=="Médio") &&
+                    ai.Strategy.Goals.Count(g=>g.Id.StartsWith("defense-checkpoint-"))==5 && ai.Strategy.Goals.Any(g=>g.Id=="winter"),"Missing staged defense or winter plan.");
                 Check(ai.Strategy.Unlocks.Count>0,"Missing unlock inventory.");
                 GameDataSaveLoader.SaveGame("StrategyRoundtrip");stage=1;GameDataSaveLoader.LoadGame("StrategyRoundtrip");
             }

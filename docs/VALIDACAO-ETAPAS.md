@@ -4,7 +4,7 @@ Objetivo: testar todas as funcionalidades, corrigir falhas e permitir retomada s
 
 ## Estado de retomada
 
-Em andamento: planejamento e análise de falhas, depois etapa 6, combate. Etapas 0–3 aprovadas no escopo indicado; prisão nativa, comércio local e orbital passaram. Construção completa atual é etapa 7. Correções salvas no Git até `0c7121a`.
+Em andamento: etapa 6, cinco combates mistos. Planejamento e análise de falhas aprovados; três cenários de controle de combate aprovados. Etapas 0–3 aprovadas no escopo indicado; prisão nativa, comércio local e orbital passaram. Construção completa atual é etapa 7. Correções salvas no Git até `0c7121a`.
 
 | Etapa | Escopo | Estado / evidência |
 |---|---|---|
@@ -55,3 +55,10 @@ Não confundir essas fixtures com sobrevivência prolongada, produção econômi
 
 - Caravana concluída: `.tools/validation/commerce-caravan-20261008-211508-209/`: seis PASS e DONE. Formação, mercadorias reais, viagem, venda/compra, retorno, descarga e persistência. Ensaio anterior conferia o depósito cedo demais, com compras no inventário; fixture passou a exigir armazenamento e descarga. Não houve criação gratuita das compras pela IA.
 - As próximas fixtures filtram também incapacidades sem skill (por exemplo Hauling); a rodada aprovada tinha transporte suficiente, mas emitiu aviso ao configurar Hauling de um colono incapaz. Essa seleção da fixture foi corrigida, sem remover restrições dos colonos normais.
+
+## Estratégia e combate
+
+- Estratégia: `.tools/validation/strategy-20261008-211953-890/` PASS após corrigir expectativas antigas da fixture: cap de allow agora 16 e cinco checkpoints militares/inverno, com nave adiada. Nenhuma redução do cap ou retomada de nave introduzida para satisfazer teste antigo.
+- Análise de falhas: `.tools/validation/failure-analysis-20261008-212032-665/` PASS: risco recuperável, evidência repetida de colapso, relatório causal, ajustes aprendidos, checkpoint de raid e persistência.
+- Controles de combate: `.tools/validation/combat-controls-20261008-212302-071/`: três PASS, dano/interceptação nativos, cobertura e retirada sob força superior. Retirada: três feridos, zero mortos/derrubados; não representa recuperação médica já concluída.
+- Próximo ensaio integrado: nova partida nativa, cinco colonos com skills 20, recursos normais, 3×, mínimo de 20 dias, núcleo/refrigeração, produção real, pesquisa/crafting/equipamento, hospital/oficina e prisão construída. Saves de checkpoint preservam início e marcos para retomada com `FunctionalStage -ResumeSave`. Não aprovado antes de cumprir esses critérios.

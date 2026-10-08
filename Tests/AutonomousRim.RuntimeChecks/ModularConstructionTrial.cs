@@ -21,14 +21,17 @@ namespace AutonomousRim.RuntimeChecks
         private int startTick;
         private float lastResume;
         private System.Collections.Generic.List<Pawn> initialPawns = new System.Collections.Generic.List<Pawn>();
-        private readonly System.Collections.Generic.HashSet<string> milestones = new System.Collections.Generic.HashSet<string>();
+        private System.Collections.Generic.HashSet<string> milestones = new System.Collections.Generic.HashSet<string>();
         private readonly System.Collections.Generic.HashSet<ConstructionTask> checkedFurniture = new System.Collections.Generic.HashSet<ConstructionTask>();
         private bool Progression => GenCommandLine.CommandLineArgPassed("autonomousrimprogressiontrial");
+        private bool Integrated => GenCommandLine.CommandLineArgPassed("autonomousrimintegratedtest");
         private bool Enabled => GenCommandLine.CommandLineArgPassed("autonomousrimmodulartrial");
         public ModularConstructionTrial(Map map) : base(map) { }
         public override void ExposeData()
         {
             Scribe_Values.Look(ref InitialResearch, "initialResearchProof", -1);
+            Scribe_Values.Look(ref startTick,"nativeTrialStartTick");
+            Scribe_Collections.Look(ref milestones,"nativeTrialMilestones",LookMode.Value);
             Scribe_Collections.Look(ref Crafted, "nativeCraftProof", LookMode.Value);
             Scribe_Collections.Look(ref UsedBenches, "usedBenchProof", LookMode.Value);
             Scribe_Collections.Look(ref initialPawns, "initialPawnProof", LookMode.Reference);
@@ -37,6 +40,7 @@ namespace AutonomousRim.RuntimeChecks
                 Crafted = Crafted ?? new System.Collections.Generic.HashSet<string>();
                 UsedBenches = UsedBenches ?? new System.Collections.Generic.HashSet<int>();
                 initialPawns = initialPawns ?? new System.Collections.Generic.List<Pawn>();
+                milestones=milestones??new System.Collections.Generic.HashSet<string>();
             }
         }
         public override void FinalizeInit()
@@ -94,6 +98,7 @@ namespace AutonomousRim.RuntimeChecks
                     ai.SetAutomation(true, true); ai.SetLootAutomation(true);
                     ai.SetScheduleAutomation(true); ai.SetStrategyAutomation(true); ai.SetEquipmentAutomation(true);
                     ai.SetBaseAutomation(true);
+                    if(Integrated){ai.SetPrisonAutomation(true);ai.SetCommerceAutomation(true);ai.SetEmergencyAutomation(true);}
                     if (!ai.BaseProjects.Any(p => p.Kind == ModularBasePlanner.ReservationKind)) throw new Exception("No modular site: " + ai.BaseStatus);
                     foreach (var p in ai.BaseProjects.Where(ModularBasePlanner.IsModular))
                     {
@@ -101,7 +106,7 @@ namespace AutonomousRim.RuntimeChecks
                         if (p.Shell.Any(t => p.Interior.Contains(t.Position))) throw new Exception("Partition inside merged room.");
                     }
                     if (!RingBasePlanner.Validate(map, ai.BaseProjects.ToList())) throw new Exception("Geometry/interaction/terrain invalid.");
-                    started = true; startTick = tick;
+                    started = true; if(!continuing || startTick<=0)startTick = tick;
                     if (InitialResearch < 0) InitialResearch = DefDatabase<ResearchProjectDef>.AllDefsListForReading.Count(r => r.IsFinished);
                     if (initialPawns.Count == 0)
                         initialPawns.AddRange(continuing ? PawnsFinder.AllMapsWorldAndTemporary_AliveOrDead.Where(p => p.IsColonist && p.Faction == Faction.OfPlayer) : map.mapPawns.FreeColonistsSpawned);
@@ -136,20 +141,31 @@ namespace AutonomousRim.RuntimeChecks
                 bool cold = freezer.Completed && freezer.Interior.CenterCell.GetTemperature(map) < 0 &&
                     freezer.Shell.Where(t => t.Def.defName == "Cooler").All(t => t.Position.GetThingList(map).OfType<ThingWithComps>().Any(b => b.def == t.Def && b.TryGetComp<CompPowerTrader>()?.PowerOn == true));
                 Milestone("refrigeration", cold);
-                if (!Progression && cold && milestones.Contains("Freezer") && milestones.Contains("Quarto") && milestones.Contains("Cozinha") && milestones.Contains("Abate") && milestones.Contains("Estoque"))
+                if (!Progression && !Integrated && cold && milestones.Contains("Freezer") && milestones.Contains("Quarto") && milestones.Contains("Cozinha") && milestones.Contains("Abate") && milestones.Contains("Estoque"))
                 {
                     GameDataSaveLoader.SaveGame("ModularInitialComplete"); finished = true;
                     Find.TickManager.CurTimeSpeed = TimeSpeed.Paused;
                     Log.Message("[AutonomousRim.ModularTrial] PASS: initial rooms, floors, beds, kitchen, butcher, stockpile, freezer complete by native work.");
                 }
                 bool progressionComplete = Progression && ResearchCraftTrialObserver.Complete(map, ai);
-                if (Progression && cold && progressionComplete)
+                if (Progression && !Integrated && cold && progressionComplete)
                 {
                     GameDataSaveLoader.SaveGame("ModularSteelComplete"); finished = true;
                     Find.TickManager.CurTimeSpeed = TimeSpeed.Paused;
                     Log.Message("[AutonomousRim.ModularTrial] PASS: native research, organized workshop, upgraded storage, crafted steel helmet/plate/sword and equipped clothing; elapsed days=" + ((tick-startTick)/60000f));
                 }
-                if (tick - startTick > (Progression ? 1800000 : 180000) && !finished) throw new Exception("Initial core incomplete after three days; diagnose latency/materials before accepting.");
+                if(Integrated)
+                {
+                    bool nativeMeals=proofMeals();
+                    bool services=new[]{"Hospital","Pesquisa","Oficina"}.All(kind=>ai.BaseProjects.Any(p=>p.Kind==kind && p.Completed));
+                    Milestone("native-cooking",nativeMeals);Milestone("secondary-services",services);Milestone("prison-built",ai.Prison.Capacity>=3);
+                    if(tick-startTick>=20*GenDate.TicksPerDay && cold && progressionComplete && services && nativeMeals && ai.Prison.Capacity>=3)
+                    {
+                        GameDataSaveLoader.SaveGame("IntegratedTwentyDaysComplete");finished=true;Find.TickManager.CurTimeSpeed=TimeSpeed.Paused;
+                        Log.Message("[AutonomousRim.ModularTrial] PASS: integrated twenty days; five original colonists alive; native core/floors/refrigeration, research/crafting/equipment, cooking, hospital, workshop and usable prison. No resources granted after native start.");
+                    }
+                }
+                if (tick - startTick > (Progression || Integrated ? 1800000 : 180000) && !finished) throw new Exception("Native trial deadline reached without its required milestones; inspect checkpoint.");
             }
             catch (Exception e)
             {
@@ -158,5 +174,6 @@ namespace AutonomousRim.RuntimeChecks
                 Log.Error("[AutonomousRim.ModularTrial] FAIL: " + e);
             }
         }
+        private bool proofMeals()=>Crafted.Any(name=>DefDatabase<ThingDef>.GetNamedSilentFail(name)?.ingestible?.IsMeal==true);
     }
 }
