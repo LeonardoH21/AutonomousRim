@@ -1,14 +1,16 @@
-param([string]$RimWorldDir = 'C:\Users\Administrador\Downloads\RimWorld.v1.6.4633\RimWorld.v1.6.4633\game', [int]$TimeoutSeconds = 900, [switch]$EmergencyChecks, [switch]$WorkScheduleChecks, [ValidateRange(0,5)][int]$TrialCase=0, [switch]$Disadvantage)
+param([string]$RimWorldDir = 'C:\Users\Administrador\Downloads\RimWorld.v1.6.4633\RimWorld.v1.6.4633\game', [int]$TimeoutSeconds = 900, [switch]$EmergencyChecks, [switch]$WorkScheduleChecks, [ValidateRange(0,5)][int]$TrialCase=0, [switch]$Disadvantage, [switch]$MeleeRevision, [switch]$Synchronous)
 $ErrorActionPreference='Stop'
 $root=Split-Path $PSScriptRoot -Parent
 $game=(Resolve-Path -LiteralPath $RimWorldDir).Path
 if (Get-Process RimWorldWin64 -ErrorAction SilentlyContinue) { throw 'Close RimWorld before running combat fixtures.' }
 if(($TrialCase -gt 0 -and ($EmergencyChecks -or $WorkScheduleChecks)) -or ($EmergencyChecks -and $WorkScheduleChecks)) { throw 'Select one test mode.' }
 $profile=Join-Path $root $(if($TrialCase -gt 0){".tools\combat-five\case$TrialCase"}elseif($WorkScheduleChecks){'.tools\work-schedule-tests'}elseif($EmergencyChecks){'.tools\emergency-tests'}else{'.tools\combat-tests'})
+if($MeleeRevision){$profile=Join-Path $root ('.tools\melee-revision\'+[DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')+'-case'+$TrialCase)}
 New-Item -ItemType Directory -Force -Path "$profile\Config" | Out-Null
 [xml]$config='<ModsConfigData><version>1.6.4633</version><activeMods><li>brrainz.harmony</li><li>ludeon.rimworld</li><li>leonardoh21.autonomousrim</li><li>leonardoh21.autonomousrim.runtimechecks</li></activeMods><knownExpansions /></ModsConfigData>'
 $config.Save("$profile\Config\ModsConfig.xml")
 Set-Content -LiteralPath "$profile\Config\Prefs.xml" -Encoding utf8 -Value '<PrefsData><devMode>True</devMode><runInBackground>True</runInBackground><autosaveIntervalDays>100</autosaveIntervalDays><pauseOnLoad>False</pauseOnLoad><pauseOnError>False</pauseOnError><volumeMaster>0</volumeMaster></PrefsData>'
+if($MeleeRevision){Set-Content -LiteralPath "$profile\Config\Prefs.xml" -Encoding utf8 -Value '<PrefsData><devMode>False</devMode><runInBackground>True</runInBackground><autosaveIntervalDays>100</autosaveIntervalDays><pauseOnLoad>False</pauseOnLoad><pauseOnError>False</pauseOnError><volumeMaster>0</volumeMaster></PrefsData>'}
 $addon=Join-Path $game 'Mods\AutonomousRim.RuntimeChecks'
 if (Test-Path -LiteralPath $addon) { throw 'Test add-on exists; inspect before retrying.' }
 New-Item -ItemType Directory -Force -Path "$addon\About","$addon\Assemblies" | Out-Null
@@ -19,6 +21,7 @@ $p=$null
 try {
     $flag=if($WorkScheduleChecks){'-autonomousrimworkscheduletest'}elseif($EmergencyChecks){'-autonomousrimemergencytest'}else{'-autonomousrimcombattest'}
     if($TrialCase -gt 0) { $flag=@('-autonomousrimcombatfive',"-autonomousrimcase$TrialCase"); if($Disadvantage){$flag+='-autonomousrimdisadvantage'} }
+    if($MeleeRevision){$flag+='-autonomousrimmeleerevision';if($Synchronous){$flag+='-autonomousrimsynchronous'}}
     $arguments=@('-batchmode','-quicktest')+@($flag)+@("-savedatafolder=`"$profile`"",'-logFile',"`"$log`"")
     $p=Start-Process -FilePath "$game\RimWorldWin64.exe" -ArgumentList $arguments -WindowStyle Hidden -PassThru
     Write-Output "PID=$($p.Id) LOG=$log"

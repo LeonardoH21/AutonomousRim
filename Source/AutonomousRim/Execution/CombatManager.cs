@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using AutonomousRim.Perception;
+using AutonomousRim.Planning;
+using AutonomousRim.Core;
 using RimWorld;
 using Verse;
 using Verse.AI;
@@ -12,6 +14,8 @@ namespace AutonomousRim.Execution
     // draft/order; excluded pawns stay manual until this engagement ends.
     public static class CombatManager
     {
+        public static long AnalysisCalls;
+        public static double AnalysisMilliseconds;
         public const int Interval = 15;
         public static bool Ranged(Pawn p) => p.equipment?.Primary?.def.IsRangedWeapon == true;
         public static List<Pawn> Enemies(Map map) => map.mapPawns.AllPawnsSpawned
@@ -133,6 +137,24 @@ namespace AutonomousRim.Execution
             return room!=null && !room.PsychologicallyOutdoors && room.CellCount<120 &&
                 enemies.All(e=>e.Position.GetRoom(map)!=room);
         }
+        private static Pawn ContactEnemy(Pawn pawn,List<Pawn> enemies)=>enemies.Where(e=>e.Position.DistanceTo(pawn.Position)<1.6f &&
+            GenSight.LineOfSight(pawn.Position,e.Position,pawn.Map,true) && pawn.CanReach(e,PathEndMode.Touch,Danger.Deadly))
+            .OrderBy(e=>e.health.summaryHealth.SummaryHealthPercent).FirstOrDefault();
+        private static bool CanSupport(Map map,Pawn friend,Pawn melee,Pawn target,List<Pawn> allies)
+        {
+            if(friend==melee)return true;
+            if(!Ranged(friend))return friend.Position.DistanceTo(target.Position)<12 ||
+                friend.Position.DistanceTo(melee.Position)<8 && friend.CanReach(target,PathEndMode.Touch,Danger.Deadly);
+            var verb=friend.equipment.Primary.TryGetComp<CompEquippable>()?.PrimaryVerb;
+            if(verb==null)return false;
+            if(verb.CanHitTarget(target) && FriendlyLane(friend.Position,target.Position,friend,allies))return true;
+            // A repositioning shooter is support only if a nearby reachable firing
+            // cell exists. Do not cancel an approach for a transient blocked lane.
+            if(friend.Position.DistanceTo(melee.Position)>12)return false;
+            return GenRadial.RadialCellsAround(friend.Position,4,true).Any(c=>SafeCell(map,friend,c) &&
+                verb.CanHitTargetFrom(c,target) && FriendlyLane(c,target.Position,friend,allies) &&
+                friend.CanReach(c,PathEndMode.OnCell,Danger.Deadly));
+        }
         private static bool Issue(CombatOrder order, Job job, string role)
         {
             var p=order.Pawn;
@@ -147,8 +169,14 @@ namespace AutonomousRim.Execution
         }
         public static string Apply(Map map,List<CombatOrder> orders,List<Pawn> excluded,bool globalRetreat=false)
         {
+            var timer=System.Diagnostics.Stopwatch.StartNew();
+            try { return ApplyCore(map,orders,excluded,globalRetreat); }
+            finally { AnalysisCalls++; AnalysisMilliseconds+=timer.Elapsed.TotalMilliseconds; }
+        }
+        private static string ApplyCore(Map map,List<CombatOrder> orders,List<Pawn> excluded,bool globalRetreat)
+        {
             var enemies=Enemies(map);
-            if(enemies.Count==0) { Stop(orders); excluded.Clear(); return "Combate: sem ameaças; colonos da IA liberados para a rotina."; }
+            if(enemies.Count==0) { CombatTacticalPlanner.Clear(map); Stop(orders); excluded.Clear(); return "Combate: sem ameaças; colonos da IA liberados para a rotina."; }
             var colonists=map.mapPawns.FreeColonistsSpawned.ToList();
             foreach(var order in orders.ToList())
             {
@@ -165,20 +193,87 @@ namespace AutonomousRim.Execution
                 orders.Add(new CombatOrder { Pawn=p, Anchor=p.Position, LastOrderTick=-300, OriginalFireAtWill=fire });
             }
             var allies=orders.Select(o=>o.Pawn).Where(PawnAnalyzer.IsCombatReady).ToList();
+            var assessments=CombatTacticalPlanner.Analyze(map,allies,enemies);
+            var assignments=new Dictionary<int,int>();
             var occupied=new HashSet<IntVec3>();
             foreach(var order in orders.OrderByDescending(o=>Ranged(o.Pawn)))
             {
                 var p=order.Pawn;
                 if(!PawnAnalyzer.IsCombatReady(p)) continue;
                 var target=Target(p,colonists,enemies);
+                if(!Ranged(p))
+                {
+                    var ranked=assessments.Where(a=>a.PawnId==p.thingIDNumber).OrderByDescending(a=>a.Score+
+                        (assignments.Count(pair=>pair.Value==a.TargetId)==1?8:assignments.Count(pair=>pair.Value==a.TargetId)>1?-10:0)).ToList();
+                    var existing=p.CurJob?.targetA.Thing as Pawn;
+                    if(p.CurJob?.def==JobDefOf.AttackMelee && existing!=null && enemies.Contains(existing) &&
+                        p.CanReach(existing,PathEndMode.Touch,Danger.Deadly))target=existing;
+                    else if(order.MeleeTarget!=null && enemies.Contains(order.MeleeTarget) &&
+                        Find.TickManager.TicksGame-order.MeleeTargetTick<240 &&
+                        order.MeleeTarget.Position.DistanceTo(order.Anchor)<=32 &&
+                        p.CanReach(order.MeleeTarget,PathEndMode.Touch,Danger.Deadly))target=order.MeleeTarget;
+                    else target=ranked.Select(a=>enemies.FirstOrDefault(e=>e.thingIDNumber==a.TargetId &&
+                        p.CanReach(e,PathEndMode.Touch,Danger.Deadly))).FirstOrDefault(e=>e!=null)??target;
+                    assignments[p.thingIDNumber]=target.thingIDNumber;
+                }
                 bool danger=globalRetreat||Wounded(p)||Overwhelmed(p,allies,enemies);
+                if(!Ranged(p) && colonists.Any(a=>a!=p && a.equipment?.Primary!=null && !Ranged(a) &&
+                    a.Position.DistanceTo(p.Position)<24 && (!PawnAnalyzer.IsCombatReady(a) || Wounded(a) || orders.Any(o=>o.Pawn==a && o.Retreated))) &&
+                    enemies.Count(e=>e.Position.DistanceTo(p.Position)<14)>1 &&
+                    !orders.Any(o=>o.Pawn!=p && !Ranged(o.Pawn) && !o.Retreated && !Wounded(o.Pawn) && o.Pawn.Position.DistanceTo(p.Position)<8))
+                    danger=true; // Withdraw the pair together rather than leaving one interceptor surrounded.
                 if(danger && !order.Retreated) { order.Retreated=true; order.RetreatUntilTick=Find.TickManager.TicksGame+600; }
                 if(order.Retreated && !danger && Find.TickManager.TicksGame>order.RetreatUntilTick &&
                     Distance(p.Position,enemies)>10 && enemies.Count<=allies.Count &&
                     enemies.Sum(PawnAnalyzer.EstimateCombatValue)<allies.Sum(PawnAnalyzer.EstimateCombatValue)*1.2f)
                     order.Retreated=false;
+                var touching=ContactEnemy(p,enemies);
+                if(touching!=null && !Ranged(touching) && touching.GetStatValue(StatDefOf.MoveSpeed)>=p.GetStatValue(StatDefOf.MoveSpeed)*0.95f &&
+                    !orders.Any(o=>o.Pawn!=p && !o.Retreated && !Ranged(o.Pawn) && !Wounded(o.Pawn) &&
+                        o.Pawn.Position.DistanceTo(touching.Position)<1.6f))
+                {
+                    // A slower pawn cannot kite an attacker already in contact.
+                    // Keep attacking instead of repeatedly turning its back to run.
+                    Issue(order,JobMaker.MakeJob(JobDefOf.AttackMelee,touching),"Melee: defender contato sem velocidade para escapar");
+                    occupied.Add(p.Position); continue;
+                }
+                if(!order.Retreated && !Ranged(p))
+                {
+                    var support=orders.Where(o=>!o.Retreated && !Wounded(o.Pawn) && PawnAnalyzer.IsCombatReady(o.Pawn) &&
+                        CanSupport(map,o.Pawn,p,target,colonists))
+                        .Select(o=>o.Pawn).ToList();
+                    var localEnemies=enemies.Where(e=>e.Position.DistanceTo(target.Position)<14).ToList();
+                    var liveAssessment=TacticalPolicy.Assess(support.Select(CombatEquipmentScanner.Copy).ToArray(),localEnemies.Select(CombatEquipmentScanner.Copy).ToArray());
+                    float advantage=liveAssessment.FirstOrDefault(a=>a.PawnId==p.thingIDNumber && a.TargetId==target.thingIDNumber)?.Advantage??0;
+                    if(p.CurJob?.def==JobDefOf.Goto && p.CurJob.GetUniqueLoadID()==order.JobId &&
+                        order.Role?.StartsWith("Melee:")==true && Find.TickManager.TicksGame-order.LastOrderTick<150 &&
+                        p.CurJob.targetA.Cell.DistanceTo(target.Position)<5 && advantage>=0.85f &&
+                        !occupied.Contains(p.CurJob.targetA.Cell) && !p.CurJob.targetA.Cell.GetThingList(map).Any(t=>t is Fire))
+                    { occupied.Add(p.CurJob.targetA.Cell); continue; }
+                    var meleePlan=MeleeTactics.PlanAttack(map,p,target,support,enemies,order.Anchor,occupied,assignments,advantage);
+                    if(meleePlan!=null)
+                    {
+                        if(order.MeleeTarget!=target){order.MeleeTarget=target;order.MeleeTargetTick=Find.TickManager.TicksGame;}
+                        // Keep native warmups and attacks intact. Reissue only on a changed target/approach.
+                        if(p.CurJob?.def==JobDefOf.AttackMelee && p.CurJob.targetA.Thing==target &&
+                            (p.stances.FullBodyBusy || p.Position.DistanceTo(target.Position)<3))
+                            order.Role=meleePlan.Role;
+                        else if(meleePlan.Strike)
+                            Issue(order,JobMaker.MakeJob(JobDefOf.AttackMelee,target),meleePlan.Role);
+                        else Issue(order,JobMaker.MakeJob(JobDefOf.Goto,meleePlan.Approach),meleePlan.Role);
+                        occupied.Add(meleePlan.Approach); continue;
+                    }
+                    if(order.Role?.StartsWith("Melee:")==true && p.CurJob?.GetUniqueLoadID()==order.JobId &&
+                        (p.CurJob.def==JobDefOf.Goto || p.CurJob.def==JobDefOf.AttackMelee && p.Position.DistanceTo(target.Position)>=3.5f))
+                        Issue(order,JobMaker.MakeJob(JobDefOf.Wait_Combat),"Melee: avanço suspenso por falta de apoio");
+                }
                 // Recovery requires a cooldown, spacing and a favorable force ratio.
                 bool retreat=order.Retreated;
+                if(retreat && p.CurJob?.def==JobDefOf.Goto && p.CurJob.GetUniqueLoadID()==order.JobId &&
+                    Find.TickManager.TicksGame-order.LastOrderTick<90 && !occupied.Contains(p.CurJob.targetA.Cell) &&
+                    (Distance(p.CurJob.targetA.Cell,enemies)>Distance(p.Position,enemies)+1 || Shelter(map,p.CurJob.targetA.Cell,enemies)) &&
+                    !p.CurJob.targetA.Cell.GetThingList(map).Any(t=>t is Fire))
+                { occupied.Add(p.CurJob.targetA.Cell); continue; }
                 bool pressure=enemies.Any(e=>!Ranged(e) && e.Position.DistanceTo(p.Position)<5 &&
                     !orders.Any(o=>!o.Retreated && !Ranged(o.Pawn) && !o.Pawn.Downed && o.Pawn.Position.DistanceTo(e.Position)<2.5f));
                 if(!retreat && !pressure && p.stances.FullBodyBusy &&
@@ -198,9 +293,11 @@ namespace AutonomousRim.Execution
                         Issue(order,JobMaker.MakeJob(JobDefOf.AttackStatic,target),"Recuo: fogo de cobertura");
                     else if(position!=p.Position && (Distance(position,enemies)>Distance(p.Position,enemies)+1 || Shelter(map,position,enemies)) && !occupied.Contains(position))
                         Issue(order,JobMaker.MakeJob(JobDefOf.Goto,position),"Recuo protegido");
+                    else if(ContactEnemy(p,enemies) is Pawn contact)
+                        Issue(order,JobMaker.MakeJob(JobDefOf.AttackMelee,contact),"Recuo: defender contato sem rota segura");
                     else Issue(order,JobMaker.MakeJob(JobDefOf.Wait_Combat),"Recuo: manter abrigo");
                 }
-                else if(!Ranged(p) && target.Position.DistanceTo(p.Position)<3.5f && target.Position.DistanceTo(order.Anchor)<6 &&
+                else if(!Ranged(p) && target.Position.DistanceTo(p.Position)<1.6f &&
                     (!Ranged(target) || target.Position.DistanceTo(p.Position)<1.6f) &&
                     (target.Position.DistanceTo(p.Position)<1.6f || allies.Any(a=>Ranged(a) && a.equipment.Primary.TryGetComp<CompEquippable>().PrimaryVerb.CanHitTarget(target))) &&
                     allies.Count(a=>Ranged(a)?a.equipment.Primary.TryGetComp<CompEquippable>().PrimaryVerb.CanHitTarget(target):a.Position.DistanceTo(target.Position)<8)>=
@@ -217,6 +314,8 @@ namespace AutonomousRim.Execution
                 }
                 else if(position!=p.Position && !occupied.Contains(position))
                     Issue(order,JobMaker.MakeJob(JobDefOf.Goto,position),Ranged(p)?"Reposicionar atirador":"Guardar passagem / proteger atirador");
+                else if(ContactEnemy(p,enemies) is Pawn contact)
+                    Issue(order,JobMaker.MakeJob(JobDefOf.AttackMelee,contact),"Melee: defender aliado em contato");
                 else Issue(order,JobMaker.MakeJob(JobDefOf.Wait_Combat),"Manter posição defensiva");
                 occupied.Add(position);
             }

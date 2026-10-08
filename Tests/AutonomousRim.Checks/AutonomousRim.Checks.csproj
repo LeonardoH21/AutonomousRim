@@ -7,5 +7,7 @@
     <Compile Include="../../Source/AutonomousRim/Core/CombatMath.cs" Link="CombatMath.cs" />
     <Compile Include="../../Source/AutonomousRim/Core/ColonyPolicy.cs" Link="ColonyPolicy.cs" />
     <Compile Include="../../Source/AutonomousRim/Core/EquipmentPolicy.cs" Link="EquipmentPolicy.cs" />
+    <Compile Include="../../Source/AutonomousRim/Core/TacticalPolicy.cs" Link="TacticalPolicy.cs" />
+    <Compile Include="../../Source/AutonomousRim/Core/AnalysisWorker.cs" Link="AnalysisWorker.cs" />
   </ItemGroup>
 </Project>

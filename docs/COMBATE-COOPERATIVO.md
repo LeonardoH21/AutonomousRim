@@ -1,6 +1,6 @@
 # Combate cooperativo
 
-Ative **Rim AI → Combate cooperativo: LIGADO**. A [emergência automática](EMERGENCIA-COLONIA.md) começa ligada e também aciona este controlador quando há perigo imediato. Desligar combate desliga essa resposta automática para preservar a escolha do jogador. A avaliação ocorre a cada 60 ticks; o botão também avalia imediatamente. O painel mostra as funções atuais e a quantidade de colonos controlados, em retirada e sob controle manual.
+Ative **Rim AI → Combate cooperativo: LIGADO**. A [emergência automática](EMERGENCIA-COLONIA.md) começa ligada e também aciona este controlador quando há perigo imediato. Desligar combate desliga essa resposta automática para preservar a escolha do jogador. O controlador de combate avalia a cada 15 ticks; o botão também avalia imediatamente. O painel mostra as funções atuais e a quantidade de colonos controlados, em retirada e sob controle manual. A [revisão de melee de 08/10/2026](REVISAO-COMBATE-MELEE.md) descreve a aproximação coordenada e os resultados mais recentes.
 
 ## Decisões
 

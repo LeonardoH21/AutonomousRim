@@ -5,6 +5,8 @@ using System.IO;
 using System.Linq;
 using AutonomousRim.Core;
 using AutonomousRim.Execution;
+using AutonomousRim.Planning;
+using AutonomousRim.Perception;
 using RimWorld;
 using RimWorld.Planet;
 using Verse;
@@ -17,12 +19,15 @@ namespace AutonomousRim.RuntimeChecks
     public sealed class FiveCombatTrials : MapComponent
     {
         private readonly List<Pawn> allies=new List<Pawn>(), enemies=new List<Pawn>();
+        private readonly HashSet<int> initialMelee=new HashSet<int>();
         private bool started, finished, hard;
         private int number, start, seed, cover, melee, retreat;
         private IntVec3 center;
         private Building_Door door;
         private string layout, weapons, roster;
         private Random random;
+        private bool Revision=>GenCommandLine.CommandLineArgPassed("autonomousrimmeleerevision");
+        private int flankSamples,approachSamples,idleSamples,firstMeleeTick=-1;
         public FiveCombatTrials(Map map):base(map){}
         public override void MapComponentUpdate()
         {
@@ -46,13 +51,16 @@ namespace AutonomousRim.RuntimeChecks
             {
                 pawn=PawnGenerator.GeneratePawn(new PawnGenerationRequest(DefDatabase<PawnKindDef>.GetNamed(kind),faction,forceGenerateNewPawn:true,canGeneratePawnRelations:false));
                 if(pawn.story!=null)foreach(var trait in pawn.story.traits.allTraits.ToList())pawn.story.traits.RemoveTrait(trait);
-            } while(pawn.Downed || pawn.health.summaryHealth.SummaryHealthPercent<0.99f ||
+            } while(pawn.Downed || pawn.health.summaryHealth.SummaryHealthPercent<0.99f || Revision && pawn.health.hediffSet.hediffs.Count>0 ||
                 pawn.health.hediffSet.PainTotal>0 || pawn.WorkTagIsDisabled(WorkTags.Violent) ||
+                Revision && friendly && pawn.skills.skills.Any(s=>s.TotallyDisabled) ||
                 !pawn.health.capacities.CapableOf(PawnCapacityDefOf.Moving) || !pawn.health.capacities.CapableOf(PawnCapacityDefOf.Manipulation) && pawn.RaceProps.Humanlike);
             if(pawn.skills!=null)
             {
+                if(Revision && friendly)foreach(var skill in pawn.skills.skills){skill.Level=20;skill.xpSinceLastLevel=0;}
                 pawn.skills.GetSkill(SkillDefOf.Shooting).Level=friendly?10:random.Next(6,13);
                 pawn.skills.GetSkill(SkillDefOf.Melee).Level=friendly?10:random.Next(6,13);
+                if(Revision && friendly){pawn.skills.GetSkill(SkillDefOf.Shooting).Level=20;pawn.skills.GetSkill(SkillDefOf.Melee).Level=20;}
             }
             if(weapon!=null)
             {
@@ -63,10 +71,18 @@ namespace AutonomousRim.RuntimeChecks
             {
                 foreach(var old in pawn.apparel.WornApparel.ToList())pawn.apparel.Remove(old);
                 pawn.apparel.Wear((Apparel)Item("Apparel_Pants")); pawn.apparel.Wear((Apparel)Item("Apparel_BasicShirt"));
-                if(friendly || random.NextDouble()<0.35)pawn.apparel.Wear((Apparel)Item("Apparel_FlakVest"));
+                if(friendly || random.NextDouble()<0.35)pawn.apparel.Wear((Apparel)Item(Revision && friendly && weapon?.StartsWith("MeleeWeapon_")==true?"Apparel_PlateArmor":"Apparel_FlakVest"));
                 if(friendly || random.NextDouble()<0.25)pawn.apparel.Wear((Apparel)Item("Apparel_SimpleHelmet"));
             }
-            GenSpawn.Spawn(pawn,cell,map); return pawn;
+            GenSpawn.Spawn(pawn,cell,map);
+            if(Revision && friendly)
+            {
+                if(pawn.needs.food!=null)pawn.needs.food.CurLevelPercentage=1;
+                if(pawn.needs.rest!=null)pawn.needs.rest.CurLevelPercentage=1;
+                if(pawn.needs.joy!=null)pawn.needs.joy.CurLevelPercentage=1;
+                if(pawn.needs.mood!=null)pawn.needs.mood.CurLevelPercentage=1;
+            }
+            return pawn;
         }
         private void Build(string name,int x,int z)
         {
@@ -84,6 +100,12 @@ namespace AutonomousRim.RuntimeChecks
             Check(number>0,"Select a case from 1 to 5.");
             hard=GenCommandLine.CommandLineArgPassed("autonomousrimdisadvantage"); seed=20261007+number*101+(hard?10000:0); random=new Random(seed);
             var ai=map.GetComponent<AutonomousRimMapComponent>(); ai.DisableAll(); center=map.Center;
+            if(Revision)
+            {
+                var preset=DefDatabase<DifficultyDef>.GetNamed("Peaceful");Find.Storyteller.difficultyDef=preset;Find.Storyteller.difficulty.CopyFrom(preset);
+                CombatTacticalPlanner.ParallelEnabled=!GenCommandLine.CommandLineArgPassed("autonomousrimsynchronous");
+                CombatTacticalPlanner.MinimumPairs=1;
+            }
             foreach(var pawn in map.mapPawns.AllPawnsSpawned.ToList()) { pawn.DeSpawn(); Find.WorldPawns.PassToWorld(pawn,PawnDiscardDecideMode.KeepForever); }
             foreach(var thing in map.listerThings.AllThings.Where(t=>t is Hive || !(t is Pawn) && t is Verse.AI.IAttackTarget && t.HostileTo(Faction.OfPlayer)).ToList())thing.Destroy(DestroyMode.Vanish);
             foreach(var c in new CellRect(center.x-50,center.z-40,101,81).Cells)
@@ -91,6 +113,8 @@ namespace AutonomousRim.RuntimeChecks
                 foreach(var thing in c.GetThingList(map).ToList())thing.Destroy(DestroyMode.Vanish);
                 map.terrainGrid.SetTerrain(c,TerrainDefOf.Soil); map.roofGrid.SetRoof(c,null); map.fogGrid.Unfog(c);
             }
+            foreach(var pawn in map.mapPawns.AllPawnsSpawned.ToList())
+            { pawn.DeSpawn();Find.WorldPawns.PassToWorld(pawn,PawnDiscardDecideMode.KeepForever); }
             // Available fallback, never invulnerable: native enemies may smash it.
             for(int x=-29;x<=-20;x++)for(int z=-6;z<=6;z++)
             {
@@ -103,7 +127,8 @@ namespace AutonomousRim.RuntimeChecks
             allies.Add(Spawn("Colonist",Faction.OfPlayer,center+new IntVec3(-13,0,3),gun2,true));
             allies.Add(Spawn("Colonist",Faction.OfPlayer,center+new IntVec3(-10,0,-1),"MeleeWeapon_LongSword",true));
             allies.Add(Spawn("Colonist",Faction.OfPlayer,center+new IntVec3(-10,0,1),"MeleeWeapon_Mace",true));
-            Check(allies.Count(CombatManager.Ranged)==2 && allies.All(p=>p.apparel.WornApparel.Any(a=>a.def.defName=="Apparel_FlakVest") &&
+            foreach(var pawn in allies.Where(p=>!CombatManager.Ranged(p)))initialMelee.Add(pawn.thingIDNumber);
+            Check(allies.Count(CombatManager.Ranged)==2 && allies.All(p=>p.apparel.WornApparel.Any(a=>a.def.defName=="Apparel_FlakVest" || Revision && a.def.defName=="Apparel_PlateArmor") &&
                 p.apparel.WornApparel.Any(a=>a.def.defName=="Apparel_SimpleHelmet")),"Expected two ranged, two melee, four vests and four helmets.");
             if(number==1)
             {
@@ -127,19 +152,38 @@ namespace AutonomousRim.RuntimeChecks
                 layout=hard?"desvantagem: superioridade mechanoid":"vantagem numerica: quatro contra dois mechs";
                 for(int z=-6;z<=6;z++)if(z!=0)Build("Sandbags",-12,z);
             }
-            int count=(hard?new[]{3,4,6,6,5}:new[]{3,4,4,4,2})[number-1];
+            int count=Revision?(number==3?8:4):(hard?new[]{3,4,6,6,5}:new[]{3,4,4,4,2})[number-1];
             for(int i=0;i<count;i++)
             {
                 var cell=center+new IntVec3(13+i%2,0,(i-count/2)*3);
                 if(hard && number==3 && i>=count/2)cell=center+new IntVec3(-7+(i-count/2)*3,0,19);
                 string kind=number==4?Pick("Wolf_Timber","WildBoar","Warg"):number==5?Pick("Mech_Scyther","Mech_Lancer"):"Colonist";
                 string weapon=number<4?Pick("Gun_Revolver","Gun_Autopistol","Gun_BoltActionRifle","MeleeWeapon_Knife","MeleeWeapon_Mace"):null;
+                if(Revision)
+                {
+                    kind="Colonist";
+                    weapon=number==1?"Gun_Revolver":number==2?"Bow_Short":number==3?"Gun_AssaultRifle":number==4?"MeleeWeapon_Knife":i<2?"Gun_Revolver":"MeleeWeapon_Mace";
+                    // Short approach isolates cooperation rather than a prolonged firing-line crossing.
+                    if(number==2 || number==5)cell=center+new IntVec3(-2+i%2,0,(i-count/2)*3);
+                    if(number==4)cell=center+new IntVec3(4+i%2,0,(i-count/2)*3);
+                }
                 var enemy=Spawn(kind,number==4?null:Faction.OfAncientsHostile,cell,weapon,false); enemies.Add(enemy);
-                if(number==4)Check(enemy.mindState.mentalStateHandler.TryStartMentalState(MentalStateDefOf.ManhunterPermanent),"Manhunter setup failed.");
+                if(Revision && number==4)enemy.SetFaction(Faction.OfAncientsHostile);
+                if(number==4 && !Revision)Check(enemy.mindState.mentalStateHandler.TryStartMentalState(MentalStateDefOf.ManhunterPermanent),"Manhunter setup failed.");
             }
-            if(number!=4)LordMaker.MakeNewLord(Faction.OfAncientsHostile,new LordJob_AssaultColony(Faction.OfAncientsHostile,false,false,false,false,false),map,enemies);
+            if(number!=4 || Revision)LordMaker.MakeNewLord(Faction.OfAncientsHostile,new LordJob_AssaultColony(Faction.OfAncientsHostile,false,false,false,false,false),map,enemies);
+            Check(!CombatManager.Enemies(map).Except(enemies).Any(),"Unrelated hostile pawn contaminates the fixture.");
+            if(Revision)
+            {
+                layout=new[]{"portas e paredes: atiradores inimigos","cooperação melee contra arqueiros","retirada contra oito rifles","interceptação e proteção dos ranged","combate misto e flanqueamento"}[number-1];
+                foreach(var p in allies)Log.Message("[FiveCombatTrials] SETUP CHECK "+p.LabelShort+" skills="+string.Join(",",p.skills.skills.Select(s=>s.def.defName+":"+s.Level))+" traits="+p.story.traits.allTraits.Count+" hediffs="+string.Join(",",p.health.hediffSet.hediffs.Select(h=>h.def.defName)));
+                Check(allies.All(p=>p.skills.skills.All(s=>s.Level==20) && p.story.traits.allTraits.Count==0 && p.health.hediffSet.hediffs.Count==0),"Level-20 healthy trait-free starting colonists required.");
+                Log.Message("[FiveCombatTrials] MELEE REVISION: Peaceful; all colonist skills 20; no initial hediffs or traits; parallel="+CombatTacticalPlanner.ParallelEnabled);
+                foreach(var p in allies.Concat(enemies)){var value=CombatEquipmentScanner.Copy(p);Log.Message("[FiveCombatTrials] EQUIPMENT "+p.LabelShort+" power="+value.Power+" armorSharp="+value.Sharp+" armorBlunt="+value.Blunt+" penetration="+value.Penetration);}
+            }
             weapons=string.Join(" | ",allies.Select(Manifest)); roster=string.Join(" | ",enemies.Select(Manifest));
-            Log.Message($"[FiveCombatTrials] START case={number}; seed={seed}; hard={hard}; {layout}; 2 melee+2 ranged; all vests/helmets; third speed selected; no healing during battle");
+            Log.Message($"[FiveCombatTrials] START case={number}; seed={seed}; hard={hard}; {layout}; 2 melee+2 ranged; armor="+
+                (Revision?"2 steel plates, 2 flak vests, 4 helmets":"4 flak vests, 4 helmets")+"; third speed selected; no healing during battle");
             Log.Message("[FiveCombatTrials] ALLIES "+weapons); Log.Message("[FiveCombatTrials] ENEMIES "+roster);
             start=Find.TickManager.TicksGame; started=true; ai.SetEmergencyAutomation(true);
         }
@@ -148,7 +192,7 @@ namespace AutonomousRim.RuntimeChecks
         {
             var ai=map.GetComponent<AutonomousRimMapComponent>(); ai.DisableAll();
             GameDataSaveLoader.SaveGame("AutonomousRim-Combate-Misto-"+number);
-            string row=$"case={number}; seed={seed}; outcome={outcome}; ticks={ticks}; enemies={enemies.Count}; remaining={enemies.Count(p=>!p.Dead&&!p.Downed&&p.Spawned)}; deaths={allies.Count(p=>p.Dead)}; downed={allies.Count(p=>!p.Dead&&p.Downed)}; injured={allies.Count(p=>p.health.hediffSet.hediffs.Any(h=>h is Hediff_Injury && h.Severity>0))}; neutralized={neutralized}; sheltered={escaped}; alliedShots={Record(allies,"ShotsFired")}; enemyShots={Record(enemies,"ShotsFired")}; alliedDamage={Record(allies,"DamageDealt").ToString(CultureInfo.InvariantCulture)}; coverSamples={cover}; interceptSamples={melee}; retreatSamples={retreat}";
+            string row=$"case={number}; seed={seed}; outcome={outcome}; ticks={ticks}; enemies={enemies.Count}; remaining={enemies.Count(p=>!p.Dead&&!p.Downed&&p.Spawned)}; deaths={allies.Count(p=>p.Dead)}; downed={allies.Count(p=>!p.Dead&&p.Downed)}; injured={allies.Count(p=>p.health.hediffSet.hediffs.Any(h=>h is Hediff_Injury && h.Severity>0))}; neutralized={neutralized}; sheltered={escaped}; alliedShots={Record(allies,"ShotsFired")}; enemyShots={Record(enemies,"ShotsFired")}; alliedDamage={Record(allies,"DamageDealt").ToString(CultureInfo.InvariantCulture)}; coverSamples={cover}; interceptSamples={melee}; retreatSamples={retreat}; flankSamples={flankSamples}; approachSamples={approachSamples}; idleMeleeSamples={idleSamples}; firstMeleeTick={firstMeleeTick}; meleeDamage={Record(allies.Where(p=>initialMelee.Contains(p.thingIDNumber)),"DamageDealt")}; workerJobs={AnalysisWorker.Completed}; workerMs={AnalysisWorker.Milliseconds:F2}; combatCalls={CombatManager.AnalysisCalls}; combatMs={CombatManager.AnalysisMilliseconds:F2}";
             Log.Message("[FiveCombatTrials] RESULT "+row);
             File.WriteAllText(Path.Combine(GenFilePaths.SaveDataFolderPath,"result.txt"),row+Environment.NewLine+layout+Environment.NewLine+"ALLIES "+weapons+Environment.NewLine+"ENEMIES "+roster);
             foreach(var pawn in allies)Log.Message($"[FiveCombatTrials] COLONIST {pawn.LabelShort}: dead={pawn.Dead}; downed={pawn.Downed}; health={pawn.health.summaryHealth.SummaryHealthPercent}; bleed={pawn.health.hediffSet.BleedRateTotal}; position={pawn.Position}");
@@ -164,10 +208,15 @@ namespace AutonomousRim.RuntimeChecks
                 var ai=map.GetComponent<AutonomousRimMapComponent>();
                 if(ticks%60==0)
                 {
+                    Check(!CombatManager.Enemies(map).Except(enemies).Any(),"Unrelated hostile pawn appeared during the fixture.");
                     foreach(var order in ai.CombatOrders)
                     {
                         if(order.Retreated)retreat++;
-                        if(order.Role=="Interceptar / ajudar aliado")melee++;
+                        if(order.Role=="Interceptar / ajudar aliado" || order.Role?.StartsWith("Melee:")==true)melee++;
+                        if(order.Role=="Melee: flanco coordenado")flankSamples++;
+                        if(!CombatManager.Ranged(order.Pawn) && order.Pawn.CurJob?.def==JobDefOf.Goto)approachSamples++;
+                        if(!order.Retreated && !CombatManager.Ranged(order.Pawn) && order.Pawn.CurJob?.def==JobDefOf.Wait_Combat)idleSamples++;
+                        if(!CombatManager.Ranged(order.Pawn) && order.Pawn.CurJob?.def==JobDefOf.AttackMelee && firstMeleeTick<0)firstMeleeTick=ticks;
                         if(CombatManager.Ranged(order.Pawn) && enemies.Any(e=>e.Spawned && !e.Dead && CoverUtility.CalculateOverallBlockChance(order.Pawn.Position,e.Position,map)>0.1f))cover++;
                     }
                     if(ticks%600==0)Log.Message($"[FiveCombatTrials] PROGRESS case={number}; ticks={ticks}; deaths={allies.Count(p=>p.Dead)}; downed={allies.Count(p=>p.Downed)}; threats={enemies.Count(p=>!p.Dead&&!p.Downed)}; shots={Record(allies,"ShotsFired")}/{Record(enemies,"ShotsFired")}; emergency={ai.Emergency.Phase}; jobs="+string.Join(" | ",allies.Select(p=>p.LabelShort+":"+p.Position+"/"+p.CurJob?.def.defName)));

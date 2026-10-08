@@ -1,5 +1,7 @@
 # Cinco combates com quatro colonos — 06/10/2026
 
+Este relatório histórico foi preservado. A revisão posterior de melee e seus novos testes estão em [Revisão do combate melee — 08/10/2026](REVISAO-COMBATE-MELEE.md).
+
 Foram executados cinco encontros independentes no RimWorld 1.6.4633, com Core, Harmony, AutonomousRim e complemento temporário de teste. O usuário confirmou incluir desvantagem. A versão de combate/emergência permaneceu a mesma: commit `bbe99f4`, DLL SHA-256 `BE0FE25A0CBACC2EF44911B20D0731A46E8911E81DD1B7083AF8D7FDF9AD2DE1`.
 
 **Os resultados não foram satisfatórios: nenhum encontro terminou em vitória ou retirada segura dos quatro combatentes.** A suíte concluiu os cinco cenários sem exceções de execução; isso não significa aprovação do comportamento de combate. Não foram repetidos encontros para substituir resultados ruins.

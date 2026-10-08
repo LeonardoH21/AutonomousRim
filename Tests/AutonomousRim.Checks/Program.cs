@@ -1,5 +1,7 @@
 using System;
 using AutonomousRim.Core;
+using System.Linq;
+using System.Threading;
 
 internal static class Program
 {
@@ -48,6 +50,27 @@ internal static class Program
         Equal(6f, EquipmentPolicy.EffectiveBurstDps(24f, 2f, 1f, 2f, 0f), "Pawn aiming time is part of the attack cycle");
         Equal(8f, EquipmentPolicy.EffectiveBurstDps(24f, 2f, 0.5f, 2f, 0f), "Faster aiming increases effective burst damage rate");
         Equal(0f, EquipmentPolicy.EffectiveBurstDps(24f, 0f, 1f, 0f, 0f), "Zero-duration firing remains invalid");
+        Equal(true,TacticalPolicy.DamageFraction(1f,0.1f)<TacticalPolicy.DamageFraction(0.1f,0.1f),"Armor reduces weak weapon exposure");
+        Equal(true,TacticalPolicy.DamageFraction(1f,0.9f)>TacticalPolicy.DamageFraction(1f,0.1f),"Penetration defeats an armor advantage");
+        Equal(true,TacticalPolicy.DamageFraction(4f,0)>0,"Armor never implies immunity");
+        Equal(true,TacticalPolicy.CanPress(1,1.3f,2,2,16,15,false),"Healthy equal-number advantage permits closing on a shooter");
+        Equal(false,TacticalPolicy.CanPress(0.5f,2,2,2,8,5,false),"Injured melee is not sent into a charge");
+        Equal(false,TacticalPolicy.CanPress(1,2,2,6,8,5,false),"Equipment does not justify severe numerical disadvantage");
+        Equal(false,TacticalPolicy.CanPress(1,2,2,2,12,100,false),"Exposed approach is rejected");
+        Equal(false,TacticalPolicy.CanPress(1,2,2,2,23,30,false),"Long crossing under fire is rejected even with equipment advantage");
+        Equal(false,TacticalPolicy.CanPress(1,2,2,2,12,5,true),"Unknown special attack prevents optimistic charge");
+        var friendly=new[]{new FighterSnapshot(1,0,0,0,false,false,1,60,12,.3f,1,.5f,1.5f,4),new FighterSnapshot(2,1,0,0,false,false,1,60,12,.3f,1,.5f,1.5f,4)};
+        var foes=new[]{new FighterSnapshot(3,12,0,2,true,false,1,40,5,.1f,0,0,24,4),new FighterSnapshot(4,8,0,0,false,false,1,30,8,.2f,0,0,1.5f,4)};
+        var expected=TacticalPolicy.Assess(friendly,foes);
+        Equal(3,expected.Where(a=>a.PawnId==1).OrderByDescending(a=>a.Score).First().TargetId,"Melee prioritizes helping its partner under fire");
+        TargetAssessment[] computed=null; int thread=0;
+        using(var done=new ManualResetEventSlim(false))
+        {
+            Equal(true,AnalysisWorker.Submit(()=>{computed=TacticalPolicy.Assess(friendly,foes);thread=Thread.CurrentThread.ManagedThreadId;done.Set();}),"Worker accepts value-only analysis");
+            Equal(true,done.Wait(5000),"Parallel analysis completes");
+        }
+        Equal(false,thread==Thread.CurrentThread.ManagedThreadId,"Calculation uses a separate CPU thread");
+        Equal(true,expected.Select(a=>a.Score).SequenceEqual(computed.Select(a=>a.Score)),"Parallel and synchronous decisions match");
         Console.WriteLine($"Passed {checks} combat and colony policy checks.");
     }
 }

@@ -52,19 +52,10 @@ namespace AutonomousRim.Perception
                 return 0f;
             }
 
-            float shooting = pawn.skills?.GetSkill(SkillDefOf.Shooting)?.Level ?? 0;
-            float melee = pawn.skills?.GetSkill(SkillDefOf.Melee)?.Level ?? 0;
-            float healthFactor = pawn.health?.summaryHealth?.SummaryHealthPercent ?? 0f;
-            float consciousness = pawn.health?.capacities?.GetLevel(PawnCapacityDefOf.Consciousness) ?? 0f;
-            float movement = pawn.health?.capacities?.GetLevel(PawnCapacityDefOf.Moving) ?? 0f;
-
-            bool ranged = pawn.equipment?.Primary?.def.IsRangedWeapon ?? false;
-            float skillScore = ranged ? shooting : melee;
-            float capabilityScore = ((healthFactor + consciousness + movement) / 3f) * 20f;
-
-            var equipment = EquipmentAnalyzer.Analyze(pawn.equipment?.Primary);
-            float equipmentValue = EquipmentAnalyzer.Suitability(pawn, equipment);
-            return (skillScore + capabilityScore + equipmentValue) * healthFactor;
+            var value=CombatEquipmentScanner.Copy(pawn);
+            float capacities=(pawn.health.capacities.GetLevel(PawnCapacityDefOf.Consciousness)+
+                pawn.health.capacities.GetLevel(PawnCapacityDefOf.Moving)+pawn.health.capacities.GetLevel(PawnCapacityDefOf.Manipulation))/3;
+            return value.Power*System.Math.Min(1,capacities);
         }
     }
 }

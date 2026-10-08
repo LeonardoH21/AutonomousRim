@@ -73,6 +73,8 @@ namespace AutonomousRim.RuntimeChecks
             fixture.Clear(); allies.Clear(); enemies.Clear(); coverSamples=retreatSamples=meleeSamples=0;
             if(scenario==0)
             {
+                var peaceful=DefDatabase<DifficultyDef>.GetNamed("Peaceful");
+                Find.Storyteller.difficultyDef=peaceful;Find.Storyteller.difficulty.CopyFrom(peaceful);
                 center=map.Center;
                 foreach(var p in map.mapPawns.AllPawnsSpawned.ToList()) { p.DeSpawn(); Find.WorldPawns.PassToWorld(p,PawnDiscardDecideMode.KeepForever); }
                 var area=new CellRect(center.x-40,center.z-25,81,51);
@@ -81,6 +83,11 @@ namespace AutonomousRim.RuntimeChecks
                     foreach(var thing in cell.GetThingList(map).ToList()) thing.Destroy(DestroyMode.Vanish);
                     map.terrainGrid.SetTerrain(cell,TerrainDefOf.Soil); map.roofGrid.SetRoof(cell,null); map.fogGrid.Unfog(cell);
                 }
+                // Clearing an ancient ruin can wake new mechs from its contents.
+                // Remove those before the explicit participants are created.
+                foreach(var thing in map.listerThings.AllThings.Where(t=>t is Hive || !(t is Pawn) && t is Verse.AI.IAttackTarget && t.HostileTo(Faction.OfPlayer)).ToList())thing.Destroy(DestroyMode.Vanish);
+                foreach(var pawn in map.mapPawns.AllPawnsSpawned.ToList())
+                { pawn.DeSpawn();Find.WorldPawns.PassToWorld(pawn,PawnDiscardDecideMode.KeepForever); }
             }
             scenario++; start=Find.TickManager.TicksGame;
             allies.Add(Spawn(false,center+new IntVec3(scenario==1?-7:-8,0,scenario==1?0:-2),"Gun_AssaultRifle"));
@@ -117,10 +124,11 @@ namespace AutonomousRim.RuntimeChecks
             int count=scenario==1?1:scenario==2?2:9;
             for(int i=0;i<count;i++) enemies.Add(Spawn(true,center+new IntVec3(scenario==1?-2:12+i%3,0,scenario==1?0:(i/3)*2-2),scenario==2?"Gun_Revolver":"MeleeWeapon_Knife"));
             LordMaker.MakeNewLord(Faction.OfAncientsHostile,new LordJob_AssaultColony(Faction.OfAncientsHostile,false,false,false,false,false),map,enemies);
+            Check(!CombatManager.Enemies(map).Except(enemies).Any(),"Unrelated hostile pawn contaminates the fixture.");
             if(scenario==3) allies[0].TakeDamage(new DamageInfo(DamageDefOf.Cut,18,0,-1,enemies[0],allies[0].health.hediffSet.GetNotMissingParts().First(b=>b.def==BodyPartDefOf.Leg)));
             component.SetCombatAutomation(true);
             if(scenario==3)component.SetEmergencyAutomation(true);
-            meleeSamples += component.CombatOrders.Count(o=>o.Role=="Interceptar / ajudar aliado");
+            meleeSamples += component.CombatOrders.Count(o=>o.Role=="Interceptar / ajudar aliado" || o.Role?.StartsWith("Melee:")==true);
             Log.Message($"[AutonomousRim.CombatTests] START {scenario}: center={center}; allies=3; enemies={count}; native third speed; no healing during battle; start="+string.Join(" | ",allies.Select(p=>p.Position+"/health="+p.health.summaryHealth.SummaryHealthPercent+"/bleed="+p.health.hediffSet.BleedRateTotal)));
         }
         public override void MapComponentTick()
@@ -133,10 +141,11 @@ namespace AutonomousRim.RuntimeChecks
                 var component=map.GetComponent<AutonomousRimMapComponent>();
                 if(elapsed%60==0)
                 {
+                    Check(!CombatManager.Enemies(map).Except(enemies).Any(),"Unrelated hostile pawn appeared during the fixture.");
                     foreach(var order in component.CombatOrders)
                     {
                         if(order.Retreated) retreatSamples++;
-                        if(order.Role=="Interceptar / ajudar aliado") meleeSamples++;
+                        if(order.Role=="Interceptar / ajudar aliado" || order.Role?.StartsWith("Melee:")==true) meleeSamples++;
                         if(CombatManager.Ranged(order.Pawn) && enemies.Any(e=>e.Spawned && CoverUtility.CalculateOverallBlockChance(order.Pawn.Position,e.Position,map)>0.1f)) coverSamples++;
                     }
                     Check(!civilian.Drafted,"Unarmed civilian was drafted.");
