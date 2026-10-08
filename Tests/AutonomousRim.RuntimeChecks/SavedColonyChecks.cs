@@ -67,6 +67,7 @@ namespace AutonomousRim.RuntimeChecks
             int tick = Find.TickManager.TicksGame;
             if (!started)
             {
+                if (GenCommandLine.CommandLineArgPassed("autonomousrimdiagnose")) ExpansionRevisionChecks.Run(map);
                 started = true; start = tick; last = tick - 6000;
                 lastCheckpointDay = tick / 60000;
                 c.SetAutomation(true, true); c.SetScheduleAutomation(true);

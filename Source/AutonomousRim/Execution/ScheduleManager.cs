@@ -14,7 +14,7 @@ namespace AutonomousRim.Execution
             var fire=DefDatabase<ThingDef>.GetNamedSilentFail("Fire");
             return fire!=null && map.listerThings.AllThings.Any(t=>t.def==fire && t.Spawned);
         }
-        public static bool Emergency(Map map,ColonyState state)=>map.GetComponent<AutonomousRimMapComponent>().SecondarySuspended || state.HostilePawnCount>0 || EmergencyManager.LocalFire(map) || state.DownedColonists>0;
+        public static bool Emergency(Map map,ColonyState state)=>map.GetComponent<AutonomousRimMapComponent>().SecondarySuspended || state.HostilePawnCount>0 || EmergencyManager.LocalFire(map);
         private static bool CanMeditate(Pawn pawn) => ModsConfig.RoyaltyActive && pawn.GetPsylinkLevel() > 0 &&
             !HealthAIUtility.ShouldSeekMedicalRest(pawn);
         private static TimeAssignmentDef Normal(Pawn pawn, int hour)
@@ -24,7 +24,7 @@ namespace AutonomousRim.Execution
             if (routineHour < 6 || routineHour >= 22) return TimeAssignmentDefOf.Sleep;
             if (CanMeditate(pawn) && routineHour == 12) return TimeAssignmentDefOf.Meditate;
             if (routineHour >= 8 && routineHour < 17) return TimeAssignmentDefOf.Work;
-            if (routineHour >= 17 && routineHour < 19) return TimeAssignmentDefOf.Joy;
+            if (routineHour >= 17 && routineHour < 19) return WorkReadiness.CanBuildRecoveryFurniture(pawn) ? TimeAssignmentDefOf.Anything : TimeAssignmentDefOf.Joy;
             return TimeAssignmentDefOf.Anything;
         }
         private static TimeAssignmentDef Assignment(Pawn pawn, int hour, bool emergency, bool recovery)
@@ -63,7 +63,7 @@ namespace AutonomousRim.Execution
                 else if (WorkReadiness.Restored(pawn)) change.PersonalRecovery = false;
                 if(emergency){change.Recovery=false;change.RecoveryUntil=0;change.LastReason=HasFire(map)?"incêndio":state.HostilePawnCount>0?"hostis":"colono ferido";}
                 else if(change.LastReason!=null && !change.Recovery){change.Recovery=true;change.RecoveryUntil=tick+6000;change.LastReason="recuperação após emergência";}
-                if(change.Recovery && tick>=change.RecoveryUntil && WorkReadiness.Restored(pawn) && map.GetComponent<AutonomousRimMapComponent>().Emergency.Phase==EmergencyPhase.Normal){change.Recovery=false;change.LastReason=null;}
+                if(change.Recovery && tick>=change.RecoveryUntil && WorkReadiness.Restored(pawn)){change.Recovery=false;change.LastReason=null;}
                 if(change.Recovery || change.PersonalRecovery)recovering++;
 
                 for(int hour=0;hour<24;hour++)

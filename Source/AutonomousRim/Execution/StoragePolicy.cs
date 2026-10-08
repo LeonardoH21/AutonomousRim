@@ -51,8 +51,10 @@ namespace AutonomousRim.Execution
                 var settings = general.Stockpile.GetStoreSettings();
                 settings.Priority = StoragePriority.Normal;
             }
-            QueueShelves(map, general, 6);
-            QueueShelves(map, freezer, state.FreezerNearFull ? 8 : 4);
+            int generalStacks = map.listerThings.AllThings.Count(t => t.Spawned && t.def.EverStorable(false) &&
+                t.def.category == ThingCategory.Item && !IsFood(t.def) && !t.def.IsCorpse && !t.Position.Fogged(map));
+            QueueShelves(map, general, Math.Min(36, Math.Max(6, (generalStacks + 2) / 3)), projects);
+            QueueShelves(map, freezer, state.FreezerNearFull ? 8 : 4, projects);
 
             if (state.FreezerCapacityCells <= 0)
                 return "Sem freezer funcional; alimentos perecíveis aguardam refrigeração.";
@@ -61,7 +63,7 @@ namespace AutonomousRim.Execution
             return $"Freezer organizado: {state.FreezerFillRatio:P0} ocupado; comida aceita no frio e estoque geral mantém filtro sem refeições.";
         }
 
-        private static void QueueShelves(Map map, RoomProject freezer, int desired)
+        private static void QueueShelves(Map map, RoomProject freezer, int desired, IReadOnlyList<RoomProject> projects)
         {
             // Upgrade completed rooms only; preserve player cancellations and room access.
             if (freezer == null || !freezer.Completed || freezer.State == ConstructionState.Paused ||
@@ -71,6 +73,9 @@ namespace AutonomousRim.Execution
             int existing = freezer.Furniture.Count(t => t.Def?.defName == shelf.defName);
             var occupied = new HashSet<IntVec3>(freezer.Shell.SelectMany(t => GenAdj.OccupiedRect(t.Position, t.Rotation, t.Def.Size)));
             occupied.UnionWith(freezer.Furniture.Where(t => t.Def is ThingDef).SelectMany(t => GenAdj.OccupiedRect(t.Position, t.Rotation, t.Def.Size)));
+            occupied.UnionWith(projects.Where(p => p != freezer).SelectMany(p => p.Furniture)
+                .Where(t => t.Def is ThingDef && !t.Def.defName.Contains("Conduit"))
+                .SelectMany(t => GenAdj.OccupiedRect(t.Position, t.Rotation, t.Def.Size)));
             while (existing < desired)
             {
                 IntVec3 cell = freezer.Interior.Cells.Where(c =>

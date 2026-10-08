@@ -15,7 +15,7 @@ namespace AutonomousRim.Core
         public List<CombatOrder> Evacuations = new List<CombatOrder>();
         public List<Pawn> Excluded = new List<Pawn>();
         public bool BlockSecondary => Phase == EmergencyPhase.Danger || Phase == EmergencyPhase.Securing;
-        public bool BlockExpansion => Phase != EmergencyPhase.Normal;
+        public bool BlockExpansion => BlockSecondary;
         public void Update(bool danger, bool needsCare, int tick)
         {
             if (danger) { Phase=EmergencyPhase.Danger; ClearSince=RecoverySince=-1; return; }

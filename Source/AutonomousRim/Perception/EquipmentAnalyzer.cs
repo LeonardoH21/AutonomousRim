@@ -61,7 +61,7 @@ namespace AutonomousRim.Perception
                 weapon.DamagePerSecond * pawn.GetStatValue(StatDefOf.MeleeDamageFactor) / Mathf.Max(0.1f, pawn.GetStatValue(StatDefOf.MeleeCooldownFactor));
             return dps * accuracy * (0.5f + skill / 20f) *
                    (1f + Mathf.Clamp(weapon.Range, 0f, 40f) / 80f) * (1f + Mathf.Clamp01(weapon.ArmorPenetration)) *
-                   EquipmentPolicy.RoleMultiplier(weapon.Ranged, TraitAnalyzer.PreferMelee(pawn), TraitAnalyzer.HasActiveTrait(pawn, "Brawler"));
+                   EquipmentPolicy.RoleMultiplier(weapon.Ranged, AutonomousRim.Planning.DefenseProductionPlan.Melee(pawn), TraitAnalyzer.HasActiveTrait(pawn, "Brawler"));
         }
     }
 }

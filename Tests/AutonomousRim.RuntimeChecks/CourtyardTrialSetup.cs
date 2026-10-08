@@ -11,7 +11,7 @@ namespace AutonomousRim.RuntimeChecks
     public static class CourtyardTrialSetup
     {
         private static bool Fresh => (GenCommandLine.CommandLineArgPassed("autonomousrimcourtyardtrial") || GenCommandLine.CommandLineArgPassed("autonomousrimmodulartrial")) &&
-            !GenCommandLine.CommandLineArgPassed("autonomousrimcourtyardresume") && !GenCommandLine.CommandLineArgPassed("autonomousrimcourtyardfromfailure") && !GenCommandLine.CommandLineArgPassed("autonomousrimcourtyardfromstart");
+            !GenCommandLine.CommandLineArgPassed("autonomousrimprogressionresume") && !GenCommandLine.CommandLineArgPassed("autonomousrimcourtyardresume") && !GenCommandLine.CommandLineArgPassed("autonomousrimcourtyardfromfailure") && !GenCommandLine.CommandLineArgPassed("autonomousrimcourtyardfromstart");
         static CourtyardTrialSetup()
         {
             if(!(GenCommandLine.CommandLineArgPassed("autonomousrimcourtyardtrial") || GenCommandLine.CommandLineArgPassed("autonomousrimmodulartrial")))return;

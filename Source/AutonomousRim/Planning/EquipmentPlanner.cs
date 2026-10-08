@@ -64,7 +64,7 @@ namespace AutonomousRim.Planning
                         foreach (var candidate in candidates)
                             if (pawn.CanReserveAndReach(candidate.Item, PathEndMode.Touch, Danger.None))
                                 proposals.Add(new EquipmentDecision { Pawn = pawn, Item = candidate.Item, CurrentScore = score, CandidateScore = candidate.Score,
-                                    Reason = $"Arma: {score:0.00} → {candidate.Score:0.00}; perfil {(TraitAnalyzer.PreferMelee(pawn) ? "corpo a corpo" : "à distância")}; precisão e mira calculadas pelo jogo." });
+                                    Reason = $"Arma: {score:0.00} → {candidate.Score:0.00}; perfil {(AutonomousRim.Planning.DefenseProductionPlan.Melee(pawn) ? "corpo a corpo" : "à distância")}; precisão e mira calculadas pelo jogo." });
                     }
                 }
                 if (pawn.apparel == null) continue;

@@ -117,7 +117,7 @@ namespace AutonomousRim.Execution
             var threat=colony.Threat;
             state.Decision=threat.Immediate?(Retreat(threat)?"Recuar / abrigar; resgatar somente por rota segura":"Defender em cobertura / reorganizar"):
                 state.Phase==EmergencyPhase.Danger?"Incêndio próximo: proteger colonos e combater o fogo":state.Phase==EmergencyPhase.Securing?"Confirmar segurança; atender feridos":state.Phase==EmergencyPhase.Recovery?"Recuperar saúde, descanso e alimentação":"Rotina normal";
-            if(state.Phase==EmergencyPhase.Normal) { Stop(state); return; }
+            if(!state.BlockSecondary) { Stop(state); return; }
             bool recovery=state.Phase==EmergencyPhase.Recovery;
             bool criticalFood=colony.StoredMealCount==0 && colony.EstimatedFoodDays<0.5f;
             bool foodLow=colony.EstimatedFoodDays<colony.TargetFoodDays;

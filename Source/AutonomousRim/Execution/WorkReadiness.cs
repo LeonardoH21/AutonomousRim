@@ -1,3 +1,4 @@
+using System.Linq;
 using RimWorld;
 using Verse;
 
@@ -5,6 +6,13 @@ namespace AutonomousRim.Execution
 {
     public static class WorkReadiness
     {
+        public static bool CanBuildRecoveryFurniture(Pawn pawn) => pawn.Map != null &&
+            pawn.Map.GetComponent<AutonomousRim.Core.AutonomousRimMapComponent>().BaseAutomation &&
+            !pawn.Map.GetComponent<AutonomousRim.Core.AutonomousRimMapComponent>().ExpansionSuspended &&
+            pawn.Map.GetComponent<AutonomousRim.Core.AutonomousRimMapComponent>().BaseProjects.Any(p => p.Kind == "Recreação inicial" &&
+                p.Furniture.Exists(t => !t.Complete(pawn.Map) && !t.CancelledByPlayer)) &&
+            !SeriousMedicalNeed(pawn) && (pawn.needs?.rest?.CurLevelPercentage ?? 1) >= .35f &&
+            (pawn.needs?.food?.CurLevelPercentage ?? 1) >= .2f && (pawn.needs?.mood?.CurLevelPercentage ?? 1) >= .3f;
         public static bool SeriousMedicalNeed(Pawn pawn) => pawn.Downed ||
             HealthAIUtility.ShouldBeTendedNowByPlayerUrgent(pawn) ||
             pawn.health.summaryHealth.SummaryHealthPercent < .75f ||

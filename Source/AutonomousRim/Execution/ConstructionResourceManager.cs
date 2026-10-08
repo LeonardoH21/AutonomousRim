@@ -10,7 +10,7 @@ namespace AutonomousRim.Execution
 {
     public static class ConstructionResourceManager
     {
-        public static string Apply(Map map, IReadOnlyList<RoomProject> projects, List<Thing> owned)
+        public static string Apply(Map map, IReadOnlyList<RoomProject> projects, List<Thing> owned, IReadOnlyList<ManagedFoodBill> production = null)
         {
             if (map.mapPawns.AllPawnsSpawned.Any(p => !p.Dead && !p.Downed && p.HostileTo(Faction.OfPlayer))) return "Coleta suspensa: hostis.";
             // Migrate only our earlier marks. CutPlant removes vegetation; HarvestPlant
@@ -41,6 +41,20 @@ namespace AutonomousRim.Execution
                 .Select(t => t.Position.GetThingList(map).OfType<ThingWithComps>().First(b => b.def == t.Def).TryGetComp<CompRefuelable>()).Where(c => c != null)
                 .Sum(c => c.GetFuelCountToFullyRefuel());
             if (fuel > 0) { costs.TryGetValue(ThingDefOf.WoodLog, out int timber); costs[ThingDefOf.WoodLog] = timber + fuel; }
+            if (AutonomousRim.Perception.FoodReservePolicy.PreparingForWinter(map))
+                costs[ThingDefOf.WoodLog] = Math.Max(costs.TryGetValue(ThingDefOf.WoodLog, out int winterCost) ? winterCost : 0,
+                    map.mapPawns.FreeColonistsSpawnedCount * 100);
+            foreach (var managed in production ?? new List<ManagedFoodBill>())
+                if (managed.Matches && !managed.Bill.suspended && managed.Bill.ShouldDoNow())
+                    foreach (var ingredient in managed.Bill.recipe.ingredients)
+                    {
+                        var mineral = DefDatabase<ThingDef>.AllDefsListForReading.Where(d => ingredient.filter.Allows(d) &&
+                            managed.Bill.ingredientFilter.Allows(d) && map.listerThings.AllThings.Any(t => t.def.building?.mineableThing == d))
+                            .OrderByDescending(d => d == ThingDefOf.Steel).ThenByDescending(d => budget.TryGetValue(d, out int count) ? count : 0).FirstOrDefault();
+                        if (mineral != null)
+                            costs[mineral] = Math.Max(costs.TryGetValue(mineral, out int current) ? current : 0,
+                                ingredient.CountRequiredOfFor(mineral, managed.Bill.recipe, managed.Bill));
+                    }
             int marked = 0;
             foreach (var cost in costs)
             {

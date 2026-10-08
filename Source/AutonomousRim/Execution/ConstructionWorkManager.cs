@@ -37,7 +37,7 @@ namespace AutonomousRim.Execution
         public static bool CanDispatch(Pawn p, WorkTypeDef work)
         {
             if (!EquipmentManager.CanAct(p) || !p.workSettings.Initialized || p.WorkTypeIsDisabled(work) || p.workSettings.GetPriority(work) == 0 ||
-                p.needs.food?.CurCategory >= HungerCategory.Hungry || p.needs.rest?.CurLevel < 0.35f || p.needs.joy?.CurLevel < 0.25f ||
+                p.needs.food?.CurCategory >= HungerCategory.Hungry || p.needs.rest?.CurLevel < 0.35f || p.needs.joy?.CurLevel < 0.25f && !WorkReadiness.CanBuildRecoveryFurniture(p) ||
                 p.timetable?.CurrentAssignment == TimeAssignmentDefOf.Sleep || p.timetable?.CurrentAssignment == TimeAssignmentDefOf.Joy) return false;
             Job current = p.CurJob;
             if(current?.def==JobDefOf.Refuel || current?.def==JobDefOf.RefuelAtomic) return false;
@@ -74,6 +74,7 @@ namespace AutonomousRim.Execution
                     if (!CanDispatch(pawn, def.workType) || scanner == null || scanner.ShouldSkip(pawn, false)) continue;
                     foreach (var target in targets.OrderBy(t => t.Project.Priority).ThenBy(t => pawn.Position.DistanceToSquared(t.Task.Position)))
                     {
+                        if (WorkReadiness.NeedsRecovery(pawn) && WorkReadiness.CanBuildRecoveryFurniture(pawn) && target.Project.Kind != "Recreação inicial") continue;
                         var task = target.Task;
                         if (name == "ConstructFinishFrames" && pawn.skills.GetSkill(SkillDefOf.Construction).Level < task.Def.constructionSkillPrerequisite || !task.Position.IsInAllowedArea(pawn)) continue;
                         if (name == "ConstructFinishFrames" && task.Def is ThingDef thing && thing.comps?.Any(c => c.compClass == typeof(CompQuality)) == true)

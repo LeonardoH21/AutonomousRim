@@ -32,7 +32,7 @@ try {
     $deadline = [DateTime]::UtcNow.AddHours(5)
     while ([DateTime]::UtcNow -lt $deadline) {
         if ($p.HasExited) { throw 'Game exited unexpectedly.' }
-        if ((Test-Path -LiteralPath $log) -and (Select-String -LiteralPath $log -SimpleMatch '[AutonomousRim.SaveTest] FAIL:' -Quiet)) { throw "Trial failed; inspect $log" }
+        if ((Test-Path -LiteralPath $log) -and (Select-String -LiteralPath $log -Pattern '\[AutonomousRim.SaveTest\] FAIL:|System\.(InvalidOperation|NullReference|Argument|IndexOutOfRange)Exception' -Quiet)) { throw "Trial failed; inspect $log" }
         if ((Test-Path -LiteralPath $log) -and (Select-String -LiteralPath $log -SimpleMatch '[AutonomousRim.SaveTest] FINISHED' -Quiet)) { Get-Content -LiteralPath $log -Tail 8; return }
         Start-Sleep -Seconds 5
     }

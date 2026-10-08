@@ -1,3 +1,4 @@
+using System.Linq;
 using AutonomousRim.Perception;
 using Verse;
 using System.Collections.Generic;
@@ -65,6 +66,7 @@ namespace AutonomousRim.Core
         public bool EquipmentAutomation => equipmentAutomation;
         public string EquipmentStatus { get; private set; } = "Autoequipamento desativado.";
         private List<Pawn> ownedHunts = new List<Pawn>();
+        private List<ManagedFoodBill> defenseBills = new List<ManagedFoodBill>();
         private List<ManagedFoodBill> ownedBills = new List<ManagedFoodBill>();
         private List<WorkPriorityChange> workChanges = new List<WorkPriorityChange>();
         private List<ScheduleChange> scheduleChanges = new List<ScheduleChange>();
@@ -112,6 +114,7 @@ namespace AutonomousRim.Core
             Scribe_Collections.Look(ref managedApparel, "managedApparel", LookMode.Deep);
             Scribe_Collections.Look(ref equipmentExcluded, "equipmentExcluded", LookMode.Reference);
             Scribe_Collections.Look(ref ownedHunts, "ownedHunts", LookMode.Reference);
+            Scribe_Collections.Look(ref defenseBills, "defenseBills", LookMode.Deep);
             Scribe_Collections.Look(ref ownedBills, "ownedBills", LookMode.Deep);
             Scribe_Collections.Look(ref workChanges, "workChanges", LookMode.Deep);
             Scribe_Collections.Look(ref scheduleChanges, "scheduleChanges", LookMode.Deep);
@@ -125,6 +128,7 @@ namespace AutonomousRim.Core
                 combatExcluded.RemoveAll(p => p == null);
                 failureMemory = failureMemory ?? new FailureMemory();
                 ownedHunts = ownedHunts ?? new List<Pawn>();
+                defenseBills = defenseBills ?? new List<ManagedFoodBill>();
                 ownedBills = ownedBills ?? new List<ManagedFoodBill>();
                 workChanges = workChanges ?? new List<WorkPriorityChange>();
                 scheduleChanges = scheduleChanges ?? new List<ScheduleChange>();
@@ -168,7 +172,7 @@ namespace AutonomousRim.Core
                 PreviewBase();
                 if (lootAutomation && CurrentState != null)
                 {
-                    LootStatus = LootAccessManager.Apply(map, CurrentState, true, baseProjects, managedApparel, EquipmentAllowedFor, releasedLoot, out int released, foodAutomation ? ownedBills : null);
+                    LootStatus = LootAccessManager.Apply(map, CurrentState, true, baseProjects, managedApparel, EquipmentAllowedFor, releasedLoot, out int released, (foodAutomation ? ownedBills : new List<ManagedFoodBill>()).Concat(equipmentAutomation ? defenseBills : new List<ManagedFoodBill>()).ToList());
                     lastLootTick = Find.TickManager.TicksGame;
                 }
                 ExecuteConstruction(Find.TickManager.TicksGame);
@@ -250,7 +254,7 @@ namespace AutonomousRim.Core
 
         public void SetEquipmentAutomation(bool enabled)
         {
-            if (!enabled) EquipmentManager.Stop(equipmentOrders, managedApparel);
+            if (!enabled) { EquipmentManager.Stop(equipmentOrders, managedApparel); FoodManager.RemoveOwnedBills(defenseBills); }
             equipmentAutomation = enabled;
             CurrentState = ColonyStateScanner.Scan(map);
             EquipmentStatus = enabled && !ExpansionSuspended ? EquipmentManager.Apply(map, CurrentState, equipmentOrders, managedApparel, equipmentExcluded) : "Autoequipamento suspenso/desativado; equipamentos atuais mantidos.";
@@ -298,6 +302,12 @@ namespace AutonomousRim.Core
             CurrentState = ColonyStateScanner.Scan(map);
         }
 
+        public override void MapComponentUpdate()
+        {
+            base.MapComponentUpdate();
+            if (strategyAutomation) ResearchNoticeManager.CloseOwnedCompletion(strategicPlan.OwnedResearch);
+        }
+
         public override void MapComponentTick()
         {
             base.MapComponentTick();
@@ -332,7 +342,7 @@ namespace AutonomousRim.Core
         private void ManageColony(bool force = true)
         {
             int cycle = Find.TickManager.TicksGame;
-            if(emergencyAutomation && emergency.Phase!=EmergencyPhase.Normal)
+            if(emergencyAutomation && emergency.BlockSecondary)
             {
                 EmergencyManager.Apply(map,CurrentState,emergency);
                 if(scheduleAutomation)ScheduleStatus=ScheduleManager.Apply(map,CurrentState,scheduleChanges,true);
@@ -344,7 +354,7 @@ namespace AutonomousRim.Core
             if (lootAutomation && CurrentState != null && Find.TickManager.TicksGame - lastLootTick >= LootIntervalTicks)
             {
                 lastLootTick = Find.TickManager.TicksGame;
-                LootStatus = LootAccessManager.Apply(map, CurrentState, baseAutomation, baseProjects, managedApparel, EquipmentAllowedFor, releasedLoot, out int released, foodAutomation ? ownedBills : null);
+                LootStatus = LootAccessManager.Apply(map, CurrentState, baseAutomation, baseProjects, managedApparel, EquipmentAllowedFor, releasedLoot, out int released, (foodAutomation ? ownedBills : new List<ManagedFoodBill>()).Concat(equipmentAutomation ? defenseBills : new List<ManagedFoodBill>()).ToList());
                 if (released > 0)
                 {
                     string transition = CurrentState.Threat.LastTransition;
@@ -353,7 +363,7 @@ namespace AutonomousRim.Core
                 }
             }
             if (workAutomation && Find.PlaySettings.useWorkPriorities && (force || cycle % 180 == 0)) WorkPriorityManager.Apply(map, CurrentState, workChanges,
-                baseAutomation && baseProjects.Exists(p => !p.Completed && p.Priority <= ConstructionPriority.High), constructionGathering.Count > 0, strategyAutomation && Find.ResearchManager.GetProject() != null);
+                baseAutomation && baseProjects.Exists(p => !p.Completed && BaseConstructionManager.Tasks(p).Any()), constructionGathering.Count > 0, strategyAutomation && Find.ResearchManager.GetProject() != null);
             if (scheduleAutomation && (force || cycle % 300 == 30)) ScheduleStatus = ScheduleManager.Apply(map, CurrentState, scheduleChanges, true);
             if (force || cycle % 600 == 60)
                 ManagementStatus = foodAutomation ? FoodManager.Apply(map, CurrentState, ownedHunts, ownedBills, baseProjects) : "Comida / roupas automáticas desativadas.";
@@ -361,6 +371,7 @@ namespace AutonomousRim.Core
                 ? " Prioridades ativas; alterações manuais do jogador são preservadas."
                 : " Prioridades pausadas: o modo numérico de trabalho foi desligado pelo jogador.";
             if (baseAutomation && (force || cycle % 300 == 150)) StoragePolicy.ManageFoodStorage(map, CurrentState, baseProjects);
+            if (equipmentAutomation && (force || cycle % 600 == 120)) DefenseProductionPlan.Apply(map, CurrentState, defenseBills);
             if (equipmentAutomation && (force || cycle % 900 == 90)) EquipmentStatus = EquipmentManager.Apply(map, CurrentState, equipmentOrders, managedApparel, equipmentExcluded);
             if (force && baseAutomation) ExecuteConstruction(cycle);
         }
@@ -384,7 +395,7 @@ namespace AutonomousRim.Core
                 lastConstructionReview = ticks;
                 BaseStatus = BaseConstructionManager.Apply(map, baseProjects);
             }
-            if (ticks % 600 == 0) GatheringStatus = ConstructionResourceManager.Apply(map, baseProjects, constructionGathering);
+            if (ticks % 600 == 0) GatheringStatus = ConstructionResourceManager.Apply(map, baseProjects, constructionGathering, equipmentAutomation ? defenseBills : null);
             ConstructionWorkManager.Apply(map, baseProjects, constructionOrders);
         }
 
@@ -410,7 +421,7 @@ namespace AutonomousRim.Core
             if(previousPhase!=emergency.Phase)Log.Message($"[AutonomousRim.Emergency] {previousPhase} → {emergency.Phase}; {next.Classification}");
             if(emergencyAutomation)
             {
-                if(emergency.Phase!=EmergencyPhase.Normal)
+                if(emergency.BlockSecondary)
                 {
                     if(emergency.Phase!=EmergencyPhase.Recovery || next.Immediate || EmergencyManager.LocalFire(map))FoodManager.CancelHunts(map,ownedHunts);
                     EquipmentManager.CancelPending(equipmentOrders);

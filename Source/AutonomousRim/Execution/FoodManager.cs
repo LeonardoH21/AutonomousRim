@@ -252,7 +252,7 @@ namespace AutonomousRim.Execution
 
         private static void EnsureClothes(Map map, ColonyState state, List<ManagedFoodBill> ownedBills)
         {
-            string outer = state.OutdoorTemperature < 10 ? "Apparel_Parka" : "Apparel_Duster";
+            string outer = state.OutdoorTemperature < 10 || AutonomousRim.Perception.FoodReservePolicy.PreparingForWinter(map) ? "Apparel_Parka" : "Apparel_Duster";
             foreach (string product in new[] { "Apparel_Pants", "Apparel_CollarShirt", outer })
             {
                 RecipeDef recipe = map.listerBuildings.AllBuildingsColonistOfClass<Building_WorkTable>()
@@ -263,7 +263,7 @@ namespace AutonomousRim.Execution
             }
         }
 
-        private static bool EnsureBill(Map map, string recipeName, ColonyState state, List<ManagedFoodBill> ownedBills, int target = 0)
+        public static bool EnsureBill(Map map, string recipeName, ColonyState state, List<ManagedFoodBill> ownedBills, int target = 0)
         {
             RecipeDef recipe = DefDatabase<RecipeDef>.GetNamedSilentFail(recipeName);
             if (recipe == null) return false;

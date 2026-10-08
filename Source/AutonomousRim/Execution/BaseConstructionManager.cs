@@ -20,13 +20,14 @@ namespace AutonomousRim.Execution
         }
         private static void Track(Map map, ConstructionTask task)
         {
+            if (task.Complete(map)) { task.WasCompleted = true; task.CancelledByPlayer = false; return; }
             if (task.Def is TerrainDef && task.OriginalTerrain != null && !task.Complete(map) && task.Position.GetTerrain(map) != task.OriginalTerrain)
             {
                 var current=task.Position.GetTerrain(map);
                 // Mining can replace natural rough rock before a floor has
                 // even been ordered. Refresh that baseline; preserve changes
                 // to already-issued work and newly built player flooring.
-                if(!task.Issued&&!task.WasCompleted&&current.designationCategory==null)
+                if(current.designationCategory==null && (!task.Issued && !task.WasCompleted || task.Pending?.Spawned == true && Matches(task, task.Pending)))
                 {task.OriginalTerrain=current;task.CancelledByPlayer=false;}
                 else task.CancelledByPlayer=true;
             }
@@ -87,7 +88,7 @@ namespace AutonomousRim.Execution
             var floors = p.Furniture.Where(t => t.Def is TerrainDef).ToList();
             return floors.Any(t => !t.Complete(map)) ? floors : FurnitureStage(map, p);
         }
-        private static int ExecutionRank(Map map, RoomProject p) => ModularBasePlanner.IsModular(p) ? ModularBasePlanner.Rank(p.Kind) : CourtyardSupport(map,p) &&
+        private static int ExecutionRank(Map map, RoomProject p) => p.Kind == "Recreação inicial" ? -1 : ModularBasePlanner.IsModular(p) ? ModularBasePlanner.Rank(p.Kind) : CourtyardSupport(map,p) &&
             FurnitureStage(map,p).Any(t => t.Def == ThingDefOf.Bed && !t.Complete(map)) ? -1 : RingBasePlanner.Rank(p.Kind);
         private static IEnumerable<RoomProject> NeededBedrooms(Map map, List<RoomProject> all)
         {
@@ -117,7 +118,7 @@ namespace AutonomousRim.Execution
             {
                 // Finish habitable bedrooms before spending their materials on secondary shells.
                 // Sibling bedrooms still progress independently when one lacks materials.
-                if (p.Kind != "Preparação do terreno" && p.Kind != ModularBasePlanner.ReservationKind && p.Kind != "Quarto" &&
+                if (p.Kind != "Recreação inicial" && p.Kind != "Preparação do terreno" && p.Kind != ModularBasePlanner.ReservationKind && p.Kind != "Quarto" &&
                     all.Any(r => r.Kind == "Quarto" && !r.Completed && r.State != ConstructionState.Paused)) return true;
                 if (p.Kind == "Corredor" && all.Any(r => ModularBasePlanner.IsModular(r) && r.Crop == null && !r.Completed)) return true;
                 // Validate obstacles per task below. A rock under one wall or

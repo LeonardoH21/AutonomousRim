@@ -30,7 +30,7 @@ namespace AutonomousRim.Planning
                             yield return new IntVec3(i, 0, j);
             }
         }
-        private static ConstructionTask Thing(string name, IntVec3 cell, Rot4? rotation = null)
+        internal static ConstructionTask Thing(string name, IntVec3 cell, Rot4? rotation = null)
         {
             var def = DefDatabase<ThingDef>.GetNamed(name);
             return new ConstructionTask { Def = def, Stuff = def.MadeFromStuff ? ThingDefOf.WoodLog : null,
@@ -66,7 +66,7 @@ namespace AutonomousRim.Planning
                     InteriorSize = 11, RequiresRoof = false, Priority = ConstructionPriority.Low };
                 foreach (var c in rect.ExpandedBy(3).Where(c => !rect.Contains(c)))
                 {
-                    if (!c.InBounds(map) || !c.GetTerrain(map).affordances.Contains(TerrainAffordanceDefOf.Light) || c.GetEdifice(map)?.Faction != null || !reserved.Add(c)) continue;
+                    if (!c.InBounds(map) || !c.GetTerrain(map).affordances.Contains(DefDatabase<TerrainDef>.GetNamed("Concrete").terrainAffordanceNeeded) || c.GetEdifice(map)?.Faction != null || !reserved.Add(c)) continue;
                     path.Furniture.Add(new ConstructionTask { Def = DefDatabase<TerrainDef>.GetNamed("Concrete"), Position = c, OriginalTerrain = c.GetTerrain(map) });
                 }
                 var prep = new RoomProject { Kind = "Preparação do terreno", LayoutSlot = "prep:" + slot,
@@ -87,7 +87,7 @@ namespace AutonomousRim.Planning
             {
                 string prefix = $"mod:{grid.x}:{grid.z}:";
                 if (projects.Any(p => p.LayoutSlot?.StartsWith(prefix) == true)) continue;
-                if (!projects.Where(IsModular).Any(p => Math.Abs(int.Parse(p.LayoutSlot.Split(':')[1]) - grid.x) + Math.Abs(int.Parse(p.LayoutSlot.Split(':')[2]) - grid.z) == 1)) continue;
+                if (!projects.Where(IsModular).Any(p => Math.Abs(int.Parse(p.LayoutSlot.Split(':')[1]) - grid.x) + Math.Abs(int.Parse(p.LayoutSlot.Split(':')[2]) - grid.z) <= 2)) continue;
                 var origin = root + new IntVec3(grid.x * Stride, 0, grid.z * Stride);
                 var rect = new CellRect(origin.x, origin.z, Size, Size);
                 if (!Site(map, rect) || rect.Any(c => c.GetEdifice(map) != null || c.Roofed(map) || c.GetTerrain(map).fertility < rice.plant.fertilityMin)) continue;
@@ -106,7 +106,7 @@ namespace AutonomousRim.Planning
                 int used = existing.Aggregate(0, (mask, p) => mask | int.Parse(p.LayoutSlot.Split(':')[3]));
                 var origin = anchor + new IntVec3(grid.x * Stride, 0, grid.z * Stride);
                 if (existing.Count == 0 && projects.Any(IsModular) && !projects.Where(IsModular).Any(p =>
-                    Math.Abs(int.Parse(p.LayoutSlot.Split(':')[1]) - grid.x) + Math.Abs(int.Parse(p.LayoutSlot.Split(':')[2]) - grid.z) == 1)) continue;
+                    Math.Abs(int.Parse(p.LayoutSlot.Split(':')[1]) - grid.x) + Math.Abs(int.Parse(p.LayoutSlot.Split(':')[2]) - grid.z) <= 2)) continue;
                 if (existing.Count == 0 && !Site(map, new CellRect(origin.x, origin.z, Size, Size))) continue;
                 foreach (int mask in parts == 4 ? new[] { 15 } : parts == 2 ? new[] { 3, 12 } : new[] { 1, 2, 4, 8 })
                 {
@@ -126,7 +126,7 @@ namespace AutonomousRim.Planning
                     if (kind == "Quarto") p.Furniture.Add(Thing("Bed", p.Origin + new IntVec3(1, 0, 4)));
                     if (kind == "Cozinha") p.Furniture.Add(Thing("FueledStove", center));
                     if (kind == "Abate") p.Furniture.Add(Thing("TableButcher", center));
-                    if (kind == "Pesquisa") p.Furniture.Add(Thing("SimpleResearchBench", center));
+                    if (kind == "Pesquisa") { p.Furniture.Add(Thing("SimpleResearchBench", center)); p.Furniture.Add(Thing("SimpleResearchBench", p.Origin + new IntVec3(9, 0, 3))); }
                     if (kind == "Hospital") p.Furniture.Add(new ConstructionTask { Def = ThingDefOf.Bed, Stuff = ThingDefOf.WoodLog, Position = p.Origin + new IntVec3(1, 0, 4), MedicalBed = true });
                     if (kind == "Estoque" || kind == "Freezer") p.StorageCells = p.Interior.Cells.ToList();
                     if (kind == "Freezer")
@@ -135,7 +135,7 @@ namespace AutonomousRim.Planning
                         cooler.Def = DefDatabase<ThingDef>.GetNamed("Cooler"); cooler.Stuff = null; cooler.Rotation = Rot4.South; cooler.TargetTemperature = -2;
                         p.NoRoofCells.Add(cooler.Position + IntVec3.South);
                     }
-                    if (kind == "Energia e climatização") p.Furniture.Add(Thing("WoodFiredGenerator", center));
+                    if (kind == "Energia e climatização" || kind == "Gerador auxiliar") p.Furniture.Add(Thing("WoodFiredGenerator", center));
                     // Reuse exact walls, including serialized task ownership in existing saves.
                     var shared = projects.SelectMany(r => r.Shell).GroupBy(t => t.Position).ToDictionary(g => g.Key, g => g.First());
                     for (int i = 0; i < p.Shell.Count; i++) if (shared.TryGetValue(p.Shell[i].Position, out var wall)) p.Shell[i] = wall;
@@ -173,12 +173,69 @@ namespace AutonomousRim.Planning
                 projects.Add(marker);
             }
             var root = marker.LayoutAnchor;
+            bool expansionGap(IntVec3 c) => ((c.x - root.x) % Stride + Stride) % Stride >= Size ||
+                ((c.z - root.z) % Stride + Stride) % Stride >= Size;
+            if (!projects.Any(p => p.Kind == "Recreação inicial"))
+            {
+                var pin = DefDatabase<ThingDef>.GetNamed("HorseshoesPin");
+                var spot = GenRadial.RadialCellsAround(root + new IntVec3(-3, 0, 6), 12, true).Where(c => c.InBounds(map) &&
+                    expansionGap(c) && c.GetEdifice(map) == null && GenConstruct.CanPlaceBlueprintAt(pin, c, Rot4.North, map, stuffDef: ThingDefOf.WoodLog) &&
+                    !projects.Where(IsModular).Any(p => p.Footprint.Contains(c)))
+                    .DefaultIfEmpty(IntVec3.Invalid).First();
+                if (spot.IsValid)
+                {
+                    var recreation = new RoomProject { Kind = "Recreação inicial", LayoutSlot = "starter-joy", Origin = spot,
+                        InteriorSize = 1, RequiresRoof = false, Priority = ConstructionPriority.Critical };
+                    recreation.Furniture.Add(Thing("HorseshoesPin", spot));
+                    var occupied = projects.SelectMany(BaseConstructionManager.Tasks).Where(t => t.Def is ThingDef)
+                        .SelectMany(t => GenAdj.OccupiedRect(t.Position, t.Rotation, t.Def.Size)).ToHashSet();
+                    var chess = GenRadial.RadialCellsAround(spot + new IntVec3(0, 0, 4), 8, true).Where(c =>
+                        new[] { c, c + IntVec3.West, c + IntVec3.East }.All(v => v.InBounds(map) && expansionGap(v) && v.GetEdifice(map) == null &&
+                            v != spot && !occupied.Contains(v) && !projects.Where(IsModular).Any(p => p.Footprint.Contains(v))))
+                        .DefaultIfEmpty(IntVec3.Invalid).First();
+                    if (chess.IsValid)
+                    {
+                        recreation.Furniture.Add(Thing("ChessTable", chess));
+                        recreation.Furniture.Add(Thing("DiningChair", chess + IntVec3.West, Rot4.East));
+                        recreation.Furniture.Add(Thing("DiningChair", chess + IntVec3.East, Rot4.West));
+                    }
+                    projects.Add(recreation);
+                }
+            }
+            foreach (var path in projects.Where(p => p.Kind == "Corredor"))
+                path.Furniture.RemoveAll(t => t.Def is TerrainDef floor && !t.Issued && !t.WasCompleted &&
+                    !t.Position.GetTerrain(map).affordances.Contains(floor.terrainAffordanceNeeded));
             while (projects.Count(p => p.Kind == "Quarto") < map.mapPawns.FreeColonistsSpawnedCount)
                 if (!AddRoom(map, projects, root, "Quarto", 1)) return "Sem módulo acessível disponível para novos quartos.";
             foreach (var kind in new[] { "Cozinha", "Abate", "Estoque", "Freezer", "Energia e climatização" })
                 if (!projects.Any(p => p.Kind == kind)) AddRoom(map, projects, root, kind, kind == "Estoque" ? 4 : kind == "Freezer" ? 2 : 1);
-            // Research is requested only when a current essential building actually needs it.
-            if (projects.SelectMany(BaseConstructionManager.Tasks).Any(t => !t.Def.IsResearchFinished) && !projects.Any(p => p.Kind == "Pesquisa"))
+            bool functional(RoomProject p) => p.Completed || (p.Kind == "Estoque" || p.Kind == "Freezer") &&
+                !BaseConstructionManager.Tasks(p).Any(t => t.CancelledByPlayer) &&
+                p.Shell.All(t => t.Complete(map)) && p.Furniture.Where(t => t.Def.defName != "ShelfSmall").All(t => t.Complete(map)) &&
+                (!p.RequiresRoof || p.RoofArea.All(c => c.Roofed(map)));
+            bool coreReady = projects.Where(p => IsModular(p) && p.Crop == null).All(functional);
+            // Production must not wait for optional dining, hospital or generator modules.
+            bool initialReady = projects.Where(p => IsModular(p) && (p.Kind == "Quarto" || p.Kind == "Cozinha" ||
+                p.Kind == "Abate" || p.Kind == "Estoque" || p.Kind == "Freezer" || p.Kind == "Pesquisa" ||
+                p.Kind == "Energia e climatização")).All(functional);
+            if (initialReady && projects.Any(p => p.Kind == "Pesquisa" && p.Completed) && !projects.Any(p => p.Kind == "Oficina"))
+                AddRoom(map, projects, root, "Oficina", 4);
+            if (coreReady)
+                foreach (var kind in new[] { "Refeitório e recreação", "Hospital" })
+                    if (!projects.Any(p => p.Kind == kind)) { AddRoom(map, projects, root, kind, 2); break; }
+            if (DefDatabase<ResearchProjectDef>.GetNamed("Fabrication").IsFinished && projects.Any(p => p.Kind == "Oficina" && p.Completed) && !projects.Any(p => p.Kind == "Fabricação"))
+                AddRoom(map, projects, root, "Fabricação", 2);
+            if (DefDatabase<ResearchProjectDef>.GetNamed("MicroelectronicsBasics").IsFinished && !projects.Any(p => p.Kind == "Laboratório"))
+                AddRoom(map, projects, root, "Laboratório", 4);
+            ModularInteriorPlanner.Plan(map, projects);
+            float demand = projects.SelectMany(BaseConstructionManager.Tasks).Where(t => t.Def is ThingDef)
+                .Sum(t => Math.Max(0, ((ThingDef)t.Def).GetCompProperties<CompProperties_Power>()?.PowerConsumption ?? 0));
+            int generators = projects.SelectMany(p => p.Furniture).Count(t => t.Def.defName == "WoodFiredGenerator");
+            bool runningGenerator = projects.SelectMany(p => p.Furniture).Any(t => t.Def.defName == "WoodFiredGenerator" && t.Complete(map));
+            if ((coreReady || runningGenerator) && demand + 200 > generators * 1000 && generators < 6)
+                AddRoom(map, projects, root, "Gerador auxiliar", 1);
+            // Research is part of the initial core, even without a blocked blueprint.
+            if (!projects.Any(p => p.Kind == "Pesquisa"))
                 AddRoom(map, projects, root, "Pesquisa", 2);
             var generator = projects.SelectMany(p => p.Furniture).FirstOrDefault(t => t.Def.defName == "WoodFiredGenerator");
             var freezer = projects.FirstOrDefault(p => p.Kind == "Freezer");
@@ -193,6 +250,7 @@ namespace AutonomousRim.Planning
                     if (z != generator.Position.z) power.Furniture.Add(Thing("HiddenConduit", new IntVec3(cooler.Position.x, 0, z)));
                 projects.Add(power);
             }
+            ModularInteriorPlanner.UpdatePower(map, projects);
             AddFoodGrowing(map, projects, root);
             AddCirculation(map, projects, root);
             return "Módulos 13×13: quartos 5×5, paredes compartilhadas, corredores de 3 células; paredes → pisos → móveis.";

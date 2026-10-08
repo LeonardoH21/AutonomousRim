@@ -1,7 +1,10 @@
-﻿param(
+param(
     [Parameter(Mandatory=$true)][string]$RimWorldDir,
     [ValidateRange(60,14400)][int]$TimeoutSeconds=7200,
-    [ValidatePattern("^[a-zA-Z0-9-]+$")][string]$RunName="run-1"
+    [ValidatePattern("^[a-zA-Z0-9-]+$")][string]$RunName="run-1",
+    [switch]$Progression,
+    [switch]$Peaceful,
+    [string]$ResumeSave
 )
 $ErrorActionPreference='Stop'
 $projectRoot=Split-Path $PSScriptRoot -Parent
@@ -33,6 +36,13 @@ try{
  $manifest=[ordered]@{utc=[DateTime]::UtcNow.ToString('o');sourceCommit=(git -C $projectRoot rev-parse HEAD);dllHash=(Get-FileHash -LiteralPath (Join-Path $gameRoot 'Mods\AutonomousRim\1.6\Assemblies\AutonomousRim.dll')).Hash;runtimeHash=(Get-FileHash -LiteralPath (Join-Path $runtimeMod 'Assemblies\AutonomousRim.RuntimeChecks.dll')).Hash;speed='Superfast';setup='Five skill-20 colonists; native starting resources'}
  $manifest|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $profile 'manifest.json') -Encoding utf8
  $gameArgs=@('-batchmode','-quicktest','-autonomousrimmodulartrial',('-savedatafolder="'+$profile+'"'),'-logFile',('"'+$logFile+'"'))
+ if($Progression){$gameArgs += '-autonomousrimprogressiontrial'}
+ if($Peaceful){$gameArgs += '-autonomousrimpeacefultrial'}
+ if($ResumeSave){
+  New-Item -ItemType Directory -Path (Join-Path $profile 'Saves') -Force | Out-Null
+  Copy-Item -LiteralPath $ResumeSave -Destination (Join-Path $profile 'Saves/ModularResume.rws')
+  $gameArgs += '-autonomousrimprogressionresume'
+ }
  $testProcess=Start-Process -FilePath (Join-Path $gameRoot 'RimWorldWin64.exe') -ArgumentList $gameArgs -WindowStyle Hidden -PassThru
  Write-Output "Trial process $($testProcess.Id); log: $logFile"
  $deadline=[DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
@@ -40,7 +50,7 @@ try{
   if($testProcess.HasExited){throw "Game exited. Inspect $logFile"}
   if(Test-Path -LiteralPath $logFile){
    $logText=Get-Content -LiteralPath $logFile -Raw
-   if($logText.Contains('[AutonomousRim.ModularTrial] FAIL:')){throw "Native trial failed. Inspect $logFile"}
+   if($logText.Contains('[AutonomousRim.ModularTrial] FAIL:') -or $logText -match 'System\.(InvalidOperation|NullReference|Argument|IndexOutOfRange)Exception'){throw "Native trial failed. Inspect $logFile"}
    if($logText.Contains('[AutonomousRim.ModularTrial] PASS:')){Write-Output "PASS: full normal construction. $logFile";return}
   }
   Start-Sleep -Seconds 2

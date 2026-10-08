@@ -7,8 +7,12 @@ namespace AutonomousRim.Perception
 {
     public static class FoodReservePolicy
     {
+        public static bool PreparingForWinter(Map map) => map != null && map.Tile >= 0 &&
+            (GenDate.Season(Find.TickManager.TicksAbs, Find.WorldGrid.LongLatOf(map.Tile)) == Season.Fall ||
+             GenDate.Season(Find.TickManager.TicksAbs, Find.WorldGrid.LongLatOf(map.Tile)) == Season.Winter || map.mapTemperature.OutdoorTemp < 0);
         public static float TargetDays(Map map, int colonists)
         {
+            if (PreparingForWinter(map)) return 15f;
             float target = ColonyPolicy.TargetFoodDays;
             int ticks = Find.TickManager?.TicksAbs ?? 0;
             if (map != null && map.Tile >= 0)

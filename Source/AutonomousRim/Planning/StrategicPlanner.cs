@@ -66,7 +66,6 @@ namespace AutonomousRim.Planning
             var buildings=map.listerBuildings.allBuildingsColonist.ToList();
             var items=map.listerThings.AllThings.Where(t=>t.Spawned && t.def.category==ThingCategory.Item && !t.Position.Fogged(map) && !t.IsForbidden(Faction.OfPlayer)).ToList();
             bool has(string name)=>buildings.Any(b=>b.def.defName==name);
-            bool researched(string name)=>DefDatabase<ResearchProjectDef>.GetNamedSilentFail(name)?.IsFinished==true;
             int beds=buildings.OfType<Building_Bed>().Count(b=>!b.Medical && !b.ForPrisoners);
             bool medical=buildings.OfType<Building_Bed>().Any(b=>b.Medical);
             int meds=items.Where(t=>t.def.IsMedicine).Sum(t=>t.stackCount);
@@ -83,7 +82,7 @@ namespace AutonomousRim.Planning
             plan.StabilityScore = stability;
             plan.ProgressionAllowed = stable;
             plan.StabilityStatus = stable
-                ? $"Estável ({stability}/100): pode ampliar tecnologia e preparar a rota da nave sem pressa."
+                ? $"Estável ({stability}/100): pode avançar os checkpoints de defesa e inverno; nave adiada."
                 : $"Estabilidade limitada ({stability}/100): manter comida, saúde, defesa e infraestrutura antes de acelerar tecnologia/vitória.";
             var priorities=new List<Tuple<string,int>>();
             void target(string id,int score)=>priorities.Add(Tuple.Create(id,score));
@@ -105,11 +104,11 @@ namespace AutonomousRim.Planning
             target("SolarPanels",74);target("Batteries",75);
             target("MicroelectronicsBasics",72); target("MultiAnalyzer",58); target("Fabrication",68);
             target("FlakArmor",70); target("PrecisionRifling",65); target("Hydroponics",foodLow && map.mapTemperature.OutdoorTemp<0?87:35);
-            foreach(var name in VictoryResearchNames)target(name,stable?30:5);
+            foreach(var name in DefenseProductionPlan.Research(map)) target(name, 93);
             var targets=priorities.OrderByDescending(p=>p.Item2).ThenBy(p=>p.Item1,StringComparer.Ordinal).Select(p=>DefDatabase<ResearchProjectDef>.GetNamedSilentFail(p.Item1)).Where(r=>r!=null).ToList();
             plan.Route=ResearchRoute(targets);
             // Never stop progressing just because the curated route is exhausted.
-            if(plan.Route.Count==0)plan.Route=ResearchRoute(DefDatabase<ResearchProjectDef>.AllDefsListForReading.Where(r=>!r.IsFinished && r.CanStartNow).OrderBy(r=>r.baseCost).ThenBy(r=>r.defName));
+            if(plan.Route.Count==0)plan.Route=ResearchRoute(DefDatabase<ResearchProjectDef>.AllDefsListForReading.Where(r=>!IsVictoryResearch(r) && !r.IsFinished && r.CanStartNow).OrderBy(r=>r.baseCost).ThenBy(r=>r.defName));
             plan.Goals.Clear();
             void goal(string id,string horizon,int priority,string description,bool done,string blocker,string resource,string risk)
                 =>plan.Goals.Add(new StrategicGoal{Id=id,Horizon=horizon,Priority=priority,Description=description,Completed=done,Blocker=done?null:blocker,ResourceNeed=resource,Risk=risk,Status=done?"Atendido":blocker});
@@ -123,10 +122,17 @@ namespace AutonomousRim.Planning
             goal("agriculture","Médio",foodLow?90:60,"Culturas e armazenagem por finalidade",rooms.Count(r=>r.GrowingZone!=null)>=5,"Essenciais/quartos e solo fértil; semeadura segue habilidade nativa.","Arroz, linho, batata, medicina e hemp","Clima, pragas e distância podem reduzir a colheita.");
             bool reservePlanned=rooms.Any(r=>r.Kind==RingBasePlanner.ReservationKind);
             goal("expansion","Médio",stable?55:72,"Base modular, corredores, energia e perímetro",reservePlanned,"Reservar módulos e validar terreno antes de expandir.","Clareira, materiais e rotas de fuga","Expansão prematura cria distância e gargalos.");
-            bool shipTech=new[]{"ShipBasics","ShipCryptosleep","ShipReactor","ShipEngine","ShipComputerCore","ShipSensorCluster"}.All(researched);
-            goal("ship-tech","Longo",stable?30:12,"Tecnologias da nave e seus pré-requisitos",shipTech,"Seguir a árvore de pesquisa nativa, incluindo requisitos ocultos.","Pesquisa, bancada e energia estáveis","Só acelerar quando as necessidades imediatas estiverem atendidas.");
-            goal("ship-build","Longo",stable?20:8,"Nave funcional e cápsula para cada colono",false,shipTech?"Pendente: executor de montagem/conectividade e orçamento da nave.":"Aguardar tecnologias; não considera pesquisa como vitória.","Recursos de nave e mão de obra especializada","Construir cedo demais sacrifica defesa, comida e medicina.");
-            goal("ship-launch","Longo",stable?10:4,"Preparação, defesa do reator e decolagem",false,"Pendente: executor de defesa, reator e embarque; não inicia o evento automaticamente.","Defesa completa, reator, tripulação e plano de contingência","O lançamento continua uma meta de longo prazo, não uma ordem urgente.");
+            for (int stage = 0; stage < 4; stage++)
+                goal("defense-checkpoint-" + (stage + 1), "Médio", 96 - stage,
+                    stage == 0 ? "Primeiro conjunto de aço: capacete, armadura de placas, espada e roupas" : stage == 1 ? "Equipar interceptores e atiradores: roupas, armas, armadura e capacetes" :
+                    stage == 2 ? "Conjuntos marine completos e escudos para melee" : "Conjuntos cataphract quando a expansão estiver disponível",
+                    DefenseProductionPlan.Equipped(map, stage), "Pesquisar, construir bancadas, fabricar e equipar; pesquisa sozinha não conclui o checkpoint.",
+                    "Aço, tecidos/couro, componentes, plasteel e componentes avançados", "Priorizar sobrevivência; nunca usar roupas contaminadas.");
+            bool winter = AutonomousRim.Perception.FoodReservePolicy.PreparingForWinter(map);
+            goal("winter", "Curto", winter ? 103 : 60, "Preparar inverno: reserva de 15 dias, roupas quentes e combustível",
+                !winter || state.EstimatedFoodDays >= 15 && colonists.All(p => p.apparel.WornApparel.Any(a => a.def.defName == "Apparel_Parka")) &&
+                    state.Resources.TryGetValue("WoodLog", out int winterWood) && winterWood >= colonists.Count * 100,
+                "Acumular alimentos conserváveis, fabricar parkas e reservar madeira antes do frio.", "15 dias de alimento; 100 madeiras por colono como margem inicial", "Aquecimento começa após nove cômodos fechados; combustível exige reposição.");
             plan.Goals=plan.Goals.OrderByDescending(g=>g.Priority).ToList();
             var pending=plan.Goals.Where(g=>!g.Completed).ToList();
             plan.CurrentFocus=pending.Count==0?"Todos os objetivos cadastrados estão atendidos.":FormatFocus(pending[0]);
@@ -171,13 +177,13 @@ namespace AutonomousRim.Planning
             if(danger){plan.ResearchStatus="Seleção suspensa por hostis; progresso atual preservado.";return;}
             if(current!=null && !current.IsFinished)
             {
-                var required=plan.Route.FirstOrDefault(r=>(plan.ProgressionAllowed || !IsVictoryResearch(r)) && r.CanStartNow);
+                var required=plan.Route.FirstOrDefault(r=>!IsVictoryResearch(r) && r.CanStartNow);
                 if(current==plan.OwnedResearch && required!=null && required!=current && constructionResearch.Contains(required))
                 {
                     plan.PreviousResearch=current;plan.OwnedResearch=required;Find.ResearchManager.SetCurrentProject(required);
                     plan.ResearchStatus="Obra planejada aguardando tecnologia: pesquisando "+required.LabelCap+"; progresso anterior preservado.";return;
                 }
-                if(!plan.ProgressionAllowed && IsVictoryResearch(current) && current==plan.OwnedResearch)
+                if(IsVictoryResearch(current) && current==plan.OwnedResearch)
                 {
                     var recovery=plan.Route.FirstOrDefault(r=>!IsVictoryResearch(r) && r.CanStartNow);
                     if(recovery!=null)
@@ -188,7 +194,7 @@ namespace AutonomousRim.Planning
                 }
                 plan.ResearchStatus="Pesquisando "+current.LabelCap+"; próxima rota recalculada sem perder progresso.";return;
             }
-            var next=plan.Route.FirstOrDefault(r=>(plan.ProgressionAllowed || !IsVictoryResearch(r)) && r.CanStartNow);
+            var next=plan.Route.FirstOrDefault(r=>!IsVictoryResearch(r) && r.CanStartNow);
             if(next==null)
             {
                 plan.ResearchStatus=plan.Route.Count==0?"Rota tecnológica concluída; metas de execução continuam.":!plan.ProgressionAllowed

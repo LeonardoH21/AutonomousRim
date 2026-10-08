@@ -14,18 +14,39 @@ namespace AutonomousRim.RuntimeChecks
     public sealed class ModularConstructionTrial : MapComponent
     {
         private bool started, finished;
+        public int InitialResearch = -1;
+        public System.Collections.Generic.HashSet<string> Crafted = new System.Collections.Generic.HashSet<string>();
+        public System.Collections.Generic.HashSet<int> UsedBenches = new System.Collections.Generic.HashSet<int>();
+        private static bool resumed;
         private int startTick;
         private float lastResume;
-        private readonly System.Collections.Generic.List<Pawn> initialPawns = new System.Collections.Generic.List<Pawn>();
+        private System.Collections.Generic.List<Pawn> initialPawns = new System.Collections.Generic.List<Pawn>();
         private readonly System.Collections.Generic.HashSet<string> milestones = new System.Collections.Generic.HashSet<string>();
+        private readonly System.Collections.Generic.HashSet<ConstructionTask> checkedFurniture = new System.Collections.Generic.HashSet<ConstructionTask>();
+        private bool Progression => GenCommandLine.CommandLineArgPassed("autonomousrimprogressiontrial");
         private bool Enabled => GenCommandLine.CommandLineArgPassed("autonomousrimmodulartrial");
         public ModularConstructionTrial(Map map) : base(map) { }
+        public override void ExposeData()
+        {
+            Scribe_Values.Look(ref InitialResearch, "initialResearchProof", -1);
+            Scribe_Collections.Look(ref Crafted, "nativeCraftProof", LookMode.Value);
+            Scribe_Collections.Look(ref UsedBenches, "usedBenchProof", LookMode.Value);
+            Scribe_Collections.Look(ref initialPawns, "initialPawnProof", LookMode.Reference);
+            if (Scribe.mode == LoadSaveMode.PostLoadInit)
+            {
+                Crafted = Crafted ?? new System.Collections.Generic.HashSet<string>();
+                UsedBenches = UsedBenches ?? new System.Collections.Generic.HashSet<int>();
+                initialPawns = initialPawns ?? new System.Collections.Generic.List<Pawn>();
+            }
+        }
         public override void FinalizeInit()
         {
             if (Enabled) map.GetComponent<AutonomousRimMapComponent>().SetBaseAutomation(false);
         }
         public override void MapComponentUpdate()
         {
+            if (Enabled && !resumed && GenCommandLine.CommandLineArgPassed("autonomousrimprogressionresume") && Current.ProgramState == ProgramState.Playing)
+            { resumed = true; GameDataSaveLoader.LoadGame("ModularResume"); return; }
             if (!Enabled || !started || finished || UnityEngine.Time.realtimeSinceStartup - lastResume < 5) return;
             lastResume = UnityEngine.Time.realtimeSinceStartup;
             foreach (var w in Find.WindowStack.Windows.Where(w => w.forcePause).ToList())
@@ -45,6 +66,7 @@ namespace AutonomousRim.RuntimeChecks
         }
         public override void MapComponentTick()
         {
+            if (GenCommandLine.CommandLineArgPassed("autonomousrimprogressionresume") && !resumed) return;
             if (!Enabled || finished || Find.TickManager.TicksGame % 30 != 0) return;
             var ai = map.GetComponent<AutonomousRimMapComponent>();
             int tick = Find.TickManager.TicksGame;
@@ -53,13 +75,22 @@ namespace AutonomousRim.RuntimeChecks
                 if (!started)
                 {
                     if (tick < 120 || map.mapPawns.FreeColonistsSpawnedCount == 0) return;
-                    while (map.mapPawns.FreeColonistsSpawnedCount < 5)
+                    bool continuing = GenCommandLine.CommandLineArgPassed("autonomousrimprogressionresume");
+                    if (!continuing && GenCommandLine.CommandLineArgPassed("autonomousrimpeacefultrial"))
+                    {
+                        var preset = DefDatabase<DifficultyDef>.GetNamed("Peaceful");
+                        Find.Storyteller.difficultyDef = preset; Find.Storyteller.difficulty.CopyFrom(preset);
+                        Log.Message("[AutonomousRim.ModularTrial] SETUP: native Peaceful difficulty; construction/research/crafting validation, not combat validation.");
+                    }
+                    while (!continuing && map.mapPawns.FreeColonistsSpawnedCount < 5)
                     {
                         var pawn = PawnGenerator.GeneratePawn(PawnKindDefOf.Colonist, Faction.OfPlayer);
                         GenSpawn.Spawn(pawn, CellFinder.RandomClosewalkCellNear(map.mapPawns.FreeColonistsSpawned.First().Position, map, 6), map);
                     }
+                    if (!GenCommandLine.CommandLineArgPassed("autonomousrimprogressionresume"))
                     foreach (var p in map.mapPawns.FreeColonistsSpawned)
                         foreach (var s in p.skills.skills) { s.Level = 20; s.xpSinceLastLevel = 0; }
+                    if (Progression) ExpansionRevisionChecks.Run(map);
                     ai.SetAutomation(true, true); ai.SetLootAutomation(true);
                     ai.SetScheduleAutomation(true); ai.SetStrategyAutomation(true); ai.SetEquipmentAutomation(true);
                     ai.SetBaseAutomation(true);
@@ -71,7 +102,11 @@ namespace AutonomousRim.RuntimeChecks
                     }
                     if (!RingBasePlanner.Validate(map, ai.BaseProjects.ToList())) throw new Exception("Geometry/interaction/terrain invalid.");
                     started = true; startTick = tick;
-                    initialPawns.AddRange(map.mapPawns.FreeColonistsSpawned);
+                    if (InitialResearch < 0) InitialResearch = DefDatabase<ResearchProjectDef>.AllDefsListForReading.Count(r => r.IsFinished);
+                    if (initialPawns.Count == 0)
+                        initialPawns.AddRange(continuing ? PawnsFinder.AllMapsWorldAndTemporary_AliveOrDead.Where(p => p.IsColonist && p.Faction == Faction.OfPlayer) : map.mapPawns.FreeColonistsSpawned);
+                    if (initialPawns.Count != 5 || initialPawns.Any(p => p == null || p.Dead))
+                        throw new Exception("Initial five colonists not alive; continuation cannot replace missing pawns.");
                     Find.TickManager.CurTimeSpeed = TimeSpeed.Superfast;
                     GameDataSaveLoader.SaveGame("ModularStart");
                     Log.Message("[AutonomousRim.ModularTrial] START: five skill-20 colonists; native resources, needs, research, costs and work; speed 3x.");
@@ -86,9 +121,10 @@ namespace AutonomousRim.RuntimeChecks
                 foreach (var kind in new[] { "Quarto", "Cozinha", "Abate", "Estoque", "Freezer" })
                     Milestone(kind, ai.BaseProjects.Any(p => p.Kind == kind) && ai.BaseProjects.Where(p => p.Kind == kind).All(p => p.Completed));
                 foreach (var room in ai.BaseProjects.Where(ModularBasePlanner.IsModular))
-                    if (room.Furniture.Any(t => t.Issued && !(t.Def is TerrainDef)) &&
-                        (room.Shell.Any(t => !t.Complete(map)) || room.Furniture.Any(t => t.Def is TerrainDef && !t.Complete(map))))
-                        throw new Exception("Furniture issued before shell/floors: " + room.LayoutSlot);
+                    foreach (var furniture in room.Furniture.Where(t => t.Issued && !t.WasCompleted && t.Pending?.Spawned == true && !(t.Def is TerrainDef)))
+                        if (!ai.SecondarySuspended && checkedFurniture.Add(furniture) &&
+                            (room.Shell.Any(t => !t.Complete(map)) || room.Furniture.Any(t => t.Def is TerrainDef && !t.Complete(map))))
+                            throw new Exception("Furniture issued before shell/floors: " + room.LayoutSlot);
                 if (tick - startTick > 20000 && walls < 7) throw new Exception("Fewer than seven walls after eight hours; responsiveness regression.");
                 if (tick % 2490 == 0)
                 {
@@ -100,13 +136,20 @@ namespace AutonomousRim.RuntimeChecks
                 bool cold = freezer.Completed && freezer.Interior.CenterCell.GetTemperature(map) < 0 &&
                     freezer.Shell.Where(t => t.Def.defName == "Cooler").All(t => t.Position.GetThingList(map).OfType<ThingWithComps>().Any(b => b.def == t.Def && b.TryGetComp<CompPowerTrader>()?.PowerOn == true));
                 Milestone("refrigeration", cold);
-                if (cold && milestones.Contains("Freezer") && milestones.Contains("Quarto") && milestones.Contains("Cozinha") && milestones.Contains("Abate") && milestones.Contains("Estoque"))
+                if (!Progression && cold && milestones.Contains("Freezer") && milestones.Contains("Quarto") && milestones.Contains("Cozinha") && milestones.Contains("Abate") && milestones.Contains("Estoque"))
                 {
                     GameDataSaveLoader.SaveGame("ModularInitialComplete"); finished = true;
                     Find.TickManager.CurTimeSpeed = TimeSpeed.Paused;
                     Log.Message("[AutonomousRim.ModularTrial] PASS: initial rooms, floors, beds, kitchen, butcher, stockpile, freezer complete by native work.");
                 }
-                if (tick - startTick > 180000 && !finished) throw new Exception("Initial core incomplete after three days; diagnose latency/materials before accepting.");
+                bool progressionComplete = Progression && ResearchCraftTrialObserver.Complete(map, ai);
+                if (Progression && cold && progressionComplete)
+                {
+                    GameDataSaveLoader.SaveGame("ModularSteelComplete"); finished = true;
+                    Find.TickManager.CurTimeSpeed = TimeSpeed.Paused;
+                    Log.Message("[AutonomousRim.ModularTrial] PASS: native research, organized workshop, upgraded storage, crafted steel helmet/plate/sword and equipped clothing; elapsed days=" + ((tick-startTick)/60000f));
+                }
+                if (tick - startTick > (Progression ? 1800000 : 180000) && !finished) throw new Exception("Initial core incomplete after three days; diagnose latency/materials before accepting.");
             }
             catch (Exception e)
             {
