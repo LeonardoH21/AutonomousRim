@@ -1,0 +1,30 @@
+# Próxima sessão — prisão, captura, conversão e recrutamento
+
+Status: plano solicitado em 08/10/2026, sem implementação ou testes nesta etapa. Complementa [comércio e economia](PLANO-COMERCIO-AUTONOMO.md). Usar ações, tratamento e interações nativas; não alterar lealdade, ideologia, resistência, saúde ou facção artificialmente.
+
+## Ordem de execução
+
+1. **Capacidade e demanda de colonos.** Identificar profissões em falta, cobertura de combate/medicina, população desejada, comida, quartos e capacidade médica. Criar limites de prisioneiros e de recrutamento dinâmicos; não capturar indiscriminadamente.
+2. **Módulo de prisão no núcleo.** Planejar ala expansível próxima do hospital e da alimentação, separada dos quartos dos colonos e do arsenal. Começar com duas celas individuais de 4×4 interiores como proposta, paredes compartilhadas, piso de madeira, cama marcada para prisioneiro, luz, mesa/cadeira e acesso de serviço. Reservar expansão sem bloquear corredores. Garantir cômodos fechados válidos e portas; manter acesso a armas fora das celas.
+3. **Cuidados e temperatura.** Disponibilizar cama médica de prisioneiro em cômodo separado das camas médicas de colonos, medicina no espaço hospitalar existente e rotas curtas. Incluir limpeza, alimentação, clima e atendimento ao contar carga de trabalho e reservas. Não exigir mobília decorativa pronta para salvar um ferido.
+4. **Avaliação dos invasores derrotados.** Ler estado de vida, possibilidade nativa de captura, sangramento/tempo até morte, mobilidade, skills, paixões, traços, incapacidades, saúde permanente, idade, necessidades e restrições de recrutamento. Não tratar animais, mechanoids ou outros alvos inelegíveis como candidatos humanoides.
+5. **Captura segura.** Integrar ao resgate tático: colonos próprios em risco têm precedência. Durante combate, capturar apenas se transporte/tratamento não comprometerem defesa; depois do combate, buscar sobreviventes elegíveis rapidamente. Reservar alvo, leito e cuidador para evitar ordens concorrentes. Emergência de sangramento pode exigir estabilização antes do transporte quando a ação nativa for válida.
+6. **Tratamento inicial.** Estancar sangramento, tratar feridas, alimentar e recuperar. Selecionar médico sem paralisar os demais trabalhadores. Falta de cama adequada, comida, médico ou rota segura deve aparecer como impedimento, sem fingir captura concluída.
+7. **Destino individual.** Classificar como candidato a recrutar, tratar e liberar ou aguardar decisão manual. Favorecer profissões faltantes e compatibilidade com a colônia, considerando custo de cuidado e recrutamento. Não recrutar automaticamente todos que têm uma skill alta. Preservar decisões manuais de interação.
+8. **Conversão antes do recrutamento.** Se Ideology estiver ativo e houver ideologia alvo aplicável, usar interação nativa de conversão; acompanhar mudança efetiva de ideologia. Já convertido pula esta etapa. Sem a DLC/sistema aplicável, passar diretamente ao recrutamento. Não alternar conversão/recrutamento a cada scan.
+9. **Recrutamento.** Após conversão confirmada, definir interação nativa de recrutamento, priorizar Warden para colono socialmente apto e acompanhar resistência/dificuldade/progresso. Lealdade inabalável impede recrutamento convencional: registrar bloqueio e considerar tratamento/liberação, sem alterar a regra do jogo.
+10. **Liberação e diplomacia.** Para quem não será recrutado, liberar após atendimento e quando puder sair com segurança. Consultar benefício real da facção: facções permanentemente hostis não dão o ganho diplomático esperado. Não manter alguém em conversão desnecessária antes de uma liberação. Não contabilizar ganho até a saída/resultado nativo confirmado.
+11. **Entrada do novo colono.** Ao recrutamento real, criar quarto conforme demanda, atualizar alimentação, roupas, equipamento, função, agenda e reservas de inverno. Atualizar automaticamente demandas de compras e materiais; não deixar o novo colono preso em políticas de prisioneiro da IA.
+12. **Segurança, persistência e HUD.** Detectar fuga/revolta e integrar à emergência; preservar vidas e rotas de colonos vulneráveis. Salvar destino, fase e impedimentos de cada prisioneiro. Botão independente para gestão de prisioneiros e painel com camas, candidatos, conversão, recrutamento, cuidados e liberação. Ao desligar, restaurar apenas alterações ainda pertencentes à IA, preservando ações concluídas e escolhas manuais.
+
+## Coordenação com o plano de comércio
+
+Construir capacidade mínima de prisão e cuidados antes de contar com novos colonos para expandir a economia. Implementar decisão/captura/tratamento primeiro; depois conversão/recrutamento/liberação e atualização de demanda. Economia comercial não pode retirar o único médico ou carcereiro necessário, consumir reservas dos pacientes ou vender suas provisões. Prisão não substitui hospital nem rouba camas dos colonos.
+
+Fluxo: sobrevivente elegível → captura segura → tratamento → decisão → conversão e recrutamento **ou** liberação → atualização da colônia/diplomacia.
+
+## Limitações e validação futura
+
+Não garantir sobrevivência de todo inimigo derrotado, sucesso de toda conversão/recrutamento ou melhora de relações com todas as facções. Confirmar APIs, interações, critérios de liberação e comportamento de DLCs/mods na instalação local. Testes continuam adiados conforme pedido anterior; plano não equivale a funcionalidade implementada.
+
+Referências: [Prisoner](https://rimworldwiki.com/wiki/Prisoners), [Factions](https://rimworldwiki.com/wiki/Factions).

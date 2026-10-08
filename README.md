@@ -6,6 +6,8 @@ The long-term goal is a full autonomous player capable of perceiving the map, ev
 
 ## Current milestone
 
+Optional autonomous commerce now connects equipment/resource deficits to smokeleaf production, native visitor/orbital trades and separately enabled caravan expeditions. See [commerce implementation and unvalidated limits](docs/COMERCIO-AUTONOMO.md). No gameplay tests were run for this revision at the user's request.
+
 **Foundation, perception and long-term colony management**
 
 - RimWorld 1.6 mod metadata

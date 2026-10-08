@@ -49,7 +49,9 @@ namespace AutonomousRim.UI
                 component.SetCombatAutomation(!(component.CombatAutomation || component.EmergencyAutomation));
             if (Widgets.ButtonText(new Rect(inRect.x, inRect.y + 274f, inRect.width, 30f), $"Emergência automática: {(component.EmergencyAutomation ? "LIGADA" : "DESLIGADA")}"))
                 component.SetEmergencyAutomation(!component.EmergencyAutomation);
-            Rect viewport = new Rect(inRect.x, inRect.y + 312f, inRect.width, inRect.height - 312f);
+            if(Widgets.ButtonText(new Rect(inRect.x,inRect.y+308f,inRect.width,30f),$"Comércio automático: {(component.CommerceAutomation?"LIGADO":"DESLIGADO")}"))
+                component.SetCommerceAutomation(!component.CommerceAutomation);
+            Rect viewport = new Rect(inRect.x, inRect.y + 346f, inRect.width, inRect.height - 346f);
             Rect content = new Rect(0f, 0f, viewport.width - 20f, contentHeight);
             Widgets.BeginScrollView(viewport, ref scrollPosition, content);
             var listing = new Listing_Standard();
@@ -74,6 +76,12 @@ namespace AutonomousRim.UI
             listing.Label(component.Strategy.ResearchStatus);
             listing.Label(component.Strategy.EquipmentStatus);
             listing.Label(component.StorageStatus);
+            listing.Label(component.Commerce.Status);
+            if(listing.ButtonText($"Expedições comerciais: {(component.Commerce.ExpeditionsEnabled?"LIGADAS":"DESLIGADAS")}"))
+                component.Commerce.ExpeditionsEnabled=!component.Commerce.ExpeditionsEnabled;
+            listing.Label(component.Commerce.CaravanStatus);
+            if(component.Commerce.Deliveries.Count>0)listing.Label("Compras aguardando entrega: "+string.Join(", ",component.Commerce.Deliveries.Select(d=>d.Def.LabelCap+" ×"+d.Count)));
+            foreach(var record in component.Commerce.History.AsEnumerable().Reverse().Take(3))listing.Label("Comércio: "+record);
             listing.Label(component.Strategy.TerrainStatus);
             listing.Label(component.Strategy.MountainPlanStatus);
             listing.Label(component.ScheduleStatus);

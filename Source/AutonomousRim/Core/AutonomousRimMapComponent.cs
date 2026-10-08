@@ -28,6 +28,25 @@ namespace AutonomousRim.Core
         private bool scheduleAutomation = true;
         private bool equipmentAutomation;
         private bool combatAutomation;
+        private bool commerceAutomation;
+        private CommerceState commerce = new CommerceState();
+        public bool CommerceAutomation => commerceAutomation;
+        public CommerceState Commerce => commerce;
+        public void SetCommerceAutomation(bool enabled)
+        {
+            commerceAutomation=enabled;
+            var commercial=baseProjects.Where(p=>p.LayoutSlot?.StartsWith("commerce:")==true).ToList();
+            if(!enabled)
+            {
+                CommerceManager.Stop(commerce);
+                BaseConstructionManager.Stop(map,commercial);
+            }
+            else
+            {
+                foreach(var project in commercial.Where(p=>p.State==ConstructionState.Paused && !p.Completed))project.State=ConstructionState.Planned;
+                if(CurrentState!=null)CommerceManager.Apply(map,CurrentState,baseProjects,commerce,baseAutomation);
+            }
+        }
         private List<CombatOrder> combatOrders = new List<CombatOrder>();
         private List<Pawn> combatExcluded = new List<Pawn>();
         public bool CombatAutomation => combatAutomation;
@@ -102,6 +121,8 @@ namespace AutonomousRim.Core
             Scribe_Values.Look(ref scheduleAutomation, "scheduleAutomation", true);
             Scribe_Values.Look(ref equipmentAutomation, "equipmentAutomation");
             Scribe_Values.Look(ref combatAutomation, "combatAutomation");
+            Scribe_Values.Look(ref commerceAutomation,"commerceAutomation");
+            Scribe_Deep.Look(ref commerce,"commerce");
             Scribe_Collections.Look(ref combatOrders, "combatOrders", LookMode.Deep);
             Scribe_Collections.Look(ref combatExcluded, "combatExcluded", LookMode.Reference);
             Scribe_Values.Look(ref baseAutomation, "baseAutomation");
@@ -139,6 +160,7 @@ namespace AutonomousRim.Core
             {
                 strategicPlan = strategicPlan ?? new StrategicPlan();
                 emergency = emergency ?? new EmergencyState();
+                commerce=commerce??new CommerceState();
                 combatOrders = combatOrders ?? new List<CombatOrder>();
                 combatExcluded = combatExcluded ?? new List<Pawn>();
                 combatOrders.RemoveAll(o => o.Pawn == null);
@@ -208,6 +230,7 @@ namespace AutonomousRim.Core
 
         public void DisableAll()
         {
+            SetCommerceAutomation(false);
             SetEmergencyAutomation(false);
             SetCombatAutomation(false);
             SetStrategyAutomation(false);
@@ -363,6 +386,10 @@ namespace AutonomousRim.Core
                 if (Prefs.DevMode) Log.Message($"[AutonomousRim] Scan: {CurrentState}");
             }
             if (ticks % 30 == 0 && CurrentState != null) ManageColony(false);
+            if(commerceAutomation && CurrentState!=null && ticks%600==210)
+                CommerceManager.Apply(map,CurrentState,baseProjects,commerce,baseAutomation);
+            if(CurrentState!=null && ticks%600==240 && (commerceAutomation || commerce.ExpeditionPawns.Count>0))
+                CommerceCaravanManager.Apply(map,CurrentState,commerce,commerceAutomation);
         }
 
         private void ManageColony(bool force = true)
@@ -451,6 +478,7 @@ namespace AutonomousRim.Core
             {
                 if(emergency.BlockSecondary)
                 {
+                    if(commerceAutomation)CommerceManager.Suspend(commerce);
                     if(emergency.Phase!=EmergencyPhase.Recovery || next.Immediate || EmergencyManager.LocalFire(map))FoodManager.CancelHunts(map,ownedHunts);
                     EquipmentManager.CancelPending(equipmentOrders);
                     ConstructionWorkManager.Stop(constructionOrders);

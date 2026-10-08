@@ -29,7 +29,9 @@ namespace AutonomousRim.Planning
             .Concat(map.mapPawns.FreeColonistsSpawned.SelectMany(p => p.apparel?.WornApparel.Cast<Thing>() ?? Enumerable.Empty<Thing>()))
             .Concat(map.mapPawns.FreeColonistsSpawned.Select(p => p.equipment?.Primary).Where(t => t != null));
         public static Dictionary<string, int> Targets(Map map, int stage) => LoadoutProgression.Analyze(map,stage).BillTargets;
-        public static bool Equipped(Map map,int stage) => Fighters(map).Count>0 && Fighters(map).All(p=>LoadoutProgression.Equipped(p,stage));
+        public static bool Equipped(Map map,int stage) => Fighters(map).Count>0 &&
+            map.GetComponent<Core.AutonomousRimMapComponent>().Commerce.ExpeditionPawns.All(p=>p==null || p.Dead || p.Spawned && p.Map==map) &&
+            Fighters(map).All(p=>LoadoutProgression.Equipped(p,stage));
         public static int Stage(Map map) => LoadoutProgression.Stage(map);
         public static IEnumerable<string> Research(Map map)
         {

@@ -17,7 +17,8 @@ namespace AutonomousRim.Execution
         public static int RawPriority(Pawn pawn,WorkTypeDef work) => StoredPriorities(pawn.workSettings)?[work] ?? pawn.workSettings.GetPriority(work);
         public static bool CanWork(Pawn pawn)
         {
-            return !pawn.Dead && !pawn.Downed && !pawn.Drafted && !pawn.InMentalState && pawn.workSettings != null;
+            return !pawn.Dead && !pawn.Downed && !pawn.Drafted && !pawn.InMentalState && pawn.workSettings != null &&
+                (pawn.Map==null || !CommerceCaravanManager.Reserved(pawn.Map.GetComponent<AutonomousRimMapComponent>().Commerce,pawn));
         }
 
         public static bool CanHunt(Pawn pawn)

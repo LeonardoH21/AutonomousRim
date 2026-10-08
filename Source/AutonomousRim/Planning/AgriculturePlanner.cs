@@ -9,6 +9,29 @@ namespace AutonomousRim.Planning
 {
     public static class AgriculturePlanner
     {
+        public static void AddCommercial(Map map,List<RoomProject> projects,ThingDef crop,int desired)
+        {
+            var stock=projects.FirstOrDefault(p=>p.Kind=="Estoque" && (p.Completed || p.FunctionalStorage));
+            if(stock==null)return;
+            int existing=map.zoneManager.AllZones.OfType<Zone_Growing>().Where(z=>z.GetPlantDefToGrow()==crop).Sum(z=>z.Cells.Count)+
+                projects.Where(p=>p.Crop==crop && p.GrowingZone==null).Sum(p=>p.StorageCells.Count);
+            if(existing>=desired || !PlantUtility.GrowthSeasonNow(stock.Interior.CenterCell,map,crop))return;
+            // Keep the entire approved envelope and future modules available; commercial plots grow outside it.
+            var reserved=projects.Where(p=>p.Crop==null).SelectMany(p=>p.Footprint).ToHashSet();
+            reserved.UnionWith(projects.Where(p=>p.Crop!=null).SelectMany(p=>p.StorageCells));
+            var candidates=GenRadial.RadialCellsAround(stock.Interior.CenterCell,75,true).Where(c=>c.InBounds(map) && !c.Fogged(map) &&
+                !reserved.Contains(c) && c.GetZone(map)==null && !c.Roofed(map) && c.GetEdifice(map)==null &&
+                c.GetTerrain(map).fertility>=crop.plant.fertilityMin && c.GetThingList(map).All(t=>!(t is Blueprint) && !(t is Frame)) &&
+                map.mapPawns.FreeColonistsSpawned.Any(p=>p.CanReach(c,Verse.AI.PathEndMode.OnCell,Danger.None))).ToList();
+            if(candidates.Count<16)return;
+            var origin=candidates[0];
+            var cells=candidates.Where(c=>c.DistanceToSquared(origin)<=100).Take(System.Math.Min(36,desired-existing)).ToList();
+            if(cells.Count<16)return;
+            var rect=CellRect.FromLimits(cells.Min(c=>c.x),cells.Min(c=>c.z),cells.Max(c=>c.x),cells.Max(c=>c.z));
+            projects.Add(new RoomProject{Kind="Plantação comercial",LayoutSlot="commerce:crop:"+projects.Count(p=>p.Kind=="Plantação comercial"),
+                Origin=rect.Min,InteriorSize=System.Math.Max(1,rect.Width-2),InteriorHeight=System.Math.Max(1,rect.Height-2),
+                Crop=crop,StorageCells=cells,NoRoofCells=cells,RequiresRoof=false,Priority=ConstructionPriority.Low});
+        }
         public static int ClothDemand(Map map)
         {
             int population=map.mapPawns.FreeColonistsSpawnedCount;

@@ -25,7 +25,8 @@ namespace AutonomousRim.Execution
             foreach (ThingDef def in DefDatabase<ThingDef>.AllDefsListForReading.Where(d => d.EverStorable(false)))
             {
                 bool animalCorpse = def.IsCorpse && def.ingestible?.sourceDef?.race?.Animal == true;
-                bool allow = kind == "Freezer" ? IsFood(def) && !def.IsCorpse && !humanMeats.Contains(def) :
+                bool allow = kind == "Mercadorias" ? def==ThingDefOf.Silver || AutonomousRim.Planning.CommercePlanner.Products.Contains(def.defName) || def.defName=="SmokeleafLeaves" || def.defName=="PsychoidLeaves" :
+                    kind == "Freezer" ? IsFood(def) && !def.IsCorpse && !humanMeats.Contains(def) :
                     kind == "Medicamentos" ? def.IsMedicine :
                     kind == "Armas" ? def.IsWeapon :
                     kind == "Roupas" ? def.IsApparel :

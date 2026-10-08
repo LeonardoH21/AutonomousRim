@@ -154,6 +154,11 @@ namespace AutonomousRim.Planning
             return result;
         }
         public static int Stage(Map map)
-        {for(int stage=0;stage<4;stage++)if(!DefenseProductionPlan.Fighters(map).All(p=>Equipped(p,stage)))return stage;return 4;}
+        {
+            var commerce=map.GetComponent<AutonomousRimMapComponent>().Commerce;
+            // Departing fighters must not falsely advance the colony's equipment checkpoint.
+            if(commerce.ExpeditionPawns.Count>0 && commerce.ExpeditionEquipmentStage>=0)return commerce.ExpeditionEquipmentStage;
+            for(int stage=0;stage<4;stage++)if(!DefenseProductionPlan.Fighters(map).All(p=>Equipped(p,stage)))return stage;return 4;
+        }
     }
 }

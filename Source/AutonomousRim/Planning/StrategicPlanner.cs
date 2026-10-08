@@ -103,6 +103,8 @@ namespace AutonomousRim.Planning
             target("HospitalBed",state.DownedColonists>0?95:65); target("SolarPanels",energy?55:85); target("GeothermalPower",energy?62:82);
             target("SolarPanels",74);target("Batteries",75);
             target("MicroelectronicsBasics",72); target("MultiAnalyzer",58);
+            if(state.EstimatedFoodDays>=3 && state.HostilePawnCount==0)
+                foreach(var research in CommercePlanner.Research(map))target(research.defName,86);
             target("Hydroponics",foodLow && map.mapTemperature.OutdoorTemp<0?87:35);
             int equipmentStage=DefenseProductionPlan.Stage(map);
             var checkpoint=LoadoutProgression.Analyze(map,equipmentStage);
