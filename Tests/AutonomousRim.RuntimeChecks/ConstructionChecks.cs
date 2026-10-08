@@ -118,7 +118,7 @@ namespace AutonomousRim.RuntimeChecks
         public override void MapComponentTick()
         {
             int ticks = Find.TickManager.TicksGame;
-            if (stage == 99 || !GenCommandLine.CommandLineArgPassed("autonomousrimtest") || ticks < 1400 || ticks % 20 != 0) return;
+            if (GenCommandLine.CommandLineArgPassed("autonomousrimskiplegacyconstruction") || stage == 99 || !GenCommandLine.CommandLineArgPassed("autonomousrimtest") || ticks < 1400 || ticks % 20 != 0) return;
             try
             {
                 if (stage == 0) { Setup(); started = ticks; stage = 1; }
@@ -199,7 +199,8 @@ namespace AutonomousRim.RuntimeChecks
         private void Setup()
         {
             component = map.GetComponent<AutonomousRimMapComponent>();
-            Check(!component.BaseAutomation, "Base automation must default to off.");
+            component.DisableAll();
+            Check(!component.BaseAutomation, "Disable-all must stop base automation before preview.");
             worker = map.mapPawns.FreeColonistsSpawned.First(p => WorkPriorityManager.CanWork(p) && !p.WorkTypeIsDisabled(WorkTypeDefOf.Construction));
             foreach (Pawn other in map.mapPawns.FreeColonistsSpawned.Where(p => p != worker))
             { drafts[other] = other.Drafted; other.drafter.Drafted = true; }

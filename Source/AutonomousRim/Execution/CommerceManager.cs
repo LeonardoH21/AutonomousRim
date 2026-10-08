@@ -28,7 +28,7 @@ namespace AutonomousRim.Execution
             CommercePlanner.Production(map,colony,projects,commerce,build);
             string demand=string.Join(", ",commerce.Needs.Take(5).Select(n=>n.Def.LabelCap+" ×"+n.Count));
             commerce.Status=$"Prata {commerce.Silver}; reserva {commerce.Reserve}; verba {commerce.Budget}. Comprar: {demand}. {commerce.Product}: alvo {commerce.Target}.";
-            if(commerce.Negotiator?.CurJob?.GetUniqueLoadID()==commerce.JobId)return;
+            if(commerce.JobId!=null && commerce.Negotiator?.CurJob?.GetUniqueLoadID()==commerce.JobId)return;
             commerce.Negotiator=null; commerce.Visitor=null; commerce.Ship=null; commerce.JobId=null;
             if(commerce.Needs.Count==0){commerce.Status+=" Checkpoint abastecido; produção comercial pausada.";return;}
             if(TradeSession.Active || Find.WindowStack.WindowOfType<Dialog_Trade>()!=null){commerce.Status+=" Aguardar negociação manual.";return;}
@@ -269,7 +269,7 @@ namespace AutonomousRim.Execution
         }
         public static void Suspend(CommerceState commerce)
         {
-            if(commerce.Negotiator?.CurJob?.GetUniqueLoadID()==commerce.JobId)commerce.Negotiator.jobs.EndCurrentJob(JobCondition.InterruptForced);
+            if(commerce.JobId!=null && commerce.Negotiator?.CurJob?.GetUniqueLoadID()==commerce.JobId)commerce.Negotiator.jobs.EndCurrentJob(JobCondition.InterruptForced);
             commerce.JobId=null;
             foreach(var bill in commerce.Bills.Where(b=>b.Matches)){bill.Bill.suspended=true;bill.Signature=ManagedFoodBill.Describe(bill.Bill);}
         }

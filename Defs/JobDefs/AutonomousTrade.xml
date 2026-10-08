@@ -4,6 +4,5 @@
     <defName>AutonomousRim_Trade</defName>
     <driverClass>AutonomousRim.Execution.JobDriver_AutonomousTrade</driverClass>
     <reportString>negociando recursos para a colônia.</reportString>
-    <checkOverrideOnExpire>true</checkOverrideOnExpire>
   </JobDef>
 </Defs>

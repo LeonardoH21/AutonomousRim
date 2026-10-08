@@ -1,0 +1,63 @@
+param(
+ [string]$RimWorldDir='C:\Users\Administrador\Downloads\RimWorld.v1.6.4633\RimWorld.v1.6.4633\game',
+ [Parameter(Mandatory=$true)][ValidatePattern('^[a-z0-9-]+$')][string]$Stage,
+ [Parameter(Mandatory=$true)][ValidatePattern('^autonomousrim[a-z]+$')][string]$Flag,
+ [Parameter(Mandatory=$true)][string]$SuccessMarker,
+ [ValidateRange(60,3600)][int]$TimeoutSeconds=600
+)
+$ErrorActionPreference='Stop'
+$root=Split-Path $PSScriptRoot -Parent
+$game=(Resolve-Path -LiteralPath $RimWorldDir).Path
+if(Get-Process RimWorldWin64 -ErrorAction SilentlyContinue){throw 'Close RimWorld before isolated tests.'}
+$profile=Join-Path $root ('.tools\validation\'+$Stage+'-'+[DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss-fff'))
+New-Item -ItemType Directory -Path "$profile\Config" -Force|Out-Null
+[xml]$config='<ModsConfigData><version>1.6.4633</version><activeMods><li>brrainz.harmony</li><li>ludeon.rimworld</li></activeMods><knownExpansions /></ModsConfigData>'
+foreach($expansion in @('Royalty','Ideology','Biotech','Anomaly','Odyssey')){
+ if(Test-Path -LiteralPath (Join-Path $game "Data\$expansion")){
+  $node=$config.CreateElement('li');$node.InnerText='ludeon.rimworld.'+$expansion.ToLowerInvariant();$config.ModsConfigData.activeMods.AppendChild($node)|Out-Null
+ }
+}
+foreach($package in @('leonardoh21.autonomousrim','leonardoh21.autonomousrim.runtimechecks')){
+ $node=$config.CreateElement('li');$node.InnerText=$package;$config.ModsConfigData.activeMods.AppendChild($node)|Out-Null
+}
+$config.Save("$profile\Config\ModsConfig.xml")
+Set-Content -LiteralPath "$profile\Config\Prefs.xml" -Encoding utf8 -Value '<PrefsData><devMode>False</devMode><runInBackground>True</runInBackground><autosaveIntervalDays>100</autosaveIntervalDays><pauseOnLoad>False</pauseOnLoad><pauseOnError>False</pauseOnError><fullscreen>False</fullscreen><volumeMaster>0</volumeMaster></PrefsData>'
+$addon=Join-Path $game 'Mods\AutonomousRim.RuntimeChecks'
+if(Test-Path -LiteralPath $addon){throw 'Runtime add-on exists; inspect before retrying.'}
+$p=$null
+$log=Join-Path $profile 'Player.log'
+try {
+ New-Item -ItemType Directory -Path "$addon\About","$addon\Assemblies" -Force|Out-Null
+ Copy-Item -LiteralPath "$root\.tools\runtime-checks\Assemblies\AutonomousRim.RuntimeChecks.dll" -Destination "$addon\Assemblies\AutonomousRim.RuntimeChecks.dll"
+ Set-Content -LiteralPath "$addon\About\About.xml" -Encoding utf8 -Value '<ModMetaData><name>AutonomousRim Runtime Checks</name><author>AutonomousRim</author><packageId>leonardoh21.autonomousrim.runtimechecks</packageId><supportedVersions><li>1.6</li></supportedVersions><loadAfter><li>leonardoh21.autonomousrim</li></loadAfter></ModMetaData>'
+ $manifest=[ordered]@{stage=$Stage;flag=$Flag;sourceCommit=(git -C $root rev-parse HEAD);dllHash=(Get-FileHash "$game\Mods\AutonomousRim\1.6\Assemblies\AutonomousRim.dll").Hash;runtimeHash=(Get-FileHash "$addon\Assemblies\AutonomousRim.RuntimeChecks.dll").Hash;result='RUNNING';profile=$profile}
+ $manifest|ConvertTo-Json|Set-Content -LiteralPath "$profile\manifest.json" -Encoding utf8
+ $arguments=@('-batchmode','-quicktest',('-'+$Flag),'-autonomousrimstagedtest',('-savedatafolder="'+$profile+'"'),'-logFile',('"'+$log+'"'))
+ $p=Start-Process -FilePath "$game\RimWorldWin64.exe" -ArgumentList $arguments -WindowStyle Hidden -PassThru
+ Write-Output "STAGE=$Stage PID=$($p.Id) LOG=$log"
+ $deadline=[DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+ while([DateTime]::UtcNow -lt $deadline){
+  if($p.HasExited){throw 'Game exited before stage completed.'}
+  if(Test-Path -LiteralPath $log){
+   $body=Get-Content -LiteralPath $log -Raw
+   if($body -match '\] FAIL\b|Exception ticking|Error in MapComponent|Exception from long event|XML error:|Config error:|Patching exception'){throw "Stage failed: $log"}
+   if($body.Contains($SuccessMarker)){
+    $manifest.result='PASS';$manifest|ConvertTo-Json|Set-Content -LiteralPath "$profile\manifest.json" -Encoding utf8
+    Select-String -LiteralPath $log -Pattern 'PASS\b|DONE'|ForEach-Object {$_.Line};return
+   }
+  }
+  Start-Sleep -Seconds 2
+ }
+ throw "Stage timeout; evidence preserved: $profile"
+}catch {
+ if($manifest){$manifest.result='FAIL';$manifest.error=$_.Exception.Message;$manifest|ConvertTo-Json|Set-Content -LiteralPath "$profile\manifest.json" -Encoding utf8}
+ throw
+}finally {
+ if($p -and !$p.HasExited){Stop-Process -Id $p.Id;$p.WaitForExit(10000)|Out-Null}
+ foreach($relative in @('Assemblies\AutonomousRim.RuntimeChecks.dll','About\About.xml')){
+  $file=Join-Path $addon $relative;if(Test-Path -LiteralPath $file){Remove-Item -LiteralPath $file}
+ }
+ foreach($directory in @("$addon\Assemblies","$addon\About",$addon)){
+  if((Test-Path -LiteralPath $directory) -and !(Get-ChildItem -LiteralPath $directory -Force)){Remove-Item -LiteralPath $directory}
+ }
+}

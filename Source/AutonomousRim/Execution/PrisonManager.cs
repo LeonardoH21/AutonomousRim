@@ -39,7 +39,7 @@ namespace AutonomousRim.Execution
         }
         private static void End(PrisonState state,PrisonOrder order,bool cancel)
         {
-            if(cancel && order.Helper?.CurJob?.GetUniqueLoadID()==order.JobId)order.Helper.jobs.EndCurrentJob(JobCondition.InterruptForced);
+            if(cancel && order.JobId!=null && order.Helper?.CurJob?.GetUniqueLoadID()==order.JobId)order.Helper.jobs.EndCurrentJob(JobCondition.InterruptForced);
             state.Orders.Remove(order);
         }
         private static void Restore(PrisonerRecord record)

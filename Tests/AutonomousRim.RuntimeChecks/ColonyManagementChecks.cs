@@ -65,6 +65,10 @@ namespace AutonomousRim.RuntimeChecks
             // The stove occupies multiple cells; place the one-cell spot afterwards
             // so its footprint cannot wipe the test butcher spot.
             GenSpawn.Spawn(butcher, EmptyCell(colonist), map);
+            // Control ingredient availability: bulk cooking requires enough raw
+            // food, whereas a random quicktest may only offer a single batch.
+            var rice=ThingMaker.MakeThing(DefDatabase<ThingDef>.GetNamed("RawRice"));rice.stackCount=75;
+            GenSpawn.Spawn(rice,EmptyCell(colonist),map);rice.SetForbidden(false,false);
             var component = map.GetComponent<AutonomousRimMapComponent>();
             Pawn worker = map.mapPawns.FreeColonistsSpawned.First(p => WorkPriorityManager.CanWork(p) && !p.WorkTypeIsDisabled(WorkTypeDefOf.Research));
             worker.workSettings.EnableAndInitializeIfNotAlreadyInitialized();
@@ -79,7 +83,7 @@ namespace AutonomousRim.RuntimeChecks
             var mealBill = stove.BillStack.Bills.OfType<Bill_Production>().FirstOrDefault(b => b.recipe.defName == "CookMealSimpleBulk" || b.recipe.defName == "CookMealFineBulk");
             var foodState = component.CurrentState ?? ColonyStateScanner.Scan(map);
             Check(mealBill != null && mealBill.targetCount >= 20 && mealBill.targetCount == foodState.CookingTargetCount &&
-                mealBill.pauseWhenSatisfied && mealBill.unpauseWhenYouHave == mealBill.targetCount, "Dynamic bulk-meal target bill missing.");
+                mealBill.pauseWhenSatisfied && mealBill.unpauseWhenYouHave == mealBill.targetCount, "Dynamic bulk-meal target bill missing. "+component.ManagementStatus+" Recipes: "+string.Join(",",stove.BillStack.Bills.Select(b=>b.recipe.defName)));
             Check(foodState.TargetFoodDays >= ColonyPolicy.TargetFoodDays && !string.IsNullOrEmpty(foodState.FoodReserveLevel) &&
                 foodState.FoodReserveStatus.Contains("dias"), "Food reserve days classification missing.");
             Check(butcher.BillStack.Bills.Any(b => b.recipe.defName == "ButcherCorpseFlesh"), "Butchering bill missing.");
@@ -90,8 +94,13 @@ namespace AutonomousRim.RuntimeChecks
             var testBills = new System.Collections.Generic.List<ManagedFoodBill>();
             map.designationManager.RemoveAllDesignationsOfDef(DesignationDefOf.Hunt);
             state = ColonyStateScanner.Scan(map); state.FoodNutrition = 0f; state.EstimatedFoodDays = 0f;
-            FoodManager.Apply(map, state, testHunts, testBills);
-            Check(testHunts.Count > 0 && testHunts.All(p => !p.RaceProps.predator && p.RaceProps.manhunterOnDamageChance <= 0f), "No safe wild prey designated during food shortage.");
+            // A forced shortage must also refresh the dynamic work allocation;
+            // the previous abundant-food scan can legitimately disable hunting.
+            var shortagePriorities=new System.Collections.Generic.List<WorkPriorityChange>();
+            WorkPriorityManager.Apply(map,state,shortagePriorities);
+            string huntStatus=FoodManager.Apply(map, state, testHunts, testBills);
+            Check(testHunts.Count > 0 && testHunts.All(p => !p.RaceProps.predator && p.RaceProps.manhunterOnDamageChance <= 0f), "No safe wild prey designated during food shortage. "+huntStatus);
+            WorkPriorityManager.Restore(shortagePriorities);
             FoodManager.CancelHunts(map, testHunts);
             prey.Destroy();
             component.SetAutomation(false, false);
