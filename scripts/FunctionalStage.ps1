@@ -50,8 +50,15 @@ try {
    $body=Get-Content -LiteralPath $log -Raw
    if($body -match '\] FAIL\b|Exception ticking|Error in MapComponent|Exception from long event|XML error:|Config error:|Patching exception'){throw "Stage failed: $log"}
    if($body.Contains($SuccessMarker)){
-    $manifest.result='PASS';$manifest|ConvertTo-Json|Set-Content -LiteralPath "$profile\manifest.json" -Encoding utf8
-    Select-String -LiteralPath $log -Pattern 'PASS\b|DONE'|ForEach-Object {$_.Line};return
+    $manifest.result='PASS'
+    if($Flag -eq 'autonomousrimcombatfive'){
+     $outcome=[regex]::Match($body,'\[FiveCombatTrials\] RESULT [^\r\n]*outcome=([^;]+)').Groups[1].Value
+     if(!$outcome){throw 'Combat completed without a recorded outcome.'}
+     $manifest.outcome=$outcome
+     $manifest.result=if($outcome -eq 'DERROTA'){'TACTICAL_FAILURE'}elseif($outcome -eq 'SEM_DESFECHO'){'INCONCLUSIVE'}else{'COMPLETED'}
+    }
+    $manifest|ConvertTo-Json|Set-Content -LiteralPath "$profile\manifest.json" -Encoding utf8
+    Select-String -LiteralPath $log -Pattern 'PASS\b|DONE|FiveCombatTrials\] RESULT'|ForEach-Object {$_.Line};return
    }
   }
   Start-Sleep -Seconds 2

@@ -125,6 +125,22 @@ namespace AutonomousRim.RuntimeChecks
             for(int i=0;i<count;i++) enemies.Add(Spawn(true,center+new IntVec3(scenario==1?-2:12+i%3,0,scenario==1?0:(i/3)*2-2),scenario==2?"Gun_Revolver":"MeleeWeapon_Knife"));
             LordMaker.MakeNewLord(Faction.OfAncientsHostile,new LordJob_AssaultColony(Faction.OfAncientsHostile,false,false,false,false,false),map,enemies);
             Check(!CombatManager.Enemies(map).Except(enemies).Any(),"Unrelated hostile pawn contaminates the fixture.");
+            if(scenario==2)
+            {
+                float raw=AutonomousRim.Perception.CombatEquipmentScanner.Copy(enemies[0]).Dps;
+                Check(CombatManager.ExpectedRangedDps(enemies[0],allies[0].Position,raw)<raw,"Incoming exposure ignored native accuracy and cover.");
+                Check(CombatManager.ExpectedRangedDps(enemies[0],center+new IntVec3(-21,0,0),raw)==0,"Blocked firing lane was treated as incoming damage.");
+            }
+            if(scenario==3)
+            {
+                var shelter=HarmonyLib.AccessTools.Method(typeof(CombatManager),"Shelter");
+                Check(!(bool)shelter.Invoke(null,new object[]{map,retreatDoor.Position,enemies}),"Doorway was incorrectly classified as a retreat shelter.");
+                Check((bool)shelter.Invoke(null,new object[]{map,center+new IntVec3(-14,0,0),enemies}),"Enclosed interior was rejected as a retreat shelter.");
+                var cut=HediffMaker.MakeHediff(DefDatabase<HediffDef>.GetNamed("Cut"),civilian,civilian.health.hediffSet.GetNotMissingParts().First(b=>b.def==BodyPartDefOf.Leg));
+                cut.Severity=16;civilian.health.AddHediff(cut);
+                Check(civilian.health.hediffSet.BleedRateTotal>.35f && HealthUtility.TicksUntilDeathDueToBloodLoss(civilian)>12000,"Non-immediate bleeding fixture invalid.");
+                Check(!(bool)HarmonyLib.AccessTools.Method(typeof(CombatManager),"Wounded").Invoke(null,new object[]{civilian}),"Treatable bleeding alone forced immediate combat withdrawal.");
+            }
             if(scenario==3) allies[0].TakeDamage(new DamageInfo(DamageDefOf.Cut,18,0,-1,enemies[0],allies[0].health.hediffSet.GetNotMissingParts().First(b=>b.def==BodyPartDefOf.Leg)));
             component.SetCombatAutomation(true);
             if(scenario==3)component.SetEmergencyAutomation(true);

@@ -38,7 +38,7 @@ namespace AutonomousRim.Planning
             {
                 var weapon=CombatEquipmentScanner.Copy(enemy);
                 if(enemy.Position.DistanceTo(pawn.Position)<=weapon.Range && GenSight.LineOfSight(enemy.Position,pawn.Position,map))
-                    exposure+=weapon.Dps*TacticalPolicy.DamageFraction(weapon.BluntDamage?own.Blunt:own.Sharp,weapon.Penetration)*
+                    exposure+=CombatManager.ExpectedRangedDps(enemy,pawn.Position,weapon.Dps)*TacticalPolicy.DamageFraction(weapon.BluntDamage?own.Blunt:own.Sharp,weapon.Penetration)*
                         Math.Min(10,distance/Math.Max(1,own.Speed));
             }
             bool help=allies.Any(a=>a!=pawn && (target.CurJob?.targetA.Thing==a || !CombatManager.Ranged(target) && target.Position.DistanceTo(a.Position)<4));
@@ -65,10 +65,8 @@ namespace AutonomousRim.Planning
                     foreach(var shooter in nearby.Where(CombatManager.Ranged))
                     {
                         var weapon=CombatEquipmentScanner.Copy(shooter);
-                        int exposed=path.NodesReversed.Count(c=>c.DistanceTo(shooter.Position)<=weapon.Range &&
-                            GenSight.LineOfSight(shooter.Position,c,map));
-                        routeExposure+=weapon.Dps*TacticalPolicy.DamageFraction(weapon.BluntDamage?own.Blunt:own.Sharp,weapon.Penetration)*
-                            exposed/Math.Max(1,own.Speed);
+                        float damage=path.NodesReversed.Sum(c=>CombatManager.ExpectedRangedDps(shooter,c,weapon.Dps));
+                        routeExposure+=damage*TacticalPolicy.DamageFraction(weapon.BluntDamage?own.Blunt:own.Sharp,weapon.Penetration)/Math.Max(1,own.Speed);
                     }
                     if(!TacticalPolicy.CanPress(own.Health,advantage,friends.Count,nearby.Count,distance,routeExposure,nearby.Any(e=>CombatEquipmentScanner.Copy(e).Special)))continue;
                 }

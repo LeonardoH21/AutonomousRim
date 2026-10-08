@@ -17,6 +17,21 @@ namespace AutonomousRim.Execution
         public static long AnalysisCalls;
         public static double AnalysisMilliseconds;
         public const int Interval = 15;
+        private static readonly Dictionary<(int Pawn,IntVec3 Cell),float> shotChances=new Dictionary<(int,IntVec3),float>();
+        private static int shotChanceTick=-1;
+        public static float ExpectedRangedDps(Pawn shooter,IntVec3 cell,float rawDps)
+        {
+            int tick=Find.TickManager.TicksGame;
+            if(tick!=shotChanceTick){shotChances.Clear();shotChanceTick=tick;}
+            var key=(shooter.thingIDNumber,cell);
+            if(!shotChances.TryGetValue(key,out float chance))
+            {
+                var verb=shooter.equipment?.Primary?.TryGetComp<CompEquippable>()?.PrimaryVerb;
+                chance=verb?.CanHitTargetFrom(shooter.Position,cell)==true?ShotReport.HitReportFor(shooter,verb,cell).TotalEstimatedHitChance:0;
+                shotChances[key]=chance;
+            }
+            return rawDps*chance;
+        }
         public static bool Ranged(Pawn p) => p.equipment?.Primary?.def.IsRangedWeapon == true;
         public static List<Pawn> Enemies(Map map) => map.mapPawns.AllPawnsSpawned
             .Where(ThreatScanner.Active).ToList();
@@ -45,7 +60,8 @@ namespace AutonomousRim.Execution
             (c.GetEdifice(map) as Building_Door)?.Open != false;
         private static float Distance(IntVec3 c, IEnumerable<Pawn> enemies) => enemies.Min(e => c.DistanceTo(e.Position));
         private static bool Wounded(Pawn p) => p.health.summaryHealth.SummaryHealthPercent < 0.65f ||
-            p.health.hediffSet.BleedRateTotal > 0.35f || p.health.hediffSet.PainTotal > Math.Min(0.55f,p.GetStatValue(StatDefOf.PainShockThreshold)*0.75f) ||
+            p.health.hediffSet.BleedRateTotal > 0 && HealthUtility.TicksUntilDeathDueToBloodLoss(p)<12000 ||
+            p.health.hediffSet.PainTotal > p.GetStatValue(StatDefOf.PainShockThreshold)*0.9f ||
             (p.health.hediffSet.GetFirstHediffOfDef(HediffDefOf.BloodLoss)?.Severity ?? 0)>0.3f ||
             (p.needs?.rest?.CurLevel ?? 1)<0.08f;
         private static bool Overwhelmed(Pawn p, List<Pawn> allies, List<Pawn> enemies)
@@ -69,6 +85,8 @@ namespace AutonomousRim.Execution
         {
             var p = order.Pawn;
             if(retreat && Shelter(map,p.Position,enemies) && enemies.All(e=>!GenSight.LineOfSight(e.Position,p.Position,map))) return p.Position;
+            var protection=CombatEquipmentScanner.Copy(p);
+            var shooters=enemies.Where(Ranged).Select(e=>new { Pawn=e,Stats=CombatEquipmentScanner.Copy(e),Verb=e.equipment.Primary.TryGetComp<CompEquippable>()?.PrimaryVerb }).ToList();
             var verb = p.equipment.Primary.TryGetComp<CompEquippable>()?.PrimaryVerb;
             float range = verb?.verbProps.range ?? 1.5f;
             float min = verb?.verbProps.minRange ?? 0;
@@ -85,8 +103,11 @@ namespace AutonomousRim.Execution
                 bool sight = Ranged(p) ? verb != null && verb.CanHitTargetFrom(c,target) : GenSight.LineOfSight(c,target.Position,map);
                 float cover = sight ? CoverUtility.CalculateOverallBlockChance(c,target.Position,map) : 0;
                 float move = c.DistanceTo(p.Position);
+                // Evaluate every incoming firing lane, not just the selected target or our own gun's range.
+                float incoming=shooters.Where(e=>e.Pawn.CurJob?.def!=JobDefOf.AttackMelee).Sum(e=>ExpectedRangedDps(e.Pawn,c,e.Stats.Dps)*
+                    TacticalPolicy.DamageFraction(e.Stats.BluntDamage?protection.Blunt:protection.Sharp,e.Stats.Penetration));
                 float score;
-                if (retreat) score = nearest*2.5f + (!sight ? 12 : cover*15) - move*0.65f - c.DistanceTo(order.Anchor)*0.08f + (Shelter(map,c,enemies)?45:0);
+                if (retreat) score = nearest*2.5f + (incoming<=0 ? 12 : cover*15) - incoming*12 - move*0.65f - c.DistanceTo(order.Anchor)*0.08f + (Shelter(map,c,enemies)?45:0);
                 else if (Ranged(p))
                 {
                     bool shot = sight && d <= range && d >= min && FriendlyLane(c,target.Position,p,allies);
@@ -96,7 +117,8 @@ namespace AutonomousRim.Execution
                         float danger = Math.Max(5,e.GetStatValue(StatDefOf.MoveSpeed)*1.5f+2);
                         if(c.DistanceTo(e.Position)<danger) score -= (danger-c.DistanceTo(e.Position))*10;
                     }
-                    score -= enemies.Count(e => Ranged(e) && GenSight.LineOfSight(e.Position,c,map))*2;
+                    score -= incoming*6;
+                    if(incoming>protection.Dps*1.25f && !allies.Any(a=>!Ranged(a) && enemies.Any(e=>a.Position.DistanceTo(e.Position)<2)))score-=30;
                 }
                 else
                 {
@@ -105,6 +127,7 @@ namespace AutonomousRim.Execution
                     score = Math.Min(2,walls)*7-Math.Abs(friendDistance-3)*2-Math.Abs(d-4)*0.2f-move*0.8f;
                     score -= c.DistanceTo(order.Anchor)*0.8f;
                     if(enemies.All(Ranged)) score+=cover*28;
+                    score-=incoming*8; // Interceptors wait behind cover until a supported approach is feasible.
                     if (allies.Any(a=>Ranged(a) && c.DistanceTo(a.Position)<d)) score+=3;
                 }
                 score -= Math.Max(0,c.DistanceTo(order.Anchor)-18)*2; // Never pursue far into hostile terrain.
@@ -134,7 +157,7 @@ namespace AutonomousRim.Execution
         private static bool Shelter(Map map,IntVec3 cell,List<Pawn> enemies)
         {
             var room=cell.GetRoom(map);
-            return room!=null && !room.PsychologicallyOutdoors && room.CellCount<120 &&
+            return !(cell.GetEdifice(map) is Building_Door) && room!=null && !room.PsychologicallyOutdoors && room.CellCount<120 &&
                 enemies.All(e=>e.Position.GetRoom(map)!=room);
         }
         private static Pawn ContactEnemy(Pawn pawn,List<Pawn> enemies)=>enemies.Where(e=>e.Position.DistanceTo(pawn.Position)<1.6f &&
@@ -175,6 +198,7 @@ namespace AutonomousRim.Execution
         }
         private static string ApplyCore(Map map,List<CombatOrder> orders,List<Pawn> excluded,bool globalRetreat)
         {
+            shotChances.Clear(); // Native geometry/stat reports remain on the game thread and expire every decision.
             var enemies=Enemies(map);
             if(enemies.Count==0) { CombatTacticalPlanner.Clear(map); Stop(orders); excluded.Clear(); return "Combate: sem ameaças; colonos da IA liberados para a rotina."; }
             var colonists=map.mapPawns.FreeColonistsSpawned.ToList();
@@ -228,7 +252,7 @@ namespace AutonomousRim.Execution
                     enemies.Sum(PawnAnalyzer.EstimateCombatValue)<allies.Sum(PawnAnalyzer.EstimateCombatValue)*1.2f)
                     order.Retreated=false;
                 var touching=ContactEnemy(p,enemies);
-                if(touching!=null && !Ranged(touching) && touching.GetStatValue(StatDefOf.MoveSpeed)>=p.GetStatValue(StatDefOf.MoveSpeed)*0.95f &&
+                if(touching!=null && touching.GetStatValue(StatDefOf.MoveSpeed)>=p.GetStatValue(StatDefOf.MoveSpeed)*0.95f &&
                     !orders.Any(o=>o.Pawn!=p && !o.Retreated && !Ranged(o.Pawn) && !Wounded(o.Pawn) &&
                         o.Pawn.Position.DistanceTo(touching.Position)<1.6f))
                 {

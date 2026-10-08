@@ -4,7 +4,7 @@ Objetivo: testar todas as funcionalidades, corrigir falhas e permitir retomada s
 
 ## Estado de retomada
 
-Em andamento: etapa 6, cinco combates mistos. Planejamento e análise de falhas aprovados; três cenários de controle de combate aprovados. Etapas 0–3 aprovadas no escopo indicado; prisão nativa, comércio local e orbital passaram. Construção completa atual é etapa 7. Correções salvas no Git até `0c7121a`.
+Em andamento: etapa 6, repetição dos cinco combates mistos após correções. Etapas 0–3 aprovadas no escopo indicado; prisão nativa, comércio local, orbital e caravana passaram. Construção completa atual é etapa 7. Infraestrutura de retomada salva no Git em `0a3ab83`; revisão tática posterior ainda em validação.
 
 | Etapa | Escopo | Estado / evidência |
 |---|---|---|
@@ -14,7 +14,7 @@ Em andamento: etapa 6, cinco combates mistos. Planejamento e análise de falhas 
 | 3 | Progressão, pesquisa, produção e armazenamento | PASS: sete grupos, incluindo fabricação nativa de capacete, substituição de parede por pedra, prateleira construída e salvar/carregar. Progressão prolongada ainda na etapa 7 |
 | 4 | Prisão: construção, captura, alimentação, tratamento, conversão, recrutamento, liberação, controle manual e salvar/carregar | PASS parcial: captura, tratamento, conversão, recrutamento, liberação, salvar/carregar e desligamento. Construção natural da prisão e cenários adicionais de segurança/manual pendentes |
 | 5 | Comércio: produção, interação local/orbital, orçamento, entrega, caravana, controles e persistência | PASS parcial: comércio local e orbital, entrega real, reserva, itens protegidos, salvar/carregar e desligamento. PASS: caravana nativa com viagem, compra, retorno e descarga. Produção econômica prolongada e cenários de interrupção/manual pendentes |
-| 6 | Combate: cenários variados, colaboração melee/ranged, retirada e resgate | Pendente |
+| 6 | Combate: cenários variados, colaboração melee/ranged, retirada e resgate | Falhas identificadas; revisão em validação. Resultados individuais abaixo |
 | 7 | Autonomia integrada: construção completa, inverno e sobrevivência prolongada | Pendente |
 | 8 | HUD, relatório final, saves para revisão, instalação e Git | Pendente |
 
@@ -62,3 +62,23 @@ Não confundir essas fixtures com sobrevivência prolongada, produção econômi
 - Análise de falhas: `.tools/validation/failure-analysis-20261008-212032-665/` PASS: risco recuperável, evidência repetida de colapso, relatório causal, ajustes aprendidos, checkpoint de raid e persistência.
 - Controles de combate: `.tools/validation/combat-controls-20261008-212302-071/`: três PASS, dano/interceptação nativos, cobertura e retirada sob força superior. Retirada: três feridos, zero mortos/derrubados; não representa recuperação médica já concluída.
 - Próximo ensaio integrado: nova partida nativa, cinco colonos com skills 20, recursos normais, 3×, mínimo de 20 dias, núcleo/refrigeração, produção real, pesquisa/crafting/equipamento, hospital/oficina e prisão construída. Saves de checkpoint preservam início e marcos para retomada com `FunctionalStage -ResumeSave`. Não aprovado antes de cumprir esses critérios.
+
+## Cinco combates e regressões táticas
+
+Fixtures usam quatro aliados saudáveis, skills 20, dois melee com armadura de placas, dois ranged com colete e quatro capacetes. Terreno, equipamentos e inimigos são preparados; dano, movimentação, tiros e incapacitação são nativos. Cinco situações incluem desvantagem. RNG e geração dos participantes variam: comparação não é um benchmark estatístico determinístico.
+
+| Caso | Rodada inicial `combat-melee-*` | Primeira revisão `combat-revised-*` |
+|---|---|---|
+| 1 | Derrota: 1 morto, 3 derrubados; melee não iniciou ataque | Sem desfecho em 6000 ticks: 0 mortos, 3 derrubados, 2 inimigos restantes |
+| 2 | Vitória: 0 mortos/derrubados, 2 feridos | Sem desfecho em 6000 ticks: 0 mortos, 2 derrubados, 2 inimigos restantes |
+| 3 | Retirada: 0 mortos/derrubados, 3 feridos | Retirada: 0 mortos/derrubados, 3 feridos |
+| 4 | Vitória: 0 mortos, 3 derrubados | Vitória: 0 mortos, 3 derrubados |
+| 5 | Vitória: 0 mortos, 1 derrubado | Vitória: 0 mortos/derrubados, 3 feridos |
+
+Não considerar DONE como vitória. O executor agora registra `TACTICAL_FAILURE` para derrota e `INCONCLUSIVE` quando não há desfecho. Saves e logs de cada confronto permanecem em `.tools/validation/`.
+
+Correções em validação: porta não conta como abrigo; exposição considera todos os atiradores, armadura e probabilidade nativa de acerto; sangramento recuperável não provoca retirada apenas pelo valor bruto; contato com ranged também exige autodefesa melee quando não há velocidade para escapar. A primeira revisão, excessivamente conservadora, causou timeout nos controles (`combat-controls-revised-20261008-213113`); após ajuste do critério de ferimentos, os três controles passaram em `combat-controls-revised-20261008-213554-375`.
+
+Teste específico de contato: a primeira fixture confirmou a ordem inicial, mas exigia neutralização durante retirada contra atirador que podia se afastar. Falhou em `contact-defense-20261008-214658-640`; tentativa seguinte foi interrompida. Outra tentativa (`215147-301`) também não neutralizou o inimigo. A fixture final isola autodefesa em contato e exige dano nativo sem derrubar o defensor, sem alegar vitória. PASS e DONE em `contact-defense-20261008-215257-002`.
+
+Regressão final dos três controles: `combat-final-controls-20261008-215329-735`, três PASS; dois cenários neutralizados, retirada contra superioridade numérica, zero mortos/derrubados, dois feridos por cenário. Inclui verificações de probabilidade nativa de tiro, parede bloqueando tiro, porta excluída de abrigo e sangramento recuperável. As 57 verificações de política passaram novamente. Cinco casos finais ainda em execução.
