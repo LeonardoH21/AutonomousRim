@@ -222,7 +222,7 @@ namespace AutonomousRim.Execution
                         {
                             if(!t.Owned || !p.Shell.All(s=>s.Complete(map)) || prisonerBed.GetRoom()?.PsychologicallyOutdoors!=false ||
                                 prisonerBed.GetRoom().ContainedBeds.Any(b=>b!=prisonerBed && !b.ForPrisoners))continue;
-                            prisonerBed.ForPrisoners=true;
+                            if(!PrisonManager.ConfigureBed(prisonerBed))continue;
                         }
                         if (t.MedicalBed && building is Building_Bed bed) bed.Medical = true;
                         if (t.StorageKind != null && building is Building_Storage storage) StoragePolicy.Configure(storage.GetStoreSettings(), t.StorageKind, shelf: true);

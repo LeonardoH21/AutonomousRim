@@ -11,6 +11,17 @@ namespace AutonomousRim.Execution
     public static class PrisonManager
     {
         public static bool Reserved(Pawn p) => p.Map?.GetComponent<AutonomousRimMapComponent>()?.Prison.Orders.Any(o=>o.Helper==p)==true;
+        public static bool ConfigureBed(Building_Bed bed)
+        {
+            var room=bed?.GetRoom();
+            if(room==null || !Building_Bed.RoomCanBePrisonCell(room) || room.PsychologicallyOutdoors ||
+                room.ContainedBeds.Any(b=>b!=bed && !b.ForPrisoners))return false;
+            bed.ForPrisoners=true;
+            // Match the native ownership UI: the setter alone leaves the prison-cell cache stale.
+            bed.GetDistrict()?.Notify_RoomShapeOrContainedBedsChanged();
+            room.Notify_RoomShapeChanged();
+            return bed.Position.IsInPrisonCell(bed.Map);
+        }
         public static int HousingTarget(Map map)
         {
             int population=map.mapPawns.FreeColonistsSpawnedCount;
@@ -70,7 +81,7 @@ namespace AutonomousRim.Execution
             if(!helper.jobs.TryTakeOrderedJob(job,JobTag.Misc,false))return false;
             order.JobId=job.GetUniqueLoadID();state.Orders.Add(order);return true;
         }
-        private static bool ClosedBed(Building_Bed bed) => bed.ForPrisoners && !bed.Destroyed &&
+        private static bool ClosedBed(Building_Bed bed) => bed.ForPrisoners && !bed.Destroyed && bed.Position.IsInPrisonCell(bed.Map) &&
             bed.GetRoom()?.PsychologicallyOutdoors==false && bed.GetRoom().ContainedBeds.All(b=>b.ForPrisoners) &&
             bed.Position.GetTemperature(bed.Map)>0 && bed.Position.GetTemperature(bed.Map)<35;
         private static bool RecruitmentRoom(Map map,ColonyState colony,PrisonState state)
@@ -101,6 +112,11 @@ namespace AutonomousRim.Execution
                     order.Patient.Spawned && float.IsPositiveInfinity(Route(helper,helper.Position,order.Patient.Position,colony)))
                 {End(state,order,true);continue;}
                 if(helper.CurJob?.GetUniqueLoadID()!=order.JobId && helper.CurJob?.GetUniqueLoadID()!=order.PreviousJobId)End(state,order,false);
+            }
+            foreach(var task in projects.SelectMany(BaseConstructionManager.Tasks).Where(t=>t.PrisonerBed && t.Owned && t.Complete(map)).ToList())
+            {
+                var bed=task.Position.GetThingList(map).OfType<Building_Bed>().FirstOrDefault(b=>b.def==task.Def && b.Position==task.Position);
+                if(bed?.ForPrisoners==true && !bed.Position.IsInPrisonCell(map))ConfigureBed(bed);
             }
             var prisoners=map.mapPawns.AllPawnsSpawned.Where(p=>p.IsPrisonerOfColony).ToList();
             var beds=map.listerThings.AllThings.OfType<Building_Bed>().Where(b=>b.Faction==Faction.OfPlayer && ClosedBed(b)).ToList();

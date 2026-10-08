@@ -17,6 +17,7 @@ namespace AutonomousRim.RuntimeChecks
         private int start;
         private Pawn recruit,release;
         private bool capturedReported,tendedReported,convertedReported;
+        private bool diagnosed;
         public PrisonChecks(Map map):base(map){}
         private void Check(bool value,string text){if(!value)throw new InvalidOperationException(text);}
         private void Pass(string text)=>Log.Message("[PrisonTests] PASS: "+text);
@@ -46,7 +47,8 @@ namespace AutonomousRim.RuntimeChecks
             foreach(var skill in pawn.skills.skills)skill.Level=faction==Faction.OfPlayer?20:8;
             foreach(var weapon in pawn.equipment.AllEquipmentListForReading.ToList())pawn.equipment.Remove(weapon);
             GenSpawn.Spawn(pawn,cell,map);
-            pawn.needs.food.CurLevel=1;pawn.needs.rest.CurLevel=1;pawn.needs.joy.CurLevel=1;pawn.needs.mood.CurLevel=1;
+            if(pawn.needs.food!=null)pawn.needs.food.CurLevel=1;if(pawn.needs.rest!=null)pawn.needs.rest.CurLevel=1;
+            if(pawn.needs.joy!=null)pawn.needs.joy.CurLevel=1;if(pawn.needs.mood!=null)pawn.needs.mood.CurLevel=1;
             pawn.workSettings?.EnableAndInitializeIfNotAlreadyInitialized();
             if(faction==Faction.OfPlayer)
                 foreach(var work in DefDatabase<WorkTypeDef>.AllDefsListForReading.Where(w=>!pawn.WorkTypeIsDisabled(w)))pawn.workSettings.SetPriority(work,3);
@@ -63,7 +65,8 @@ namespace AutonomousRim.RuntimeChecks
             }
             var bed=(Building_Bed)SpawnThing("Bed",origin+new IntVec3(1,0,3));
             SpawnThing("Table1x2c",origin+new IntVec3(3,0,2));SpawnThing("DiningChair",origin+new IntVec3(2,0,2));
-            bed.ForPrisoners=prisoner;bed.Medical=medical;return bed;
+            if(prisoner)Check(PrisonManager.ConfigureBed(bed),"native prison-cell configuration");
+            bed.Medical=medical;return bed;
         }
         private void Wound(Pawn pawn)
         {
@@ -93,8 +96,11 @@ namespace AutonomousRim.RuntimeChecks
             recruit=SpawnPawn(Find.FactionManager.AllFactions.FirstOrDefault(f=>!f.IsPlayer && f.HostileTo(Faction.OfPlayer) && f.ideos?.PrimaryIdeo!=null)??Faction.OfAncientsHostile,center+new IntVec3(-10,0,-15));
             release=SpawnPawn(Faction.OfAncientsHostile,center+new IntVec3(-5,0,-15));
             foreach(var skill in recruit.skills.skills)skill.Level=20;
+            recruit.guest.Recruitable=true;
+            foreach(var skill in release.skills.skills){skill.Level=0;skill.passion=Passion.None;}
+            Check(AutonomousRim.Planning.PrisonPlanner.CandidateScore(map,recruit)>=8 && AutonomousRim.Planning.PrisonPlanner.CandidateScore(map,release)<8,"Controlled candidate scores incorrect.");
             Wound(recruit);Wound(release);
-            ai.SetPrisonAutomation(true);start=Find.TickManager.TicksGame;stage=1;
+            ai.SetAutomation(false,false);ai.SetPrisonAutomation(true);start=Find.TickManager.TicksGame;stage=1;
             Pass("fixture: five healthy skill-20 colonists, separate prison/hospital beds and native enemy eligibility");
         }
         public override void MapComponentTick()
@@ -116,6 +122,19 @@ namespace AutonomousRim.RuntimeChecks
                 if(release==null)release=ai.Prison.Prisoners.FirstOrDefault(r=>r.Destination==PrisonerDestination.TreatAndRelease)?.Pawn;
                 Check(recruit!=null && release!=null,"Fixture patients not tracked.");
                 Check(!recruit.Dead && !release.Dead,"Prison patient died.");
+                if(!diagnosed && Find.TickManager.TicksGame-start>900 && !capturedReported)
+                {
+                    diagnosed=true;
+                    foreach(var h in map.mapPawns.FreeColonistsSpawned.ToList())
+                    {
+                        var bed=RestUtility.FindBedFor(recruit,h,false,false,GuestStatus.Prisoner);
+                        bool available=(bool)HarmonyLib.AccessTools.Method(typeof(PrisonManager),"Available").Invoke(null,new object[]{h,ai.Prison});
+                        float route=bed==null?-1:(float)HarmonyLib.AccessTools.Method(typeof(PrisonManager),"Route").Invoke(null,new object[]{h,recruit.Position,bed.Position,ai.CurrentState});
+                        Log.Message($"[PrisonTests] diagnosis {h.LabelShort}: available={available}; capturable={recruit.CanBeCaptured()}; hostile={recruit.HostileTo(Faction.OfPlayer)}; reserve={h.CanReserve(recruit)}; rescue={HealthAIUtility.CanRescueNow(h,recruit,true)}; bed={bed}; route={route}; days={ai.CurrentState.EstimatedFoodDays}; job={h.CurJob?.def.defName}; ownCare={HarmonyLib.AccessTools.Method(typeof(PrisonManager),"OwnPatients").Invoke(null,new object[]{map})}");
+                        foreach(var b in map.listerBuildings.AllBuildingsColonistOfClass<Building_Bed>().Where(b=>b.ForPrisoners).ToList())
+                            Log.Message($"[PrisonTests] bed {b.Position}: valid={RestUtility.IsValidBedFor(b,recruit,h,false,false,false,GuestStatus.Prisoner)}; now={RestUtility.CanUseBedNow(b,recruit,false,false,GuestStatus.Prisoner)}; prisonCell={b.Position.IsInPrisonCell(map)}; role={b.GetRoom()?.Role?.defName}; ideologyForbids={b.CompAssignableToPawn.IdeoligionForbids(recruit)}; reach={h.CanReach(b,PathEndMode.OnCell,Danger.Some)}; medCare={HealthAIUtility.ShouldEverReceiveMedicalCareFromPlayer(recruit)}");
+                    }
+                }
                 if(!capturedReported && recruit.IsPrisonerOfColony && release.IsPrisonerOfColony && recruit.InBed() && release.InBed())
                 {
                     var r=ai.Prison.Prisoners.Single(x=>x.Pawn==recruit);var other=ai.Prison.Prisoners.Single(x=>x.Pawn==release);

@@ -3,6 +3,7 @@ param(
  [Parameter(Mandatory=$true)][ValidatePattern('^[a-z0-9-]+$')][string]$Stage,
  [Parameter(Mandatory=$true)][ValidatePattern('^autonomousrim[a-z]+$')][string]$Flag,
  [Parameter(Mandatory=$true)][string]$SuccessMarker,
+ [ValidatePattern('^autonomousrim[a-z0-9]+$')][string[]]$ExtraFlags=@(),
  [ValidateRange(60,3600)][int]$TimeoutSeconds=600
 )
 $ErrorActionPreference='Stop'
@@ -33,6 +34,7 @@ try {
  $manifest=[ordered]@{stage=$Stage;flag=$Flag;sourceCommit=(git -C $root rev-parse HEAD);dllHash=(Get-FileHash "$game\Mods\AutonomousRim\1.6\Assemblies\AutonomousRim.dll").Hash;runtimeHash=(Get-FileHash "$addon\Assemblies\AutonomousRim.RuntimeChecks.dll").Hash;result='RUNNING';profile=$profile}
  $manifest|ConvertTo-Json|Set-Content -LiteralPath "$profile\manifest.json" -Encoding utf8
  $arguments=@('-batchmode','-quicktest',('-'+$Flag),'-autonomousrimstagedtest',('-savedatafolder="'+$profile+'"'),'-logFile',('"'+$log+'"'))
+ foreach($extraFlag in $ExtraFlags){$arguments+=('-'+$extraFlag)}
  $p=Start-Process -FilePath "$game\RimWorldWin64.exe" -ArgumentList $arguments -WindowStyle Hidden -PassThru
  Write-Output "STAGE=$Stage PID=$($p.Id) LOG=$log"
  $deadline=[DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
