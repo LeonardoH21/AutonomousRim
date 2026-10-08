@@ -4,7 +4,7 @@ Objetivo: testar todas as funcionalidades, corrigir falhas e permitir retomada s
 
 ## Estado de retomada
 
-Em andamento: etapa 4, prisão. Etapas 0–3 concluídas no escopo indicado; construção completa atual é etapa 7. Revisão inicial `1f66fbf`, correções básicas `3863a07`, correção da cela em validação.
+Em andamento: planejamento e análise de falhas, depois etapa 6, combate. Etapas 0–3 aprovadas no escopo indicado; prisão nativa, comércio local e orbital passaram. Construção completa atual é etapa 7. Correções salvas no Git até `0c7121a`.
 
 | Etapa | Escopo | Estado / evidência |
 |---|---|---|
@@ -12,8 +12,8 @@ Em andamento: etapa 4, prisão. Etapas 0–3 concluídas no escopo indicado; con
 | 1 | Carregamento, XML, allow, comida, equipamento e construção básica | PASS: carregamento, allow, Bills, jobs reais de equipamento e desligamento; log `Player-20261008-204405-289.log`. Construção antiga excluída desta etapa; layout modular terá ensaio próprio |
 | 2 | Prioridades, agenda, emergência e resgate | PASS: 14 verificações de trabalho/agenda, emergência com recuperação/restauração e resgates nativos com/sem cama |
 | 3 | Progressão, pesquisa, produção e armazenamento | PASS: sete grupos, incluindo fabricação nativa de capacete, substituição de parede por pedra, prateleira construída e salvar/carregar. Progressão prolongada ainda na etapa 7 |
-| 4 | Prisão: construção, captura, alimentação, tratamento, conversão, recrutamento, liberação, controle manual e salvar/carregar | Em execução; corrigido cache nativo da cela que bloqueava captura. Capturas reais observadas; demais resultados aguardando |
-| 5 | Comércio: produção, interação local/orbital, orçamento, entrega, caravana, controles e persistência | Pendente; criar ensaio específico |
+| 4 | Prisão: construção, captura, alimentação, tratamento, conversão, recrutamento, liberação, controle manual e salvar/carregar | PASS parcial: captura, tratamento, conversão, recrutamento, liberação, salvar/carregar e desligamento. Construção natural da prisão e cenários adicionais de segurança/manual pendentes |
+| 5 | Comércio: produção, interação local/orbital, orçamento, entrega, caravana, controles e persistência | PASS parcial: comércio local e orbital, entrega real, reserva, itens protegidos, salvar/carregar e desligamento. PASS: caravana nativa com viagem, compra, retorno e descarga. Produção econômica prolongada e cenários de interrupção/manual pendentes |
 | 6 | Combate: cenários variados, colaboração melee/ranged, retirada e resgate | Pendente |
 | 7 | Autonomia integrada: construção completa, inverno e sobrevivência prolongada | Pendente |
 | 8 | HUD, relatório final, saves para revisão, instalação e Git | Pendente |
@@ -46,3 +46,12 @@ Não confundir essas fixtures com sobrevivência prolongada, produção econômi
 - Prisão: a propriedade ForPrisoners sozinha não atualizava IsInPrisonCell; corrigida configuração com notificações nativas de distrito/sala e migração de camas próprias existentes. O teste confirmou que a cama marcada antes era rejeitada por RestUtility.
 - Tentativas anteriores de prisão registradas como FAIL/interrompidas. Ajustadas fixtures de necessidades ausentes em inimigos, enumeração mutável e seleção de candidato (paixões aleatórias podiam tornar ambos recrutáveis). Captura repetida com resultado nativo; conversão/recrutamento ainda em andamento.
 
+- Comércio local: `.tools/validation/commerce-20261008-210727-235/`: quatro PASS e DONE; `CommerceRoundtrip.rws` contém transação concluída. Fixture forneceu comerciante, produtos e déficits; cultivo/fabricação e viagem comercial ainda não validados.
+- Prisão: `prison-20261008-210428-997` capturou, tratou, converteu, recrutou e liberou, mas falhou na verificação final porque o teste salvava antes da próxima atualização de registro. Corrigida sincronização da fixture; repetição `prison-20261008-210807-417` em andamento.
+
+- Prisão concluída: `.tools/validation/prison-20261008-210807-417/`: seis PASS e DONE, `PrisonRoundtrip.rws`. Resistência/certidão inicial de um candidato reduzidas apenas na fixture para acelerar as interações; captura, cuidado, conversão, recrutamento e saída ocorreram por jobs nativos.
+- Orbital: `.tools/validation/commerce-orbital-20261008-211203-728/`: cinco PASS e DONE. Console e beacon alimentados por gerador/conduítes; negociação, pods e reconhecimento de estoque realmente entregues. Primeira tentativa falhou por nome errado do gerador na fixture; corrigido para WoodFiredGenerator.
+- Caravana: `.tools/validation/commerce-caravan-20261008-211317-981/` em andamento: cenário controlado com destino amistoso vizinho, mercadorias e reservas; viagem/formação nativas exigidas.
+
+- Caravana concluída: `.tools/validation/commerce-caravan-20261008-211508-209/`: seis PASS e DONE. Formação, mercadorias reais, viagem, venda/compra, retorno, descarga e persistência. Ensaio anterior conferia o depósito cedo demais, com compras no inventário; fixture passou a exigir armazenamento e descarga. Não houve criação gratuita das compras pela IA.
+- As próximas fixtures filtram também incapacidades sem skill (por exemplo Hauling); a rodada aprovada tinha transporte suficiente, mas emitiu aviso ao configurar Hauling de um colono incapaz. Essa seleção da fixture foi corrigida, sem remover restrições dos colonos normais.

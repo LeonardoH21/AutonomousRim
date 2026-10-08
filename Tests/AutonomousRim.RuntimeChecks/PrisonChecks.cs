@@ -42,7 +42,8 @@ namespace AutonomousRim.RuntimeChecks
         {
             Pawn pawn;
             do{pawn=PawnGenerator.GeneratePawn(new PawnGenerationRequest(PawnKindDefOf.Colonist,faction,forceGenerateNewPawn:true,canGeneratePawnRelations:false));}
-            while(pawn.health.hediffSet.hediffs.Count>0 || pawn.skills.skills.Any(s=>s.TotallyDisabled));
+            while(pawn.health.hediffSet.hediffs.Count>0 || pawn.skills.skills.Any(s=>s.TotallyDisabled) ||
+                faction==Faction.OfPlayer && DefDatabase<WorkTypeDef>.AllDefsListForReading.Any(pawn.WorkTypeIsDisabled));
             foreach(var trait in pawn.story.traits.allTraits.ToList())pawn.story.traits.RemoveTrait(trait);
             foreach(var skill in pawn.skills.skills)skill.Level=faction==Faction.OfPlayer?20:8;
             foreach(var weapon in pawn.equipment.AllEquipmentListForReading.ToList())pawn.equipment.Remove(weapon);
@@ -148,8 +149,10 @@ namespace AutonomousRim.RuntimeChecks
                 {tendedReported=true;Pass("native doctor treatment stops untreated injuries and bleeding");}
                 if(tendedReported && !convertedReported && ModsConfig.IdeologyActive && recruit.Ideo==Faction.OfPlayer.ideos.PrimaryIdeo)
                 {convertedReported=true;Pass("native warden conversion reaches colony ideology");}
-                if(capturedReported && recruit.Faction==Faction.OfPlayer && !recruit.IsPrisoner && !release.IsPrisonerOfColony)
+                if(capturedReported && recruit.Faction==Faction.OfPlayer && !recruit.IsPrisoner && !release.IsPrisonerOfColony &&
+                    ai.Prison.Prisoners.Any(r=>r.Pawn==recruit && r.Completed))
                 {
+                    Check(tendedReported && (!ModsConfig.IdeologyActive || convertedReported),"Recruitment finished without the required treatment/conversion evidence.");
                     Pass("native recruitment joins colony; recovered second patient released by native job");
                     stage=3;GameDataSaveLoader.SaveGame("PrisonRoundtrip");GameDataSaveLoader.LoadGame("PrisonRoundtrip");return;
                 }
