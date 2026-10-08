@@ -6,13 +6,13 @@ O botão **Combate cooperativo** desligado também desliga a resposta de emergê
 
 ## Detecção e fases
 
-A cada 60 ticks, o scanner identifica humanos hostis, manhunters temporários/permanentes, insetos, mechanoides ativos, outras criaturas hostis, colmeias visíveis e estruturas hostis consideradas ameaças pelo motor nativo. Fontes hostis de condições de jogo também são consideradas. Mortos, incapacitados, animais pacíficos e fontes de combate dormentes não são tratados como atacantes ativos. Incêndios próximos de colonos ou estruturas da colônia também ativam emergência. O detector usa a situação atual do mapa; não deduz o evento apenas por uma carta de raid.
+A cada 15 ticks, o scanner identifica humanos hostis, manhunters temporários/permanentes, insetos, mechanoides ativos, outras criaturas hostis, colmeias visíveis e estruturas hostis consideradas ameaças pelo motor nativo. Fontes hostis de condições de jogo também são consideradas. Mortos, incapacitados, animais pacíficos e fontes de combate dormentes não são tratados como atacantes ativos. Incêndios próximos de colonos ou estruturas da colônia também ativam emergência. O detector usa a situação atual do mapa; não deduz o evento apenas por uma carta de raid.
 
 | Fase | Condição e comportamento |
 | --- | --- |
 | Danger | Ameaça imediata ou incêndio próximo; defesa/retirada, atendimento e suspensão de trabalho secundário |
 | Securing | A ameaça desapareceu; exige 600 ticks consecutivos sem perigo e mantém as suspensões |
-| Recovery | Medicina, descanso, alimentação, limpeza, transporte e cultivo retornam antes de pesquisa, produção secundária, decoração e expansão |
+| Recovery | Atendimento médico e recuperação individual; colonos saudáveis retomam prioridades anteriores, inclusive construção e pesquisa |
 | Normal | Após pelo menos 3.000 ticks de recuperação e sem incapacitamentos, sangramento, ferimentos temporários ou necessidades críticas; prioridades anteriores restauradas e automações habituais retomadas |
 
 Nova ameaça interrompe imediatamente confirmação/recuperação no próximo scan. As fases, tempos, prioridades originais e ordens próprias são serializados; um teste completo de carregar uma emergência em andamento ainda precisa de validação específica.
@@ -25,7 +25,7 @@ Suspende novos projetos de construção/decoração, coleta planejada, caça da 
 
 Ordens de trabalho nativas passam por uma checagem de rota durante a emergência. Caminhos com fogo e exposição próxima a hostis são rejeitados; combate e movimentação tática têm suas próprias avaliações. Apagar incêndios continua usando a aproximação nativa. Esse filtro é conservador e pode deixar trabalho pendente em vez de enviar alguém por uma área perigosa.
 
-Resgate usa o trabalho nativo para carregar um incapacitado até uma cama, exigindo cuidador capaz, cama válida, acesso/reservas e rotas seguras. Não tenta resgate exposto perto de inimigos. Vulneráveis sem ordens manuais podem ser enviados a salas fechadas acessíveis; o caminho não pode avançar para mais perto das fontes hostis ao escapar de uma área já exposta. Sem abrigo/rota/cama, o painel informa o impedimento. Não há teleporte nem garantia de conseguir salvar um colono cercado.
+Resgate pode destacar um combatente da IA para carregar e tratar um incapacitado, mantendo defesa suficiente e rotas seguras. Considera prazo até a morte por sangramento, medicina, deslocamento e contribuição ao combate; quando necessário, estabiliza no chão antes de transportar. O cuidador fica protegido de recrutamento automático até concluir o atendimento. Veja [resgate tático e testes nativos](RESGATE-TATICO.md). Vulneráveis sem ordens manuais podem ser enviados a salas fechadas acessíveis; o caminho não pode avançar para mais perto das fontes hostis ao escapar de uma área já exposta. Sem abrigo ou rota segura, o painel informa o impedimento. Não há teleporte nem garantia de conseguir salvar um colono cercado.
 
 Prioridades são uma camada temporária separada das prioridades habituais. Mudanças manuais são preservadas. A comparação usa o valor numérico realmente armazenado, porque o modo de caixas de seleção do RimWorld apresenta todo trabalho habilitado como prioridade 3; isso não deve ser confundido com uma edição manual.
 

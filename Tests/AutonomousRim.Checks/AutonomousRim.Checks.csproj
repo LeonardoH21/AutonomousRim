@@ -9,5 +9,6 @@
     <Compile Include="../../Source/AutonomousRim/Core/EquipmentPolicy.cs" Link="EquipmentPolicy.cs" />
     <Compile Include="../../Source/AutonomousRim/Core/TacticalPolicy.cs" Link="TacticalPolicy.cs" />
     <Compile Include="../../Source/AutonomousRim/Core/AnalysisWorker.cs" Link="AnalysisWorker.cs" />
+    <Compile Include="../../Source/AutonomousRim/Core/RescuePolicy.cs" Link="RescuePolicy.cs" />
   </ItemGroup>
 </Project>

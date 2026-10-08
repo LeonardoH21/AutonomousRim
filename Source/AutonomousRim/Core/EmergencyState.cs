@@ -14,6 +14,7 @@ namespace AutonomousRim.Core
         public List<WorkPriorityChange> Work = new List<WorkPriorityChange>();
         public List<CombatOrder> Evacuations = new List<CombatOrder>();
         public List<Pawn> Excluded = new List<Pawn>();
+        public List<MedicalOrder> Medical = new List<MedicalOrder>();
         public bool BlockSecondary => Phase == EmergencyPhase.Danger || Phase == EmergencyPhase.Securing;
         public bool BlockExpansion => BlockSecondary;
         public void Update(bool danger, bool needsCare, int tick)
@@ -31,9 +32,11 @@ namespace AutonomousRim.Core
             Scribe_Collections.Look(ref Work,"work",LookMode.Deep);
             Scribe_Collections.Look(ref Evacuations,"evacuations",LookMode.Deep);
             Scribe_Collections.Look(ref Excluded,"excluded",LookMode.Reference);
+            Scribe_Collections.Look(ref Medical,"medical",LookMode.Deep);
             if(Scribe.mode==LoadSaveMode.PostLoadInit)
             {
                 Work=Work??new List<WorkPriorityChange>(); Evacuations=Evacuations??new List<CombatOrder>(); Excluded=Excluded??new List<Pawn>();
+                Medical=Medical??new List<MedicalOrder>();Medical.RemoveAll(o=>o.Helper==null||o.Patient==null);
                 Work.RemoveAll(c=>c.Pawn==null || c.Work==null); Evacuations.RemoveAll(c=>c.Pawn==null); Excluded.RemoveAll(p=>p==null);
             }
         }

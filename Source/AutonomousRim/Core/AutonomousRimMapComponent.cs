@@ -33,6 +33,20 @@ namespace AutonomousRim.Core
         public bool CombatAutomation => combatAutomation;
         public string CombatStatus { get; private set; } = "Combate cooperativo desligado.";
         public IReadOnlyList<CombatOrder> CombatOrders => combatOrders;
+        public bool CanAssignMedical(Pawn pawn)
+        {
+            if(combatExcluded.Contains(pawn))return false;
+            var owned=combatOrders.FirstOrDefault(o=>o.Pawn==pawn);
+            return owned!=null ? pawn.CurJob?.playerForced!=true || pawn.CurJob.GetUniqueLoadID()==owned.JobId :
+                !pawn.Drafted && pawn.CurJob?.playerForced!=true;
+        }
+        public bool ReleaseCombatForMedical(Pawn pawn)
+        {
+            if(!CanAssignMedical(pawn))return false;
+            var owned=combatOrders.FirstOrDefault(o=>o.Pawn==pawn);
+            if(owned!=null){CombatManager.Stop(new List<CombatOrder>{owned});combatOrders.Remove(owned);}
+            return true;
+        }
         private bool baseAutomation = true;
         private bool strategyAutomation = true;
         private StrategicPlan strategicPlan = new StrategicPlan();
@@ -429,7 +443,7 @@ namespace AutonomousRim.Core
                     EmergencyManager.Apply(map,CurrentState,emergency);
                     if(scheduleAutomation)ScheduleStatus=ScheduleManager.Apply(map,CurrentState,scheduleChanges,true);
                 }
-                else EmergencyManager.Stop(emergency);
+                else EmergencyManager.Apply(map,CurrentState,emergency);
             }
             if (previous.ActiveCount == 0 && next.ActiveCount > 0) FailureAnalyzer.RecordRaidStart(map, CurrentState, failureMemory);
             if (previous.ActiveCount > 0 && next.ActiveCount == 0) FailureAnalyzer.RecordRaidEnd(CurrentState, failureMemory);

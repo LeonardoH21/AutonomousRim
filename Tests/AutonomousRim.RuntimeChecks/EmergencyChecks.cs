@@ -127,7 +127,7 @@ namespace AutonomousRim.RuntimeChecks
                     Check(WorkPriorityManager.RawPriority(helper,WorkTypeDefOf.Hauling)==0,"Exhausted helper resumed hauling during recovery.");
                     helper.needs.rest.CurLevel=1;
                     EmergencyManager.Apply(map,ai.CurrentState,ai.Emergency);
-                    Check(helper.workSettings.GetPriority(WorkTypeDefOf.Hauling)>0 && helper.workSettings.GetPriority(WorkTypeDefOf.Research)==0,"Recovery did not restore work gradually: haul="+helper.workSettings.GetPriority(WorkTypeDefOf.Hauling)+" research="+helper.workSettings.GetPriority(WorkTypeDefOf.Research)+" changes="+string.Join(" | ",ai.Emergency.Work.Where(c=>c.Pawn==helper).Select(c=>c.Work.defName+":"+c.Original+"/"+c.Applied+"/manual="+c.UserOverride)));
+                    Check(helper.workSettings.GetPriority(WorkTypeDefOf.Hauling)>0 && helper.workSettings.GetPriority(WorkTypeDefOf.Research)==researchOriginal,"Healthy helper did not recover original work while patients recover.");
                     enemy=Spawn("Colonist",Faction.OfAncientsHostile,center+new IntVec3(35,0,0));
                     ai.SetEmergencyAutomation(true);
                     Check(ai.Emergency.Phase==EmergencyPhase.Danger,"New threat did not interrupt recovery."); enemy.Destroy(DestroyMode.Vanish);

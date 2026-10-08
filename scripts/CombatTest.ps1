@@ -1,4 +1,4 @@
-param([string]$RimWorldDir = 'C:\Users\Administrador\Downloads\RimWorld.v1.6.4633\RimWorld.v1.6.4633\game', [int]$TimeoutSeconds = 900, [switch]$EmergencyChecks, [switch]$WorkScheduleChecks, [ValidateRange(0,5)][int]$TrialCase=0, [switch]$Disadvantage, [switch]$MeleeRevision, [switch]$Synchronous)
+param([string]$RimWorldDir = 'C:\Users\Administrador\Downloads\RimWorld.v1.6.4633\RimWorld.v1.6.4633\game', [int]$TimeoutSeconds = 900, [switch]$EmergencyChecks, [switch]$MedicalRescueChecks, [switch]$WorkScheduleChecks, [ValidateRange(0,5)][int]$TrialCase=0, [switch]$Disadvantage, [switch]$MeleeRevision, [switch]$Synchronous)
 $ErrorActionPreference='Stop'
 $root=Split-Path $PSScriptRoot -Parent
 $game=(Resolve-Path -LiteralPath $RimWorldDir).Path
@@ -6,11 +6,12 @@ if (Get-Process RimWorldWin64 -ErrorAction SilentlyContinue) { throw 'Close RimW
 if(($TrialCase -gt 0 -and ($EmergencyChecks -or $WorkScheduleChecks)) -or ($EmergencyChecks -and $WorkScheduleChecks)) { throw 'Select one test mode.' }
 $profile=Join-Path $root $(if($TrialCase -gt 0){".tools\combat-five\case$TrialCase"}elseif($WorkScheduleChecks){'.tools\work-schedule-tests'}elseif($EmergencyChecks){'.tools\emergency-tests'}else{'.tools\combat-tests'})
 if($MeleeRevision){$profile=Join-Path $root ('.tools\melee-revision\'+[DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')+'-case'+$TrialCase)}
+if($MedicalRescueChecks){if($EmergencyChecks -or $WorkScheduleChecks -or $TrialCase -gt 0){throw 'Select one test mode.'};$profile=Join-Path $root ('.tools\medical-rescue-tests\'+[DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss'))}
 New-Item -ItemType Directory -Force -Path "$profile\Config" | Out-Null
 [xml]$config='<ModsConfigData><version>1.6.4633</version><activeMods><li>brrainz.harmony</li><li>ludeon.rimworld</li><li>leonardoh21.autonomousrim</li><li>leonardoh21.autonomousrim.runtimechecks</li></activeMods><knownExpansions /></ModsConfigData>'
 $config.Save("$profile\Config\ModsConfig.xml")
 Set-Content -LiteralPath "$profile\Config\Prefs.xml" -Encoding utf8 -Value '<PrefsData><devMode>True</devMode><runInBackground>True</runInBackground><autosaveIntervalDays>100</autosaveIntervalDays><pauseOnLoad>False</pauseOnLoad><pauseOnError>False</pauseOnError><volumeMaster>0</volumeMaster></PrefsData>'
-if($MeleeRevision){Set-Content -LiteralPath "$profile\Config\Prefs.xml" -Encoding utf8 -Value '<PrefsData><devMode>False</devMode><runInBackground>True</runInBackground><autosaveIntervalDays>100</autosaveIntervalDays><pauseOnLoad>False</pauseOnLoad><pauseOnError>False</pauseOnError><volumeMaster>0</volumeMaster></PrefsData>'}
+if($MeleeRevision -or $MedicalRescueChecks){Set-Content -LiteralPath "$profile\Config\Prefs.xml" -Encoding utf8 -Value '<PrefsData><devMode>False</devMode><runInBackground>True</runInBackground><autosaveIntervalDays>100</autosaveIntervalDays><pauseOnLoad>False</pauseOnLoad><pauseOnError>False</pauseOnError><volumeMaster>0</volumeMaster></PrefsData>'}
 $addon=Join-Path $game 'Mods\AutonomousRim.RuntimeChecks'
 if (Test-Path -LiteralPath $addon) { throw 'Test add-on exists; inspect before retrying.' }
 New-Item -ItemType Directory -Force -Path "$addon\About","$addon\Assemblies" | Out-Null
@@ -19,7 +20,7 @@ Set-Content -LiteralPath "$addon\About\About.xml" -Encoding utf8 -Value '<ModMet
 $log=Join-Path $profile ('Player-'+[DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss')+'.log')
 $p=$null
 try {
-    $flag=if($WorkScheduleChecks){'-autonomousrimworkscheduletest'}elseif($EmergencyChecks){'-autonomousrimemergencytest'}else{'-autonomousrimcombattest'}
+    $flag=if($MedicalRescueChecks){'-autonomousrimmedicalrescuetest'}elseif($WorkScheduleChecks){'-autonomousrimworkscheduletest'}elseif($EmergencyChecks){'-autonomousrimemergencytest'}else{'-autonomousrimcombattest'}
     if($TrialCase -gt 0) { $flag=@('-autonomousrimcombatfive',"-autonomousrimcase$TrialCase"); if($Disadvantage){$flag+='-autonomousrimdisadvantage'} }
     if($MeleeRevision){$flag+='-autonomousrimmeleerevision';if($Synchronous){$flag+='-autonomousrimsynchronous'}}
     $arguments=@('-batchmode','-quicktest')+@($flag)+@("-savedatafolder=`"$profile`"",'-logFile',"`"$log`"")
@@ -30,7 +31,8 @@ try {
         if($p.HasExited) { throw 'Game exited before combat validation.' }
         if(Test-Path -LiteralPath $log) {
             $body=Get-Content -LiteralPath $log -Raw
-            if($body -match '(CombatTests|EmergencyTests|FiveCombatTrials|WorkScheduleTests)\] FAIL|Exception ticking|Error in MapComponent|Exception from long event|Patching exception') { throw "Native test failed: $log" }
+            if($body -match '(CombatTests|EmergencyTests|FiveCombatTrials|WorkScheduleTests|MedicalRescueTests)\] FAIL|Exception ticking|Error in MapComponent|Exception from long event|Patching exception') { throw "Native test failed: $log" }
+            if($MedicalRescueChecks -and $body -match 'MedicalRescueTests\] DONE'){Select-String -LiteralPath $log -Pattern 'MedicalRescueTests\] PASS' | ForEach-Object {$_.Line};return}
             if($WorkScheduleChecks -and $body -match 'WorkScheduleTests\] DONE') { Select-String -LiteralPath $log -Pattern 'WorkScheduleTests\] PASS' | ForEach-Object {$_.Line}; return }
             if($TrialCase -gt 0 -and $body -match 'FiveCombatTrials\] DONE') { Select-String -LiteralPath $log -Pattern 'FiveCombatTrials\] RESULT' | ForEach-Object {$_.Line}; return }
             if((!$EmergencyChecks -and $body -match 'CombatTests\] PASS 3:') -or ($EmergencyChecks -and $body -match 'EmergencyTests\] DONE')) { Select-String -LiteralPath $log -Pattern '(CombatTests|EmergencyTests)\] PASS' | ForEach-Object {$_.Line}; return }

@@ -71,6 +71,14 @@ internal static class Program
         }
         Equal(false,thread==Thread.CurrentThread.ManagedThreadId,"Calculation uses a separate CPU thread");
         Equal(true,expected.Select(a=>a.Score).SequenceEqual(computed.Select(a=>a.Score)),"Parallel and synchronous decisions match");
+        Equal(true,RescuePolicy.CanDetach(3,2,160,70),"Three defenders against two permits a rescue");
+        Equal(false,RescuePolicy.CanDetach(2,6,160,70),"Do not abandon defense during numerical disadvantage");
+        Equal(false,RescuePolicy.CanDetach(3,2,50,100),"Numbers alone do not defeat stronger enemies");
+        Equal(true,RescuePolicy.CanDetach(0,0,0,0),"Safe postbattle care does not require defenders");
+        Equal(true,RescuePolicy.HelperScore(20,35,100,4000)>RescuePolicy.HelperScore(4,70,100,4000),"A skilled doctor with lower combat value is preferred");
+        Equal(true,RescuePolicy.StabilizeFirst(1000,900,300,true),"Stabilize before a journey that risks bleeding death");
+        Equal(false,RescuePolicy.StabilizeFirst(10000,900,300,true),"Stable patient can be carried first");
+        Equal(true,RescuePolicy.StabilizeFirst(10000,900,300,false),"No bed must not prevent safe bleeding treatment");
         Console.WriteLine($"Passed {checks} combat and colony policy checks.");
     }
 }

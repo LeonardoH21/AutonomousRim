@@ -30,6 +30,7 @@ namespace AutonomousRim.Execution
         public static void RestoreWork(EmergencyState state) => WorkPriorityManager.Restore(state.Work);
         public static void Stop(EmergencyState state)
         {
+            MedicalRescueManager.Stop(state);
             RestoreWork(state); CombatManager.Stop(state.Evacuations); state.Excluded.Clear();
         }
         public static bool Safe(Map map,IntVec3 cell,ThreatState threat)
@@ -61,7 +62,7 @@ namespace AutonomousRim.Execution
         }
         private static void Evacuate(EmergencyState state,ThreatState threat)
         {
-            state.DeferredRescues=state.MissingShelters=0;
+            state.MissingShelters=0;
             foreach(var order in state.Evacuations.ToList())
             {
                 var pawn=order.Pawn;
@@ -74,29 +75,6 @@ namespace AutonomousRim.Execution
                     // Preserve later manual orders and exclude them for this incident.
                     CombatManager.Stop(new List<CombatOrder>{order}); state.Evacuations.Remove(order);
                     if(pawn!=null)state.Excluded.Add(pawn);
-                }
-            }
-            var rescuer=new WorkGiver_RescueDowned();
-            foreach(var victim in threat.Colonists.Where(p=>p.Downed && !p.InBed()).OrderByDescending(p=>p.health.hediffSet.BleedRateTotal))
-            {
-                if(state.Evacuations.Any(o=>o.Pawn.CurJob?.targetA.Thing==victim))continue;
-                state.DeferredRescues++;
-                if(!Safe(victim.Map,victim.Position,threat))continue;
-                foreach(var helper in threat.Colonists.Where(p=>WorkPriorityManager.CanWork(p) && !p.InBed() &&
-                    !p.WorkTagIsDisabled(WorkTags.Caring) && !p.WorkTagIsDisabled(WorkTags.Hauling) &&
-                    p.health.summaryHealth.SummaryHealthPercent>0.8f && p.health.hediffSet.BleedRateTotal<0.1f &&
-                    (p.needs?.rest?.CurLevel??1)>0.25f && p.CurJob?.playerForced!=true && !state.Excluded.Contains(p) &&
-                    !state.Evacuations.Any(o=>o.Pawn==p)).OrderBy(p=>p.Position.DistanceTo(victim.Position)))
-                {
-                    if(!Route(helper,victim.Position,threat) || !rescuer.HasJobOnThing(helper,victim))continue;
-                    var job=rescuer.JobOnThing(helper,victim);
-                    if(job==null || !job.targetB.IsValid || !Safe(helper.Map,job.targetB.Cell,threat) || !Route(helper,job.targetB.Cell,threat))continue;
-                    if(helper.jobs.TryTakeOrderedJob(job,JobTag.Misc,false))
-                    {
-                        state.Evacuations.Add(new CombatOrder{Pawn=helper,JobId=job.GetUniqueLoadID(),Role="Resgate seguro",OriginalFireAtWill=helper.drafter?.FireAtWill??true});
-                        state.DeferredRescues--;
-                    }
-                    break;
                 }
             }
             foreach(var pawn in threat.Colonists.Where(p=>!p.Dead && !p.Downed && !p.InMentalState && !p.Drafted && p.drafter!=null &&
@@ -115,9 +93,10 @@ namespace AutonomousRim.Execution
         public static void Apply(Map map,ColonyState colony,EmergencyState state)
         {
             var threat=colony.Threat;
+            MedicalRescueManager.Apply(map,state,threat);
             state.Decision=threat.Immediate?(Retreat(threat)?"Recuar / abrigar; resgatar somente por rota segura":"Defender em cobertura / reorganizar"):
                 state.Phase==EmergencyPhase.Danger?"Incêndio próximo: proteger colonos e combater o fogo":state.Phase==EmergencyPhase.Securing?"Confirmar segurança; atender feridos":state.Phase==EmergencyPhase.Recovery?"Recuperar saúde, descanso e alimentação":"Rotina normal";
-            if(!state.BlockSecondary) { Stop(state); return; }
+            if(!state.BlockSecondary && state.Phase!=EmergencyPhase.Recovery) { RestoreWork(state);CombatManager.Stop(state.Evacuations);state.Excluded.Clear();return; }
             bool recovery=state.Phase==EmergencyPhase.Recovery;
             bool criticalFood=colony.StoredMealCount==0 && colony.EstimatedFoodDays<0.5f;
             bool foodLow=colony.EstimatedFoodDays<colony.TargetFoodDays;
@@ -128,7 +107,10 @@ namespace AutonomousRim.Execution
                 pawn.workSettings.EnableAndInitializeIfNotAlreadyInitialized();
                 foreach(var work in DefDatabase<WorkTypeDef>.AllDefsListForReading.Where(w=>!pawn.WorkTypeIsDisabled(w)))
                 {
-                    int desired=Essential(work,recovery,criticalFood,foodLow)?1:0;
+                    var prior=state.Work.FirstOrDefault(c=>c.Pawn==pawn && c.Work==work);
+                    int desired=recovery ? prior!=null && !prior.UserOverride?prior.Original:WorkPriorityManager.RawPriority(pawn,work) : Essential(work,false,criticalFood,foodLow)?1:0;
+                    if(recovery && WorkReadiness.SelfCare(work) && WorkReadiness.NeedsRecovery(pawn))desired=1;
+                    if(recovery && work==WorkTypeDefOf.Doctor && threat.Colonists.Any(p=>p.Downed || HealthAIUtility.ShouldBeTendedNowByPlayer(p)))desired=1;
                     if(work==WorkTypeDefOf.Hunting && !WorkPriorityManager.CanHunt(pawn))desired=0;
                     if(work==WorkTypeDefOf.Doctor && pawn!=doctor)desired=2;
                     if((work.defName=="Patient" || work.defName=="PatientBedRest") && pawn==doctor && !WorkReadiness.SeriousMedicalNeed(pawn))desired=2;
@@ -145,7 +127,7 @@ namespace AutonomousRim.Execution
                     pawn.jobs.EndCurrentJob(JobCondition.InterruptForced);
             }
             if(threat.Immediate)Evacuate(state,threat);
-            else { CombatManager.Stop(state.Evacuations); state.Excluded.Clear(); state.DeferredRescues=state.MissingShelters=0; }
+            else { CombatManager.Stop(state.Evacuations); state.Excluded.Clear(); state.MissingShelters=0; }
         }
     }
     [HarmonyPatch(typeof(JobGiver_OptimizeApparel),"TryGiveJob")]
