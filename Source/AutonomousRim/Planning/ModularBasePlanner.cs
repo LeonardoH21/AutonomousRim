@@ -51,6 +51,18 @@ namespace AutonomousRim.Planning
         }
         public static int Rank(string kind) => kind == "Quarto" ? 0 : kind == "Cozinha" ? 1 : kind == "Abate" ? 2 :
             kind == "Estoque" ? 3 : kind == "Freezer" ? 4 : kind == "Energia e climatização" ? 5 : 6;
+        private static bool Functional(Map map,RoomProject p) => p.Completed || (p.Kind == "Estoque" || p.Kind == "Freezer") &&
+            !BaseConstructionManager.Tasks(p).Any(t => t.CancelledByPlayer) && p.Shell.All(t => t.Complete(map)) &&
+            p.Furniture.Where(t => t.Def.defName != "ShelfSmall").All(t => t.Complete(map)) &&
+            (!p.RequiresRoof || p.RoofArea.All(c => c.Roofed(map)));
+        private static bool InitialCoreReady(Map map,List<RoomProject> projects)
+        {
+            int population=map.mapPawns.FreeColonistsSpawnedCount;
+            var bedrooms=projects.Where(p=>IsModular(p) && p.Kind=="Quarto").OrderByDescending(p=>Functional(map,p)).Take(population).ToList();
+            return bedrooms.Count==population && bedrooms.All(p=>Functional(map,p)) && projects.Where(p=>IsModular(p) &&
+                (p.Kind=="Cozinha" || p.Kind=="Abate" || p.Kind=="Estoque" || p.Kind=="Freezer" || p.Kind=="Pesquisa" ||
+                 p.Kind=="Energia e climatização")).All(p=>Functional(map,p));
+        }
 
         private static void AddCirculation(Map map, List<RoomProject> projects, IntVec3 root)
         {
@@ -209,15 +221,10 @@ namespace AutonomousRim.Planning
                 if (!AddRoom(map, projects, root, "Quarto", 1)) return "Sem módulo acessível disponível para novos quartos.";
             foreach (var kind in new[] { "Cozinha", "Abate", "Estoque", "Freezer", "Energia e climatização" })
                 if (!projects.Any(p => p.Kind == kind)) AddRoom(map, projects, root, kind, kind == "Estoque" ? 4 : kind == "Freezer" ? 2 : 1);
-            bool functional(RoomProject p) => p.Completed || (p.Kind == "Estoque" || p.Kind == "Freezer") &&
-                !BaseConstructionManager.Tasks(p).Any(t => t.CancelledByPlayer) &&
-                p.Shell.All(t => t.Complete(map)) && p.Furniture.Where(t => t.Def.defName != "ShelfSmall").All(t => t.Complete(map)) &&
-                (!p.RequiresRoof || p.RoofArea.All(c => c.Roofed(map)));
+            bool functional(RoomProject p) => Functional(map,p);
             bool coreReady = projects.Where(p => IsModular(p) && p.Crop == null).All(functional);
             // Production must not wait for optional dining, hospital or generator modules.
-            bool initialReady = projects.Where(p => IsModular(p) && (p.Kind == "Quarto" || p.Kind == "Cozinha" ||
-                p.Kind == "Abate" || p.Kind == "Estoque" || p.Kind == "Freezer" || p.Kind == "Pesquisa" ||
-                p.Kind == "Energia e climatização")).All(functional);
+            bool initialReady = InitialCoreReady(map,projects);
             if (initialReady && projects.Any(p => p.Kind == "Pesquisa" && p.Completed) && !projects.Any(p => p.Kind == "Oficina"))
                 AddRoom(map, projects, root, "Oficina", 4);
             if (coreReady)

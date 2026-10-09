@@ -82,6 +82,15 @@ namespace AutonomousRim.RuntimeChecks
                 Check(!Blocked(kitchen,dependencies) && !Blocked(butcher,dependencies) && !Blocked(storage,dependencies) && Blocked(research,dependencies),
                     "Food/storage dependency or occupied-colony shelter gate incorrect.");
                 Log.Message("[ConstructionDependencyTests] PASS: spare bedrooms cannot block production; food/storage proceed while shelter is built.");
+                foreach(var p in dependencies.Where(p=>p.Kind!=ModularBasePlanner.ReservationKind))
+                {p.LayoutSlot="mod:0:0:"+dependencies.IndexOf(p);p.Completed=p!=spare;}
+                bool Ready()=>(bool)AccessTools.Method(typeof(ModularBasePlanner),"InitialCoreReady").Invoke(null,new object[]{map,dependencies});
+                Check(Ready(),"Spare bedroom withheld workshop planning after occupied shelter/services were ready.");
+                var occupiedBedroom=dependencies.First(p=>p.Kind=="Quarto" && p.Completed);
+                occupiedBedroom.Completed=false;Check(!Ready(),"Workshop planned without enough functional bedrooms.");
+                occupiedBedroom.Completed=true;kitchen.Completed=false;Check(!Ready(),"Workshop planned before functional kitchen.");
+                kitchen.Completed=true;
+                Log.Message("[ConstructionDependencyTests] PASS: workshop readiness uses current population shelter; extra bedroom does not gate production.");
                 var lampCell=GenRadial.RadialCellsAround(map.Center,45,true).First(c=>c.InBounds(map) && c.Standable(map) && !c.Fogged(map) && !c.GetThingList(map).Any() && (c+IntVec3.North).InBounds(map) && !(c+IntVec3.North).GetThingList(map).Any());
                 var lampRoom=new RoomProject();lampRoom.Furniture.Add(new ConstructionTask{Def=DefDatabase<ThingDef>.GetNamed("WallLamp"),Position=lampCell,Rotation=Rot4.North});
                 Check(!RingBasePlanner.Validate(map,new List<RoomProject>{lampRoom}),"Unsupported lamp accepted.");
