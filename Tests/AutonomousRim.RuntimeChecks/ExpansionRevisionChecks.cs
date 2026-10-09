@@ -22,6 +22,7 @@ namespace AutonomousRim.RuntimeChecks
             {
                 var room = new RoomProject { Kind = kind, LayoutSlot = "mod:10:10:1", Origin = new IntVec3(30, 0, 30),
                     InteriorSize = kind == "Quarto" ? 5 : 11, InteriorHeight = (kind == "Oficina" || kind == "Laboratório") ? 11 : 5, Completed = true, RequiresRoof = false };
+                foreach(var wall in room.Footprint.EdgeCells)room.Shell.Add(new ConstructionTask{Def=ThingDefOf.Wall,Stuff=ThingDefOf.WoodLog,Position=wall});
                 if (kind == "Quarto" || kind == "Hospital") room.Furniture.Add(new ConstructionTask { Def = ThingDefOf.Bed, Stuff = ThingDefOf.WoodLog, Position = room.Origin + new IntVec3(1, 0, 4) });
                 var projects = new List<RoomProject> { room };
                 if (kind == "Quarto") projects.Add(new RoomProject { Kind = "Climatização", LayoutSlot = "heat:" + room.LayoutSlot,

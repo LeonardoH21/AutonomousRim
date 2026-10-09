@@ -89,6 +89,15 @@ namespace AutonomousRim.RuntimeChecks
                 Check(RingBasePlanner.Validate(map,new List<RoomProject>{lampRoom}),"Future supporting wall rejected.");
                 lampRoom.Shell[0].CancelledByPlayer=true;Check(!RingBasePlanner.Validate(map,new List<RoomProject>{lampRoom}),"Cancelled support accepted.");
                 Log.Message("[ConstructionDependencyTests] PASS: planned lamp support accepted; missing/cancelled support rejected.");
+                var bedroom=new RoomProject{Kind="Quarto",LayoutSlot="mod:12:12:1",Origin=lampCell-new IntVec3(3,0,5),InteriorSize=5,Completed=true};
+                foreach(var edge in bedroom.Footprint.EdgeCells)bedroom.Shell.Add(new ConstructionTask{Def=ThingDefOf.Wall,Stuff=ThingDefOf.WoodLog,Position=edge});
+                var door=(Building)ThingMaker.MakeThing(ThingDefOf.Door,ThingDefOf.WoodLog);door.SetFaction(Faction.OfPlayer);GenSpawn.Spawn(door,lampCell+IntVec3.North,map);
+                var finish=new RoomProject{Kind="Acabamento",LayoutSlot="interior:"+bedroom.LayoutSlot};
+                var oldLamp=new ConstructionTask{Def=DefDatabase<ThingDef>.GetNamed("WallLamp"),Position=lampCell,Rotation=Rot4.North};finish.Furniture.Add(oldLamp);
+                var interiors=new List<RoomProject>{bedroom,finish};ModularInteriorPlanner.Plan(map,interiors);
+                Check(oldLamp.Position!=lampCell && bedroom.Shell.Any(w=>w.Position==oldLamp.Position+IntVec3.North) && (oldLamp.Position+IntVec3.North).GetEdifice(map)==null,"Unissued lamp kept unsupported door as support.");
+                oldLamp.Position=lampCell;oldLamp.CancelledByPlayer=true;ModularInteriorPlanner.Plan(map,interiors);Check(oldLamp.Position==lampCell,"Cancelled lamp plan relocated.");
+                Log.Message("[ConstructionDependencyTests] PASS: unissued door-backed lamp relocated to a planned wall; cancelled lamp preserved.");
                 Log.Message("[ConstructionDependencyTests] DONE: controlled contracts only; native checkpoint continuation required.");
             }
             catch(Exception ex){Log.Error("[ConstructionDependencyTests] FAIL: "+ex);}

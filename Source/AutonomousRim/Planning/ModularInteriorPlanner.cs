@@ -10,6 +10,14 @@ namespace AutonomousRim.Planning
     // Finishing has its own project: research for a dresser must not block a habitable bedroom.
     public static class ModularInteriorPlanner
     {
+        private static bool LampSupport(Map map, RoomProject room, IntVec3 cell)
+        {
+            if(!cell.InBounds(map))return false;
+            var actual=cell.GetEdifice(map);
+            if(actual!=null && actual.def.building?.supportsWallAttachments==true && actual.def.Fillage==FillCategory.Full)return true;
+            if(actual!=null && !(actual is Mineable))return false;
+            return room.Shell.Any(t=>t.Def==ThingDefOf.Wall && !t.CancelledByPlayer && t.Position==cell);
+        }
         public static void Plan(Map map, List<RoomProject> projects)
         {
             foreach (var room in projects.Where(p => ModularBasePlanner.IsModular(p) && p.Crop == null && p.Completed).ToList())
@@ -28,7 +36,7 @@ namespace AutonomousRim.Planning
                     var free = room.Interior.Cells.OrderBy(c => c.DistanceToSquared(task.Position)).Where(c =>
                         GenAdj.OccupiedRect(c, task.Rotation, task.Def.Size).All(n => room.Interior.Contains(n) &&
                             !occupied.Contains(n) && n.GetEdifice(map) == null) &&
-                        (def != "WallLamp" || room.Footprint.EdgeCells.Contains(c + IntVec3.North)))
+                        (def != "WallLamp" || room.Footprint.EdgeCells.Contains(c + IntVec3.North) && LampSupport(map,room,c + IntVec3.North)))
                         .DefaultIfEmpty(IntVec3.Invalid).First();
                     if (free.IsValid) { task.Position = free; finish.Furniture.Add(task); }
                 }
@@ -110,10 +118,11 @@ namespace AutonomousRim.Planning
                 {
                     var occupied = projects.SelectMany(p => p.Furniture).Where(t => t != task && t.Def is ThingDef &&
                         !t.Def.defName.Contains("Conduit")).SelectMany(t => GenAdj.OccupiedRect(t.Position, t.Rotation, t.Def.Size)).ToHashSet();
-                    if (!GenAdj.OccupiedRect(task.Position, task.Rotation, task.Def.Size).Any(occupied.Contains)) continue;
+                    if (!GenAdj.OccupiedRect(task.Position, task.Rotation, task.Def.Size).Any(occupied.Contains) &&
+                        (task.Def.defName!="WallLamp" || LampSupport(map,room,task.Position+task.Rotation.FacingCell))) continue;
                     var free = room.Interior.Cells.OrderBy(c => c.DistanceToSquared(task.Position)).Where(c =>
                         GenAdj.OccupiedRect(c, task.Rotation, task.Def.Size).All(n => room.Interior.Contains(n) && !occupied.Contains(n) && n.GetEdifice(map) == null) &&
-                        (task.Def.defName != "WallLamp" || room.Footprint.EdgeCells.Contains(c + IntVec3.North)))
+                        (task.Def.defName != "WallLamp" || room.Footprint.EdgeCells.Contains(c + IntVec3.North) && LampSupport(map,room,c + IntVec3.North)))
                         .DefaultIfEmpty(IntVec3.Invalid).First();
                     if (free.IsValid) task.Position = free;
                 }
