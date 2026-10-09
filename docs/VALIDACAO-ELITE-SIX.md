@@ -10,9 +10,9 @@ Novos ensaios usam Alpha, Bravo, Charlie, Delta, Echo e Foxtrot originais, todas
 | Alimentação e reservas | Parcial: cozinha, refeições e estimativa em dias | Ajustes por escassez/excesso, freezer cheio, inverno e reserva estratégica |
 | Pesquisa, oficina e equipamento | Parcial: duas bancadas usadas; arco fabricado/equipado | Armaduras, checkpoints tecnológicos e distribuição completa |
 | Comércio local e segurança | PASS: troca, reservas, controle manual, fogo, save/load e desligamento | Produção agrícola comercial orgânica |
-| Prisão | Ensaio adaptado para seis; execução em andamento | Captura, tratamento, conversão, recrutamento, soltura e rebelião no novo ambiente |
+| Prisão | PASS nativo: captura, tratamento, conversão, recrutamento, soltura e recarga | Rebelião, guardas de segurança e duração natural da conversão/recrutamento |
 | Comércio orbital e caravana | Adaptados; não executados neste ambiente | Compra real, entrega e retorno dos seis originais |
-| Cinco combates e recuperação | Adaptados; não executados neste ambiente | Vantagem/equilíbrio/desvantagem, melee/ranged, animais/mechs e atendimento |
+| Cinco combates e recuperação | Primeiro combate em execução | Vantagem/equilíbrio/desvantagem, melee/ranged, animais/mechs e atendimento |
 | Prioridades, agenda, resgate e emergência | Há observação parcial e ensaios históricos | Cobertura específica no ambiente Elite Six |
 | Inverno, energia e expansão | Pendente | Reservas, climatização, expansão e recursos com demanda real |
 
@@ -35,3 +35,5 @@ O jogo deve estar liberado entre ensaios. Registrar resultado e checkpoint antes
 ## Evidência nova de comércio
 
 `enhanced-commercesafety-20261009-232953-198`: sete PASS e DONE; seis IDs conferidos contra BASE no `CommerceRoundtrip.rws`. Executou código `7008217`. As guardas adicionais de identidade/fatores de `201753e` serão exercitadas nas etapas seguintes.
+
+`enhanced-prison-20261009-233305-690`: seis PASS e DONE; guardas de identidade/fatores exercitadas, mantendo seis originais e recrutando um sétimo. Resistência/certidão reduzidas somente nos pacientes controlados; soltura para facção permanentemente hostil não melhorou diplomacia. Tentativa anterior `enhanced-prison-20261009-233115-240` inválida por ameaça não planejada no setup; seu resultado permanece registrado.

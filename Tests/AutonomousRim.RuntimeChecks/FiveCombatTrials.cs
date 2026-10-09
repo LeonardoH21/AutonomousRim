@@ -148,7 +148,7 @@ namespace AutonomousRim.RuntimeChecks
             }
             if(Elite)
             {
-                eliteRoster=map.mapPawns.FreeColonistsSpawned.ToList();
+                eliteRoster=EliteFixtureBaseline.Roster(map);
                 Check(eliteRoster.Count==6 && Current.Game.Scenario.name=="AutonomousRim Enhanced World","Combat fixture requires six original Enhanced World colonists");
             }
             foreach(var pawn in map.mapPawns.AllPawnsSpawned.ToList()) { pawn.DeSpawn(); if(!eliteRoster.Contains(pawn))Find.WorldPawns.PassToWorld(pawn,PawnDiscardDecideMode.KeepForever); }
