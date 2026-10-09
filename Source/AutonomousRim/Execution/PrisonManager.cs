@@ -221,7 +221,10 @@ namespace AutonomousRim.Execution
             foreach(var patient in map.mapPawns.AllPawnsSpawned.Where(p=>p.Downed && !p.Dead && p.RaceProps.Humanlike && !p.IsPrisoner &&
                 p.Faction!=null && p.HostileTo(Faction.OfPlayer) && !p.Position.Fogged(map) && p.CanBeCaptured()).OrderBy(p=>HealthUtility.TicksUntilDeathDueToBloodLoss(p)))
             {
-                if(state.Prisoners.Any(r=>r.Pawn==patient) || state.Orders.Any(o=>o.Patient==patient))continue;
+                var previous=state.Prisoners.FirstOrDefault(r=>r.Pawn==patient);
+                // A completed automatic record (escape/release) must not forever
+                // blacklist a hostile survivor who can be safely captured again.
+                if(previous!=null && (!previous.Completed || previous.Manual) || state.Orders.Any(o=>o.Patient==patient))continue;
                 foreach(var helper in map.mapPawns.FreeColonistsSpawned.Where(p=>Available(p,state) && !p.WorkTagIsDisabled(WorkTags.Hauling)).OrderByDescending(p=>p.skills.GetSkill(SkillDefOf.Medicine).Level))
                 {
                     if(!helper.CanReserve(patient) || !HealthAIUtility.CanRescueNow(helper,patient,true))continue;
@@ -241,6 +244,7 @@ namespace AutonomousRim.Execution
                     bool recruit=patient.guest?.Recruitable==true && RecruitmentRoom(map,colony,state) && PrisonPlanner.CandidateScore(map,patient)>=8;
                     if(Issue(state,helper,patient,bed,job,"Capturar"))
                     {
+                        if(previous!=null)state.Prisoners.Remove(previous);
                         state.Prisoners.Add(new PrisonerRecord{Pawn=patient,OriginalFaction=patient.Faction,
                             Destination=recruit?PrisonerDestination.Recruit:PrisonerDestination.TreatAndRelease});return;
                     }

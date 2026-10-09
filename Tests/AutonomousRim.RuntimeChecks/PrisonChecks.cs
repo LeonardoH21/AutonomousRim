@@ -106,6 +106,13 @@ namespace AutonomousRim.RuntimeChecks
             state.NextAction=0;PrisonManager.Apply(map,shortage,projects,state,false);
             Check(state.Orders.Count==0,"Capture ignored the two-day food reserve gate.");
             Pass("safety: low reserve blocks new prisoners (controlled reserve input)");
+            foreach(var patient in new[]{recruit,release})state.Prisoners.Add(new PrisonerRecord{Pawn=patient,Owned=true,Completed=true,Manual=true});
+            state.NextAction=0;PrisonManager.Apply(map,ColonyStateScanner.Scan(map),projects,state,false);
+            Check(state.Orders.Count==0 && state.Prisoners.All(r=>r.Manual && r.Completed),"Completed manual prisoner records were overwritten or recaptured.");
+            Pass("safety: completed manual prisoner records remain protected");
+            map.GetComponent<AutonomousRimMapComponent>().Prison.Prisoners.Add(new PrisonerRecord{Pawn=recruit,Owned=true,Completed=true,
+                OriginalFaction=recruit.Faction,Destination=PrisonerDestination.Recruit,Status="Controlled earlier escape record"});
+            Pass("recapture setup: same hostile pawn has a completed automatic record; native capture must replace it without duplication");
         }
         private void Setup()
         {
@@ -156,6 +163,7 @@ namespace AutonomousRim.RuntimeChecks
                 if(release==null)release=ai.Prison.Prisoners.FirstOrDefault(r=>r.Destination==PrisonerDestination.TreatAndRelease)?.Pawn;
                 Check(recruit!=null && release!=null,"Fixture patients not tracked.");
                 Check(!recruit.Dead && !release.Dead,"Prison patient died.");
+                Check(!capturedReported || recruit.MapHeld==map || recruit.Faction==Faction.OfPlayer,"Recruit candidate escaped from the map before recruitment; inspect failure save.");
                 if(!diagnosed && Find.TickManager.TicksGame-start>900 && !capturedReported)
                 {
                     diagnosed=true;
@@ -193,7 +201,7 @@ namespace AutonomousRim.RuntimeChecks
                     Log.Message($"[PrisonTests] progress tick={Find.TickManager.TicksGame-start}: {ai.Prison.Status}; recruit={recruit.guest?.ExclusiveInteractionMode?.defName}/{recruit.CurJob?.def.defName}; release={release.guest?.ExclusiveInteractionMode?.defName}/{release.CurJob?.def.defName}");
                 Check(Find.TickManager.TicksGame-start<300000,"Prison scenario exceeded five game days without completing: "+ai.Prison.Status);
             }
-            catch(Exception ex){stage=99;Log.Error("[PrisonTests] FAIL: "+ex);}
+            catch(Exception ex){GameDataSaveLoader.SaveGame("PrisonFailure");stage=99;Log.Error("[PrisonTests] FAIL: "+ex);}
         }
     }
 }

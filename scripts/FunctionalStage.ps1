@@ -5,7 +5,8 @@ param(
  [Parameter(Mandatory=$true)][string]$SuccessMarker,
  [ValidatePattern('^autonomousrim[a-z0-9]+$')][string[]]$ExtraFlags=@(),
  [string]$ResumeSave,
- [ValidateRange(60,3600)][int]$TimeoutSeconds=600
+ [ValidateRange(60,3600)][int]$TimeoutSeconds=600,
+ [switch]$Visible
 )
 $ErrorActionPreference='Stop'
 $root=Split-Path $PSScriptRoot -Parent
@@ -35,13 +36,15 @@ try {
  $manifest=[ordered]@{stage=$Stage;flag=$Flag;extraFlags=@($ExtraFlags);resumeSaveHash=$(if($ResumeSave){(Get-FileHash -LiteralPath $ResumeSave).Hash}else{$null});sourceCommit=(git -C $root rev-parse HEAD);dllHash=(Get-FileHash "$game\Mods\AutonomousRim\1.6\Assemblies\AutonomousRim.dll").Hash;runtimeHash=(Get-FileHash "$addon\Assemblies\AutonomousRim.RuntimeChecks.dll").Hash;result='RUNNING';profile=$profile}
  $manifest|ConvertTo-Json|Set-Content -LiteralPath "$profile\manifest.json" -Encoding utf8
  $arguments=@('-batchmode','-quicktest',('-'+$Flag),'-autonomousrimstagedtest',('-savedatafolder="'+$profile+'"'),'-logFile',('"'+$log+'"'))
+ if($Visible){$arguments=@($arguments|Where-Object{$_ -ne '-batchmode'})+@('-screen-width','1280','-screen-height','900')}
  foreach($extraFlag in $ExtraFlags){$arguments+=('-'+$extraFlag)}
  if($ResumeSave){
   New-Item -ItemType Directory -Path "$profile\Saves" -Force|Out-Null
   Copy-Item -LiteralPath $ResumeSave -Destination "$profile\Saves\ModularResume.rws"
   $arguments+='-autonomousrimprogressionresume'
  }
- $p=Start-Process -FilePath "$game\RimWorldWin64.exe" -ArgumentList $arguments -WindowStyle Hidden -PassThru
+ $windowStyle=if($Visible){'Normal'}else{'Hidden'}
+ $p=Start-Process -FilePath "$game\RimWorldWin64.exe" -ArgumentList $arguments -WindowStyle $windowStyle -PassThru
  Write-Output "STAGE=$Stage PID=$($p.Id) LOG=$log"
  $deadline=[DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
  while([DateTime]::UtcNow -lt $deadline){

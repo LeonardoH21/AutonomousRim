@@ -4,7 +4,7 @@ Objetivo: testar todas as funcionalidades, corrigir falhas e permitir retomada s
 
 ## Estado de retomada
 
-Em andamento: etapa 6, controles de retirada e recuperação clínica por checkpoint. Etapas 0–3 aprovadas no escopo indicado; prisão nativa, comércio local, orbital e caravana passaram. Ensaio integrado chegou a trinta dias com cinco sobreviventes, mas reprovou progressão militar e conectividade modular; não exportar como aprovado. Correções e evidências salvas no Git até `03e1b94`; revisões posteriores detalhadas abaixo.
+Em andamento: repetir a etapa 7 após correções de pesquisa e expansão. Recuperação clínica por checkpoint passou, sem mortes, preservando sequelas nativas. Prisão passou em seis guardas e recaptura controlada; contenção de rebeliões continua pendente. HUD passou na auditoria visual dos 12 controles após correção da rolagem. Ensaio integrado anterior chegou a trinta dias com cinco sobreviventes, mas reprovou progressão militar e conectividade modular; não exportar como aprovado. Evidências e limites detalhados abaixo.
 
 | Etapa | Escopo | Estado / evidência |
 |---|---|---|
@@ -16,7 +16,7 @@ Em andamento: etapa 6, controles de retirada e recuperação clínica por checkp
 | 5 | Comércio: produção, interação local/orbital, orçamento, entrega, caravana, controles e persistência | PASS parcial: comércio local e orbital, entrega real, reserva, itens protegidos, salvar/carregar e desligamento. PASS: caravana nativa com viagem, compra, retorno e descarga. Produção econômica prolongada e cenários de interrupção/manual pendentes |
 | 6 | Combate: cenários variados, colaboração melee/ranged, retirada e resgate | Falhas identificadas; revisão em validação. Resultados individuais abaixo |
 | 7 | Autonomia integrada: construção completa, inverno e sobrevivência prolongada | FAIL aos trinta dias: cinco sobreviventes, mas conjunto militar incompleto e hospital separado do núcleo. Save final preservado. Correções de pesquisa/expansão passaram em controles; nova partida prolongada pendente |
-| 8 | HUD, relatório final, saves para revisão, instalação e Git | Pendente |
+| 8 | HUD, relatório final, saves para revisão, instalação e Git | PASS dos 12 controles reais, rolagem e estado gravado; exportação de base integrada aprovada e relatório completo pendentes |
 
 Logs ficam em `.tools`, saves/checkpoints de partidas também. Não chamar uma etapa de aprovada apenas porque compilou ou emitiu uma ordem: confirmar o resultado real exigido pelo cenário. Registrar falhas, correção e repetição, incluindo limites de cobertura.
 
@@ -190,3 +190,26 @@ Próxima ampliação de prisão preparada: flag `autonomousrimprisonsafetytest`,
 `prison-safety-regression-20261009-115804-490` completou cinco controles adicionais e os seis grupos de captura/tratamento/conversão/recrutamento/liberação/persistência. Entretanto o setup emitiu erro nativo ao atribuir `ForPrisoners=false`; manifesto reclassificado `INVALID_FIXTURE`, preservando `originalResult=PASS` e motivo. Corrigido para `ForOwnerType=BedOwnerType.Colonist`, conforme API nativa 1.6. Executor agora rejeita também essa mensagem de erro. Nova rodada `prison-owner-api-regression` em execução, usando fixture corrigido. Não considerar a rodada com erro uma aprovação limpa.
 
 Ordem de continuidade: coletar resultado de `prison-owner-api-regression`; depois HUD visível/controles, interrupções manuais de comércio e prisão, combates humanos variados ainda pendentes, nova partida integrada com pesquisa/expansão corrigidas e cobertura sazonal. Preservar a falha integrada aos trinta dias. Exportação aprovada depende de uma nova execução que cumpra os marcos, seguida de carregamento sem observador.
+
+### Fuga e recaptura
+
+`prison-owner-api-regression-20261009-120247-775` passou nos controles de segurança, captura, tratamento e conversão sem o erro de propriedade das camas. Entretanto o candidato Ñore iniciou uma fuga nativa antes de ser recrutado: `Saves/AutonomousRim_Raid_35160.rws` contém `LordJob_PrisonBreak`, `lastPrisonBreakTicks=35153`, resistência zero e humor aproximadamente 0,616. O log depois registra zero presos e ausência de job do candidato; cenário encerrado intencionalmente, manifesto `FUNCTIONAL_FAILURE_ESCAPE`, mantendo erro do executor e motivo. Não é aprovação integral de prisão. A fixture usa ajudantes desarmados e combate desligado, portanto não demonstra contenção de rebelião por defensores equipados.
+
+Inspeção revelou falha independente na recaptura: qualquer registro prévio do mesmo Pawn, mesmo automático e concluído após fuga/liberação, impedia eternamente uma nova captura. Correção permite substituir apenas um registro automático concluído depois de emitir uma nova ordem de captura válida; registros manuais e ordens ativas continuam protegidos. Destino é reavaliado com necessidades atuais. Compilação e 57 políticas passaram.
+
+Rodada `prison-recapture-regression` em execução: seis guardas de segurança, incluindo registro manual concluído, e candidato com registro automático concluído controlado. Exige nova captura nativa do mesmo Pawn sem duplicação, depois tratamento/conversão/recrutamento/liberação/persistência. O observador agora salva `PrisonFailure.rws` e reprova imediatamente se o candidato sair do mapa antes de ser recrutado; não aguarda um timeout quando o objetivo já ficou impossível. Contenção física de fuga e interação manual de um preso vivo ainda pendentes.
+
+`prison-recapture-regression-20261009-120852-641` executou a captura nativa do candidato com registro automático concluído, sem duplicação, e passou em tratamento/conversão. Porém o novo observador interpretou `Spawned=false` como fuga quando um cuidador carregava o candidato entre camas. `PrisonFailure.rws` contém `Human38010` no `carryTracker/innerContainer/innerList`, ainda prisioneiro. Manifesto `INVALID_OBSERVER`, erro original preservado. Corrigido para `MapHeld==map`, que inclui Pawn carregado; nova rodada `prison-carried-recapture-regression` em execução. A fuga de Ñore na rodada anterior continua uma falha real, comprovada por LordJob_PrisonBreak e saída do mapa.
+
+`prison-carried-recapture-regression-20261009-121107-319` passou sem erro nativo: seis guardas de segurança, captura do candidato com registro automático concluído sem duplicação (assertiva Single no registro), tratamento, conversão, recrutamento/liberação, persistência e desligamento. A recaptura usa estado prévio controlado; não representa derrota/recaptura de uma rebelião real. Ensaio anterior de fuga permanece reprovado.
+
+Auditoria de HUD preparada com `HudInteractionChecks` e `FunctionalStage.ps1 -Visible`: observador pausa a colônia isolada e só registra estados; não clica nem aciona controles para produzir aprovação. Computer Use deve operar os doze controles reais, verificar transições visuais, rolagem e save final. Mudanças acopladas entre combate/emergência são registradas, mas não substituem seus cliques individuais. Screenshot/save nativos apenas depois de todos os estados terem ligado e desligado. Texto da HUD corrigido para distinguir plano modular atual do legado em anel. Compilação/sintaxe passaram; auditoria visual em execução.
+
+## Auditoria visual da HUD e correção da rolagem
+
+- `hud-visible-audit-20261009-121523-406`: dez controles clicados realmente em ON/OFF. FAIL funcional da rolagem: prisão e expedições ficavam fora da área visível. `Verse.Listing.NewColumnIfNeeded` distribui linhas em colunas quando `maxOneColumn` é falso; a altura calculada também encolhia. Corrigido com uma única coluna no painel rolável.
+- `hud-scroll-regression-20261009-122408-508`: interrupção excedeu prazo da sessão; nenhum controle auditado nesta repetição. Preservado como FAIL por timeout, sem conclusão funcional.
+- `hud-scroll-final-20261009-163051-899`: PASS. Computer Use clicou individualmente cada um dos 12 controles em ON e OFF. Observador nativo registrou 24 transições, sem gerar cliques; rolagem expôs prisão e expedições. Meta populacional mudou 8→9→8. Prévia, reavaliação e análise de risco foram acionadas sem exceções; isso sozinho não comprova toda a lógica desses sistemas.
+- `Saves/HudAuditComplete.rws` verificado diretamente: todas as 12 opções desligadas, conforme campos/defaults do Scribe; nenhuma Blueprint/Frame pendente. `HudAuditComplete.png` preservado. Texto de planta atualizado para núcleos modulares, mantendo descrição separada para saves antigos em anel.
+- HUD usa partida pausada para isolar os cliques. Ensaios de gameplay continuam em 3×. Esta aprovação não representa construção, comércio ou combate autônomo completo.
+- Próxima retomada: nova partida integrada com correções atuais, mantendo prazo nativo de trinta dias. Depois: rebelião com defensores equipados; variações humanas de combate; fabricação comercial orgânica/interrupções; inverno real; revisão e exportação da base aprovada.

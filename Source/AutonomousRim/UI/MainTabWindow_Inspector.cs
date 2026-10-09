@@ -54,7 +54,7 @@ namespace AutonomousRim.UI
             Rect viewport = new Rect(inRect.x, inRect.y + 346f, inRect.width, inRect.height - 346f);
             Rect content = new Rect(0f, 0f, viewport.width - 20f, contentHeight);
             Widgets.BeginScrollView(viewport, ref scrollPosition, content);
-            var listing = new Listing_Standard();
+            var listing = new Listing_Standard { maxOneColumn = true };
             listing.Begin(content);
             listing.Label(state.ToString());
             listing.Label(component.BaseStatus);
@@ -67,7 +67,9 @@ namespace AutonomousRim.UI
                 foreach(var pawn in state.Threat.Colonists)listing.Label($"Colono: {pawn.LabelShort} em {pawn.Position} — {(pawn.Downed ? "incapacitado" : state.Threat.Vulnerable.Contains(pawn) ? "vulnerável" : "combatente")}");
             }
             foreach (var order in component.CombatOrders) listing.Label($"{order.Pawn?.LabelShort}: {order.Role}");
-            listing.Label("Plano em anel: estoque e alimentação primeiro; quartos 5×5 por colono, cozinha e abate 4×4 separados; expansão reservada, energia e perímetro. Planos antigos são preservados.");
+            listing.Label(component.BaseProjects.Any(p=>p.Kind==AutonomousRim.Planning.RingBasePlanner.ReservationKind)
+                ? "Plano em anel: estoque e alimentação primeiro; quartos 5×5 por colono, cozinha e abate 4×4 separados; planos antigos são preservados."
+                : "Plano modular: núcleos 13×13 com paredes compartilhadas, quartos 5×5, cozinha e abate separados, pisos de madeira e corredores de 3 células. Expansão parte de módulos vizinhos ao núcleo.");
             listing.Label("Rota final: " + component.Strategy.VictoryRoute);
             listing.Label($"Horizonte: {component.Strategy.HorizonDays} dias | Dia atual: {component.Strategy.LastKnownDay} | Restantes: {component.Strategy.EstimatedDaysRemaining}");
             listing.Label(component.Strategy.StabilityStatus);
