@@ -248,7 +248,12 @@ namespace AutonomousRim.Planning
                     if(occupied.ContainsKey(c)) {Log.Message("[AutonomousRim] Ring collision: "+occupied[c].Def.defName+"/"+t.Def.defName+" at "+c);return false;}occupied[c]=t;
                 }
                 var report=GenConstruct.CanPlaceBlueprintAt(t.Def,t.Position,t.Rotation,map,stuffDef:t.Stuff);
-                bool plannedLampSupport=t.Def.defName=="WallLamp" && report.Reason=="MustPlaceOnWall".Translate().ToString() && projects.SelectMany(p=>p.Shell).Any(w=>w.Def==ThingDefOf.Wall && !w.CancelledByPlayer && w.Position==t.Position+t.Rotation.FacingCell);
+                var support=t.Position+t.Rotation.FacingCell;
+                bool awaitingWall=report.Reason=="MustPlaceOnWall".Translate().ToString() ||
+                    report.Reason=="CannotSupportAttachment".Translate().ToString() && support.InBounds(map) &&
+                    support.GetThingList(map).Where(b=>(GenConstruct.BuiltDefOf(b.def) as ThingDef)?.building!=null)
+                        .All(b=>GenConstruct.BuiltDefOf(b.def)==ThingDefOf.Wall || b.def.defName=="PowerConduit" || b.def.defName=="HiddenConduit");
+                bool plannedLampSupport=t.Def.defName=="WallLamp" && awaitingWall && projects.SelectMany(p=>p.Shell).Any(w=>w.Def==ThingDefOf.Wall && !w.CancelledByPlayer && w.Position==support);
                 bool clearableInteraction=false;
                 if(t.Def is ThingDef interactionDef && interactionDef.hasInteractionCell && !report)
                 {

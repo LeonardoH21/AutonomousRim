@@ -89,6 +89,15 @@ namespace AutonomousRim.RuntimeChecks
                 Check(RingBasePlanner.Validate(map,new List<RoomProject>{lampRoom}),"Future supporting wall rejected.");
                 lampRoom.Shell[0].CancelledByPlayer=true;Check(!RingBasePlanner.Validate(map,new List<RoomProject>{lampRoom}),"Cancelled support accepted.");
                 Log.Message("[ConstructionDependencyTests] PASS: planned lamp support accepted; missing/cancelled support rejected.");
+                lampRoom.Shell[0].CancelledByPlayer=false;
+                var conduit=ThingMaker.MakeThing(DefDatabase<ThingDef>.GetNamed("PowerConduit"));
+                conduit.SetFaction(Faction.OfPlayer);GenSpawn.Spawn(conduit,lampCell+IntVec3.North,map);
+                Check(GenConstruct.CanPlaceBlueprintAt(lampRoom.Furniture[0].Def,lampCell,Rot4.North,map).Reason=="CannotSupportAttachment".Translate().ToString(),"Conduit-only support fixture did not reproduce native attachment rejection.");
+                Check(RingBasePlanner.Validate(map,new List<RoomProject>{lampRoom}),"Future wall with an existing conduit rejected.");
+                lampRoom.Shell[0].CancelledByPlayer=true;
+                Check(!RingBasePlanner.Validate(map,new List<RoomProject>{lampRoom}),"Conduit accepted as support without an active future wall.");
+                conduit.Destroy();
+                Log.Message("[ConstructionDependencyTests] PASS: conduit-only cell awaits its planned wall; conduit alone never supports a lamp.");
                 var bedroom=new RoomProject{Kind="Quarto",LayoutSlot="mod:12:12:1",Origin=lampCell-new IntVec3(3,0,5),InteriorSize=5,Completed=true};
                 foreach(var edge in bedroom.Footprint.EdgeCells)bedroom.Shell.Add(new ConstructionTask{Def=ThingDefOf.Wall,Stuff=ThingDefOf.WoodLog,Position=edge});
                 var door=(Building)ThingMaker.MakeThing(ThingDefOf.Door,ThingDefOf.WoodLog);door.SetFaction(Faction.OfPlayer);GenSpawn.Spawn(door,lampCell+IntVec3.North,map);

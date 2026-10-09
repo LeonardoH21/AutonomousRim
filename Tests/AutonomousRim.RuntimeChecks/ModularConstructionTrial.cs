@@ -108,7 +108,18 @@ namespace AutonomousRim.RuntimeChecks
                         if (p.InteriorSize != 5 && p.InteriorSize != 11 || p.Height != 5 && p.Height != 11) throw new Exception("Wrong module interior.");
                         if (p.Shell.Any(t => p.Interior.Contains(t.Position))) throw new Exception("Partition inside merged room.");
                     }
-                    if (!RingBasePlanner.Validate(map, ai.BaseProjects.ToList())) throw new Exception("Geometry/interaction/terrain invalid.");
+                    if (!RingBasePlanner.Validate(map, ai.BaseProjects.ToList()))
+                    {
+                        foreach(var finish in ai.BaseProjects.Where(p=>p.LayoutSlot?.StartsWith("prison:finish:")==true))
+                        {
+                            var room=ai.BaseProjects.FirstOrDefault(p=>p.LayoutSlot==finish.LayoutSlot.Replace("prison:finish:","prison:cell:"));
+                            foreach(var lamp in finish.Furniture.Where(t=>t.Def.defName=="WallLamp"))
+                                Log.Message($"[AutonomousRim.ModularTrial] GEOMETRY lamp={lamp.Position}; rotation={lamp.Rotation}; issued={lamp.Issued}; completed={lamp.WasCompleted}; cancelled={lamp.CancelledByPlayer}; parent={room?.LayoutSlot}; support={ (lamp.Position+lamp.Rotation.FacingCell).GetEdifice(map)?.def.defName}; cells="+
+                                    string.Join(";",room?.Interior.Cells.Select(c=>c+":"+c.GetEdifice(map)?.def.defName+":north="+(c+IntVec3.North).GetEdifice(map)?.def.defName)??Enumerable.Empty<string>()));
+                        }
+                        GameDataSaveLoader.SaveGame("GeometryFailure");
+                        throw new Exception("Geometry/interaction/terrain invalid.");
+                    }
                     started = true; if(!continuing || startTick<=0)startTick = tick;
                     if (InitialResearch < 0) InitialResearch = DefDatabase<ResearchProjectDef>.AllDefsListForReading.Count(r => r.IsFinished);
                     if (initialPawns.Count == 0)
