@@ -97,7 +97,7 @@ namespace AutonomousRim.RuntimeChecks
             foreach(var fixtureHediff in ownPatient.health.hediffSet.hediffs.Except(originalHediffs).ToList())ownPatient.health.RemoveHediff(fixtureHediff);
             Pass("safety: own bleeding/downed colonist takes precedence over capture");
             var beds=map.listerBuildings.AllBuildingsColonistOfClass<Building_Bed>().Where(b=>b.ForPrisoners).ToList();
-            foreach(var bed in beds){bed.ForPrisoners=false;bed.GetDistrict()?.Notify_RoomShapeOrContainedBedsChanged();bed.GetRoom()?.Notify_RoomShapeChanged();}
+            foreach(var bed in beds){bed.ForOwnerType=BedOwnerType.Colonist;bed.GetDistrict()?.Notify_RoomShapeOrContainedBedsChanged();bed.GetRoom()?.Notify_RoomShapeChanged();}
             state.NextAction=0;PrisonManager.Apply(map,ColonyStateScanner.Scan(map),projects,state,false);
             Check(state.Capacity==0 && state.Orders.Count==0,"Capture issued without a valid prison bed.");
             foreach(var bed in beds)Check(PrisonManager.ConfigureBed(bed),"Prison bed fixture did not restore.");
