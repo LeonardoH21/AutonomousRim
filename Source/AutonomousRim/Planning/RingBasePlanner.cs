@@ -248,7 +248,8 @@ namespace AutonomousRim.Planning
                     if(occupied.ContainsKey(c)) {Log.Message("[AutonomousRim] Ring collision: "+occupied[c].Def.defName+"/"+t.Def.defName+" at "+c);return false;}occupied[c]=t;
                 }
                 var report=GenConstruct.CanPlaceBlueprintAt(t.Def,t.Position,t.Rotation,map,stuffDef:t.Stuff);
-                if(!report && !t.Complete(map) && !t.Position.GetThingList(map).Any(b=>(b is Blueprint || b is Frame) && b.def.entityDefToBuild==t.Def && b.Rotation==t.Rotation) &&
+                bool plannedLampSupport=t.Def.defName=="WallLamp" && report.Reason=="MustPlaceOnWall".Translate().ToString() && projects.SelectMany(p=>p.Shell).Any(w=>w.Def==ThingDefOf.Wall && !w.CancelledByPlayer && w.Position==t.Position+t.Rotation.FacingCell);
+                if(!report && !plannedLampSupport && !t.Complete(map) && !t.Position.GetThingList(map).Any(b=>(b is Blueprint || b is Frame) && b.def.entityDefToBuild==t.Def && b.Rotation==t.Rotation) &&
                     !GenAdj.OccupiedRect(t.Position,t.Rotation,t.Def.Size).Concat(t.Def.defName=="Cooler"?new[]{t.Position+t.Rotation.FacingCell,t.Position-t.Rotation.FacingCell}:Array.Empty<IntVec3>()).Concat(((ThingDef)t.Def).hasInteractionCell?new[]{t.Position+((ThingDef)t.Def).interactionCellOffset.RotatedBy(t.Rotation)}:Array.Empty<IntVec3>())
                         .Any(c=>c.GetEdifice(map) is Mineable || projects.Any(p=>p.Kind=="Preparação do terreno"&&(p.ClearCells.Contains(c)||p.PlantCells.Contains(c)))) && !t.Position.GetThingList(map).Any(b=>b.def==ThingDefOf.Wall && t.Def==ThingDefOf.Door && projects.Any(p=>p.ClearCells.Contains(t.Position))))
                 { Log.Message("[AutonomousRim] Ring placement: "+t.Def.defName+" at "+t.Position+": "+report.Reason);return false; }
@@ -303,3 +304,4 @@ namespace AutonomousRim.Planning
         }
     }
 }
+

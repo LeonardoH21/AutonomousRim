@@ -82,10 +82,18 @@ namespace AutonomousRim.RuntimeChecks
                 Check(!Blocked(kitchen,dependencies) && !Blocked(butcher,dependencies) && !Blocked(storage,dependencies) && Blocked(research,dependencies),
                     "Food/storage dependency or occupied-colony shelter gate incorrect.");
                 Log.Message("[ConstructionDependencyTests] PASS: spare bedrooms cannot block production; food/storage proceed while shelter is built.");
+                var lampCell=GenRadial.RadialCellsAround(map.Center,45,true).First(c=>c.InBounds(map) && c.Standable(map) && !c.Fogged(map) && !c.GetThingList(map).Any() && (c+IntVec3.North).InBounds(map) && !(c+IntVec3.North).GetThingList(map).Any());
+                var lampRoom=new RoomProject();lampRoom.Furniture.Add(new ConstructionTask{Def=DefDatabase<ThingDef>.GetNamed("WallLamp"),Position=lampCell,Rotation=Rot4.North});
+                Check(!RingBasePlanner.Validate(map,new List<RoomProject>{lampRoom}),"Unsupported lamp accepted.");
+                lampRoom.Shell.Add(new ConstructionTask{Def=ThingDefOf.Wall,Stuff=ThingDefOf.WoodLog,Position=lampCell+IntVec3.North});
+                Check(RingBasePlanner.Validate(map,new List<RoomProject>{lampRoom}),"Future supporting wall rejected.");
+                lampRoom.Shell[0].CancelledByPlayer=true;Check(!RingBasePlanner.Validate(map,new List<RoomProject>{lampRoom}),"Cancelled support accepted.");
+                Log.Message("[ConstructionDependencyTests] PASS: planned lamp support accepted; missing/cancelled support rejected.");
                 Log.Message("[ConstructionDependencyTests] DONE: controlled contracts only; native checkpoint continuation required.");
             }
             catch(Exception ex){Log.Error("[ConstructionDependencyTests] FAIL: "+ex);}
         }
     }
 }
+
 
