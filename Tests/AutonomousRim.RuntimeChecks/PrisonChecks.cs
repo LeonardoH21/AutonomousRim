@@ -134,6 +134,10 @@ namespace AutonomousRim.RuntimeChecks
                 foreach(var t in cell.GetThingList(map).ToList()){if(t.def.destroyable)t.Destroy(DestroyMode.Vanish);else t.DeSpawn();}
                 map.terrainGrid.SetTerrain(cell,TerrainDefOf.Soil);map.roofGrid.SetRoof(cell,null);map.fogGrid.Unfog(cell);
             }
+            // Destroying an ancient chamber during fixture preparation can spawn defenders.
+            // Remove only these setup by-products before reintroducing the original colonists.
+            foreach(var pawn in map.mapPawns.AllPawnsSpawned.ToList())
+            {pawn.DeSpawn();Find.WorldPawns.PassToWorld(pawn,PawnDiscardDecideMode.KeepForever);}
             for(int i=0;i<ExpectedDefenders;i++)
             {
                 var helper=Elite?originals[i]:SpawnPawn(Faction.OfPlayer,center+new IntVec3(i*2,0,-12));
@@ -159,6 +163,8 @@ namespace AutonomousRim.RuntimeChecks
             foreach(var skill in release.skills.skills){skill.Level=0;skill.passion=Passion.None;}
             Check(AutonomousRim.Planning.PrisonPlanner.CandidateScore(map,recruit)>=8 && AutonomousRim.Planning.PrisonPlanner.CandidateScore(map,release)<8,"Controlled candidate scores incorrect.");
             Wound(recruit);Wound(release);
+            var setupThreats=ColonyStateScanner.Scan(map).Threat;
+            Check(!setupThreats.Immediate,"Unrelated threat in prison fixture setup: "+string.Join(";",setupThreats.Sources.Select(t=>t.LabelShort+" at "+t.Position)));
             if(GenCommandLine.CommandLineArgPassed("autonomousrimprisonsafetytest"))SafetySetupChecks();
             ai.SetAutomation(false,false);ai.SetPrisonAutomation(true);if(BreakTrial){ai.SetCombatAutomation(true);ai.SetEmergencyAutomation(true);ai.SetScheduleAutomation(true);}start=Find.TickManager.TicksGame;stage=1;
             Pass(Elite?"fixture: six original EliteSix profiles, Cassandra/Medium and scenario factors preserved; disposable prison facilities and patients":"fixture: five healthy skill-20 colonists, separate prison/hospital beds and native enemy eligibility");
