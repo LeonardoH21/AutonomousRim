@@ -41,7 +41,7 @@ namespace AutonomousRim.Execution
                 p.timetable?.CurrentAssignment == TimeAssignmentDefOf.Sleep || p.timetable?.CurrentAssignment == TimeAssignmentDefOf.Joy) return false;
             Job current = p.CurJob;
             if(current?.def==JobDefOf.Refuel || current?.def==JobDefOf.RefuelAtomic) return false;
-            if (current?.def.joyKind != null || current?.def.joyGainRate > 0 || current?.workGiverDef?.workType == WorkTypeDefOf.Construction ||
+            if (current?.def.joyKind != null || current?.def == JobDefOf.Meditate || current?.workGiverDef?.workType == WorkTypeDefOf.Construction ||
                 current?.targetA.Thing is Frame || current?.targetB.Thing is Frame || current?.targetA.Thing is Blueprint_Build || current?.targetB.Thing is Blueprint_Build) return false;
             if (current?.workGiverDef?.workType != null)
             {
@@ -55,6 +55,33 @@ namespace AutonomousRim.Execution
             }
             return true;
         }
+        private static Job InteractionClearance(Pawn pawn, IReadOnlyList<RoomProject> projects)
+        {
+            if(!CanDispatch(pawn,WorkTypeDefOf.Hauling))return null;
+            var map=pawn.Map;
+            var tasks=projects.Where(p=>p.Started && !p.Completed && p.State!=ConstructionState.Paused)
+                .OrderBy(p=>p.Priority).SelectMany(p=>BaseConstructionManager.CurrentStage(map,p))
+                .Where(t=>!t.CancelledByPlayer && !t.Complete(map) && t.Pending?.Spawned!=true && t.Def is ThingDef d && d.hasInteractionCell).ToList();
+            if(tasks.Count==0)return null;
+            var protectedCells=projects.SelectMany(BaseConstructionManager.Tasks).Where(t=>t.Def is ThingDef d && !d.defName.Contains("Conduit"))
+                .SelectMany(t=>GenAdj.OccupiedRect(t.Position,t.Rotation,t.Def.Size)
+                    .Concat(ThingUtility.InteractionCellsWhenAt((ThingDef)t.Def,t.Position,t.Rotation,map))).ToHashSet();
+            foreach(var task in tasks)
+            foreach(var cell in ThingUtility.InteractionCellsWhenAt((ThingDef)task.Def,task.Position,task.Rotation,map).Where(c=>c.InBounds(map)))
+            foreach(var item in cell.GetThingList(map).Where(t=>t.def.category==ThingCategory.Item && t.def.EverHaulable && t.def.passability!=Traversability.Standable).ToList())
+            {
+                if(item.IsForbidden(Faction.OfPlayer) || !cell.IsInAllowedArea(pawn) || !pawn.CanReserveAndReach(item,PathEndMode.Touch,Danger.None))continue;
+                var job=HaulAIUtility.HaulAsideJobFor(pawn,item);if(job==null)continue;
+                var destination=GenRadial.RadialCellsAround(cell,18,true).FirstOrDefault(c=>c.InBounds(map) && !protectedCells.Contains(c) &&
+                    c.Standable(map) && !c.IsForbidden(pawn) && c.IsInAllowedArea(pawn) && !c.ContainsStaticFire(map) &&
+                    !(c.GetZone(map) is Zone_Growing) && GenPlace.HaulPlaceBlockerIn(item,c,map,true)==null &&
+                    !GenAdj.AdjacentCells.Any(a=>(c+a).InBounds(map) && map.designationManager.DesignationAt(c+a,DesignationDefOf.Mine)!=null) &&
+                    pawn.CanReserveAndReach(c,PathEndMode.OnCell,Danger.None));
+                if(destination==default(IntVec3))continue;
+                job.targetB=destination;return job;
+            }
+            return null;
+        }
         public static void Apply(Map map, IReadOnlyList<RoomProject> projects, List<ConstructionOrder> orders)
         {
             if (map.mapPawns.AllPawnsSpawned.Any(p => !p.Dead && !p.Downed && p.HostileTo(Faction.OfPlayer))) return;
@@ -66,6 +93,8 @@ namespace AutonomousRim.Execution
             foreach (Pawn pawn in workers)
             {
                 if (issued >= 9 || orders.Any(o => o.Pending && o.Pawn == pawn) || orders.Any(o => o.Pawn == pawn && Find.TickManager.TicksGame - o.IssuedTick < 30)) continue;
+                var clearance=InteractionClearance(pawn,projects);
+                if(clearance!=null && Start(pawn,clearance,DefDatabase<WorkGiverDef>.GetNamed("HaulGeneral"),clearance.targetA.Thing,orders)){issued++;continue;}
                 bool assigned = false;
                 foreach (string name in new[] { "ConstructFinishFrames", "DeliverResourcesToFrames", "DeliverResourcesToBlueprints", "ConstructDeliverResourcesToFrames", "ConstructDeliverResourcesToBlueprints" })
                 {
