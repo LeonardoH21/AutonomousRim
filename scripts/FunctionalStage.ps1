@@ -25,6 +25,11 @@ foreach($package in @('leonardoh21.autonomousrim','leonardoh21.autonomousrim.run
 }
 $config.Save("$profile\Config\ModsConfig.xml")
 Set-Content -LiteralPath "$profile\Config\Prefs.xml" -Encoding utf8 -Value '<PrefsData><devMode>False</devMode><runInBackground>True</runInBackground><autosaveIntervalDays>100</autosaveIntervalDays><pauseOnLoad>False</pauseOnLoad><pauseOnError>False</pauseOnError><fullscreen>False</fullscreen><volumeMaster>0</volumeMaster></PrefsData>'
+if($Flag -eq 'autonomousrimenhancedtest' -or 'autonomousrimelitesix' -in $ExtraFlags){
+ New-Item -ItemType Directory -Path "$profile\Scenarios","$profile\PrepareCarefully" -Force|Out-Null
+ Copy-Item -LiteralPath "$root\Scenarios\AutonomousRim_Enhanced_World.rsc" -Destination "$profile\Scenarios"
+ Copy-Item -LiteralPath "$root\Tests\Fixtures\EliteSix\AutonomousRim_EliteSix_RW1.6_PC1.6.2.pcp" -Destination "$profile\PrepareCarefully"
+}
 $addon=Join-Path $game 'Mods\AutonomousRim.RuntimeChecks'
 if(Test-Path -LiteralPath $addon){throw 'Runtime add-on exists; inspect before retrying.'}
 $p=$null
@@ -34,6 +39,13 @@ try {
  Copy-Item -LiteralPath "$root\.tools\runtime-checks\Assemblies\AutonomousRim.RuntimeChecks.dll" -Destination "$addon\Assemblies\AutonomousRim.RuntimeChecks.dll"
  Set-Content -LiteralPath "$addon\About\About.xml" -Encoding utf8 -Value '<ModMetaData><name>AutonomousRim Runtime Checks</name><author>AutonomousRim</author><packageId>leonardoh21.autonomousrim.runtimechecks</packageId><supportedVersions><li>1.6</li></supportedVersions><loadAfter><li>leonardoh21.autonomousrim</li></loadAfter></ModMetaData>'
  $manifest=[ordered]@{stage=$Stage;flag=$Flag;extraFlags=@($ExtraFlags);resumeSaveHash=$(if($ResumeSave){(Get-FileHash -LiteralPath $ResumeSave).Hash}else{$null});sourceCommit=(git -C $root rev-parse HEAD);dllHash=(Get-FileHash "$game\Mods\AutonomousRim\1.6\Assemblies\AutonomousRim.dll").Hash;runtimeHash=(Get-FileHash "$addon\Assemblies\AutonomousRim.RuntimeChecks.dll").Hash;result='RUNNING';profile=$profile}
+ $manifest.sourceDirty=[bool](git -C $root status --porcelain)
+ $taskPatch=Join-Path $game 'Mods\AutonomousRim\Patches\EnhancedWorldYieldCaps.xml'
+ if(Test-Path -LiteralPath $taskPatch){$manifest.yieldCapsHash=(Get-FileHash -LiteralPath $taskPatch).Hash}
+ if(Test-Path -LiteralPath "$profile\Scenarios\AutonomousRim_Enhanced_World.rsc"){
+  $manifest.scenarioHash=(Get-FileHash -LiteralPath "$profile\Scenarios\AutonomousRim_Enhanced_World.rsc").Hash
+  $manifest.presetHash=(Get-FileHash -LiteralPath "$profile\PrepareCarefully\AutonomousRim_EliteSix_RW1.6_PC1.6.2.pcp").Hash
+ }
  $manifest|ConvertTo-Json|Set-Content -LiteralPath "$profile\manifest.json" -Encoding utf8
  $arguments=@('-batchmode','-quicktest',('-'+$Flag),'-autonomousrimstagedtest',('-savedatafolder="'+$profile+'"'),'-logFile',('"'+$log+'"'))
  if($Visible){$arguments=@($arguments|Where-Object{$_ -ne '-batchmode'})+@('-screen-width','1280','-screen-height','900')}
@@ -52,7 +64,7 @@ try {
   if(Test-Path -LiteralPath $log){
    $body=Get-Content -LiteralPath $log -Raw
    if($body.Contains('Reached max messages limit. Stopping logging to avoid spam.')){throw "Logging limit reached; native result cannot be verified: $profile"}
-   if($body -match '\] FAIL\b|Exception ticking|Error in MapComponent|Exception from long event|XML error:|Config error:|Patching exception|Bed ForPrisoners=false'){throw "Stage failed: $log"}
+   if($body -match '\] FAIL\b|Exception ticking|Error in MapComponent|Error in GenStep|Error while generating pawn|Exception from long event|XML error:|Config error:|Patching exception|Bed ForPrisoners=false'){throw "Stage failed: $log"}
    if($body.Contains($SuccessMarker)){
     $manifest.result='PASS'
     if($Flag -eq 'autonomousrimcombatfive'){

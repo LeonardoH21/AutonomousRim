@@ -1,0 +1,460 @@
+{
+  "target": {
+    "rimworld": "1.6.4633",
+    "prepareCarefully": "1.6.2",
+    "allDLC": true,
+    "presetSchema": 5
+  },
+  "pawns": [
+    {
+      "id": "autonomousrim-alpha",
+      "name": "Alpha",
+      "gender": "Male",
+      "bodyType": "Male",
+      "bio_age": 27,
+      "chrono_age": 112,
+      "childhood": "BuddingArtist44",
+      "adulthood": "Beastmaster67",
+      "traits": [
+        [
+          "Tough",
+          0
+        ],
+        [
+          "SpeedOffset",
+          2
+        ],
+        [
+          "Industriousness",
+          2
+        ]
+      ],
+      "skills": {
+        "Shooting": [
+          20,
+          "Major"
+        ],
+        "Melee": [
+          8,
+          "Minor"
+        ],
+        "Construction": [
+          20,
+          "Major"
+        ],
+        "Mining": [
+          0,
+          "None"
+        ],
+        "Cooking": [
+          8,
+          "Minor"
+        ],
+        "Plants": [
+          8,
+          "Minor"
+        ],
+        "Animals": [
+          8,
+          "None"
+        ],
+        "Crafting": [
+          8,
+          "Minor"
+        ],
+        "Artistic": [
+          5,
+          "None"
+        ],
+        "Medicine": [
+          20,
+          "Major"
+        ],
+        "Social": [
+          20,
+          "Major"
+        ],
+        "Intellectual": [
+          20,
+          "Major"
+        ]
+      },
+      "skin": "Toughskin"
+    },
+    {
+      "id": "autonomousrim-bravo",
+      "name": "Bravo",
+      "gender": "Male",
+      "bodyType": "Hulk",
+      "bio_age": 26,
+      "chrono_age": 91,
+      "childhood": "StoryWriter67",
+      "adulthood": "MilitaryCook18",
+      "traits": [
+        [
+          "Tough",
+          0
+        ],
+        [
+          "Nimble",
+          0
+        ],
+        [
+          "SpeedOffset",
+          2
+        ]
+      ],
+      "skills": {
+        "Shooting": [
+          10,
+          "Minor"
+        ],
+        "Melee": [
+          20,
+          "Major"
+        ],
+        "Construction": [
+          20,
+          "Major"
+        ],
+        "Mining": [
+          20,
+          "Major"
+        ],
+        "Cooking": [
+          7,
+          "None"
+        ],
+        "Plants": [
+          8,
+          "Minor"
+        ],
+        "Animals": [
+          8,
+          "Minor"
+        ],
+        "Crafting": [
+          20,
+          "Major"
+        ],
+        "Artistic": [
+          4,
+          "None"
+        ],
+        "Medicine": [
+          20,
+          "Major"
+        ],
+        "Social": [
+          0,
+          "None"
+        ],
+        "Intellectual": [
+          11,
+          "Minor"
+        ]
+      },
+      "skin": "Stoneskin"
+    },
+    {
+      "id": "autonomousrim-charlie",
+      "name": "Charlie",
+      "gender": "Female",
+      "bodyType": "Female",
+      "bio_age": 24,
+      "chrono_age": 73,
+      "childhood": "StoryWriter67",
+      "adulthood": "Landworker98",
+      "traits": [
+        [
+          "Tough",
+          0
+        ],
+        [
+          "SpeedOffset",
+          2
+        ],
+        [
+          "ShootingAccuracy",
+          -1
+        ]
+      ],
+      "skills": {
+        "Shooting": [
+          20,
+          "Major"
+        ],
+        "Melee": [
+          8,
+          "Minor"
+        ],
+        "Construction": [
+          8,
+          "Minor"
+        ],
+        "Mining": [
+          6,
+          "None"
+        ],
+        "Cooking": [
+          20,
+          "Major"
+        ],
+        "Plants": [
+          20,
+          "Major"
+        ],
+        "Animals": [
+          20,
+          "Major"
+        ],
+        "Crafting": [
+          8,
+          "Minor"
+        ],
+        "Artistic": [
+          4,
+          "None"
+        ],
+        "Medicine": [
+          20,
+          "Major"
+        ],
+        "Social": [
+          8,
+          "Minor"
+        ],
+        "Intellectual": [
+          3,
+          "None"
+        ]
+      },
+      "skin": "Toughskin"
+    },
+    {
+      "id": "autonomousrim-delta",
+      "name": "Delta",
+      "gender": "Male",
+      "bodyType": "Male",
+      "bio_age": 28,
+      "chrono_age": 136,
+      "childhood": "BuddingArtist44",
+      "adulthood": "Beastmaster67",
+      "traits": [
+        [
+          "Industriousness",
+          2
+        ],
+        [
+          "ShootingAccuracy",
+          -1
+        ],
+        [
+          "Tough",
+          0
+        ]
+      ],
+      "skills": {
+        "Shooting": [
+          20,
+          "Major"
+        ],
+        "Melee": [
+          8,
+          "Minor"
+        ],
+        "Construction": [
+          20,
+          "Major"
+        ],
+        "Mining": [
+          20,
+          "Major"
+        ],
+        "Cooking": [
+          8,
+          "Minor"
+        ],
+        "Plants": [
+          0,
+          "None"
+        ],
+        "Animals": [
+          8,
+          "None"
+        ],
+        "Crafting": [
+          20,
+          "Major"
+        ],
+        "Artistic": [
+          5,
+          "None"
+        ],
+        "Medicine": [
+          8,
+          "Minor"
+        ],
+        "Social": [
+          8,
+          "Minor"
+        ],
+        "Intellectual": [
+          20,
+          "Major"
+        ]
+      },
+      "skin": "Toughskin"
+    },
+    {
+      "id": "autonomousrim-echo",
+      "name": "Echo",
+      "gender": "Female",
+      "bodyType": "Female",
+      "bio_age": 25,
+      "chrono_age": 88,
+      "childhood": "FireKeeper44",
+      "adulthood": "Beastmaster67",
+      "traits": [
+        [
+          "Tough",
+          0
+        ],
+        [
+          "SpeedOffset",
+          2
+        ],
+        [
+          "NaturalMood",
+          2
+        ]
+      ],
+      "skills": {
+        "Shooting": [
+          20,
+          "Major"
+        ],
+        "Melee": [
+          8,
+          "Minor"
+        ],
+        "Construction": [
+          8,
+          "Minor"
+        ],
+        "Mining": [
+          0,
+          "None"
+        ],
+        "Cooking": [
+          20,
+          "Major"
+        ],
+        "Plants": [
+          20,
+          "Major"
+        ],
+        "Animals": [
+          8,
+          "None"
+        ],
+        "Crafting": [
+          2,
+          "None"
+        ],
+        "Artistic": [
+          20,
+          "Major"
+        ],
+        "Medicine": [
+          8,
+          "Minor"
+        ],
+        "Social": [
+          20,
+          "Major"
+        ],
+        "Intellectual": [
+          8,
+          "Minor"
+        ]
+      },
+      "skin": "Toughskin"
+    },
+    {
+      "id": "autonomousrim-foxtrot",
+      "name": "Foxtrot",
+      "gender": "Female",
+      "bodyType": "Hulk",
+      "bio_age": 27,
+      "chrono_age": 104,
+      "childhood": "BuddingArtist44",
+      "adulthood": "MilitaryCommissar71",
+      "traits": [
+        [
+          "Tough",
+          0
+        ],
+        [
+          "Nimble",
+          0
+        ],
+        [
+          "SpeedOffset",
+          2
+        ]
+      ],
+      "skills": {
+        "Shooting": [
+          11,
+          "Minor"
+        ],
+        "Melee": [
+          20,
+          "Major"
+        ],
+        "Construction": [
+          8,
+          "Minor"
+        ],
+        "Mining": [
+          0,
+          "None"
+        ],
+        "Cooking": [
+          8,
+          "Minor"
+        ],
+        "Plants": [
+          20,
+          "Major"
+        ],
+        "Animals": [
+          20,
+          "Major"
+        ],
+        "Crafting": [
+          20,
+          "Major"
+        ],
+        "Artistic": [
+          5,
+          "None"
+        ],
+        "Medicine": [
+          8,
+          "Minor"
+        ],
+        "Social": [
+          6,
+          "None"
+        ],
+        "Intellectual": [
+          20,
+          "Major"
+        ]
+      },
+      "skin": "Stoneskin"
+    }
+  ]
+}

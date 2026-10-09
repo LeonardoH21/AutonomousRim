@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using AutonomousRim.Core;
 using AutonomousRim.Execution;
@@ -19,6 +20,7 @@ namespace AutonomousRim.RuntimeChecks
         private bool capturedReported,tendedReported,convertedReported;
         private bool diagnosed,breakStarted,breakDraft,breakDowned;
         private int breakTick;
+        private readonly List<Pawn> initialDefenders=new List<Pawn>();
         private bool BreakTrial=>GenCommandLine.CommandLineArgPassed("autonomousrimprisonbreaktest");
         public PrisonChecks(Map map):base(map){}
         private void Check(bool value,string text){if(!value)throw new InvalidOperationException(text);}
@@ -133,6 +135,7 @@ namespace AutonomousRim.RuntimeChecks
             for(int i=0;i<5;i++)
             {
                 var helper=SpawnPawn(Faction.OfPlayer,center+new IntVec3(i*2,0,-12));
+                initialDefenders.Add(helper);
                 if(BreakTrial && i<4)
                 {
                     helper.equipment.AddEquipment((ThingWithComps)ThingMaker.MakeThing(DefDatabase<ThingDef>.GetNamed(i<2?"MeleeWeapon_LongSword":"Gun_AssaultRifle"),i<2?ThingDefOf.Steel:null));
@@ -212,7 +215,7 @@ namespace AutonomousRim.RuntimeChecks
                     {
                         Check(recruit.MapHeld==map,"Rebel escaped the map.");
                         breakDraft|=map.mapPawns.FreeColonistsSpawned.Any(p=>p.Drafted);breakDowned|=recruit.Downed;
-                        Check(map.mapPawns.FreeColonistsSpawned.All(p=>!p.Dead),"Colonist died during containment.");
+                        Check(initialDefenders.Count==5 && initialDefenders.All(p=>p!=null && !p.Dead && !p.Destroyed && p.MapHeld==map),"An original defender died or left the containment map.");
                         if(breakDraft && breakDowned && recruit.InBed() && !recruit.health.HasHediffsNeedingTend() && recruit.health.hediffSet.BleedRateTotal==0 && !PrisonBreakUtility.IsPrisonBreaking(recruit) && !ai.CurrentState.Threat.Immediate)
                         {GameDataSaveLoader.SaveGame("PrisonBreakContained");stage=99;Pass("native mixed defense neutralized rebellion; living prisoner returned to bed and treated");Log.Message("[PrisonBreakTests] DONE");return;}
                         Check(Find.TickManager.TicksGame-breakTick<120000,"Rebellion did not reach safe containment/treatment within two days.");

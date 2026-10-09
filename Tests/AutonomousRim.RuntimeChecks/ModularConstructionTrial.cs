@@ -94,7 +94,7 @@ namespace AutonomousRim.RuntimeChecks
                         var pawn = PawnGenerator.GeneratePawn(PawnKindDefOf.Colonist, Faction.OfPlayer);
                         GenSpawn.Spawn(pawn, CellFinder.RandomClosewalkCellNear(map.mapPawns.FreeColonistsSpawned.First().Position, map, 6), map);
                     }
-                    if (!GenCommandLine.CommandLineArgPassed("autonomousrimprogressionresume"))
+                    if (!GenCommandLine.CommandLineArgPassed("autonomousrimprogressionresume") && !EnhancedWorldSetup.Enabled)
                     foreach (var p in map.mapPawns.FreeColonistsSpawned)
                         foreach (var s in p.skills.skills) { s.Level = 20; s.xpSinceLastLevel = 0; }
                     if (Progression) ExpansionRevisionChecks.Run(map);
@@ -124,11 +124,13 @@ namespace AutonomousRim.RuntimeChecks
                     if (InitialResearch < 0) InitialResearch = DefDatabase<ResearchProjectDef>.AllDefsListForReading.Count(r => r.IsFinished);
                     if (initialPawns.Count == 0)
                         initialPawns.AddRange(continuing ? PawnsFinder.AllMapsWorldAndTemporary_AliveOrDead.Where(p => p.IsColonist && p.Faction == Faction.OfPlayer) : map.mapPawns.FreeColonistsSpawned);
-                    if (initialPawns.Count != 5 || initialPawns.Any(p => p == null || p.Dead))
-                        throw new Exception("Initial five colonists not alive; continuation cannot replace missing pawns.");
+                    if (initialPawns.Count != (EnhancedWorldSetup.Enabled?6:5) || initialPawns.Any(p => p == null || p.Dead))
+                        throw new Exception("Original colonist roster not alive; continuation cannot replace missing pawns.");
                     Find.TickManager.CurTimeSpeed = TimeSpeed.Superfast;
                     GameDataSaveLoader.SaveGame("ModularStart");
-                    Log.Message("[AutonomousRim.ModularTrial] START: five skill-20 colonists; native resources, needs, research, costs and work; speed 3x.");
+                    Log.Message(EnhancedWorldSetup.Enabled?
+                        "[AutonomousRim.ModularTrial] START: six EliteSix preset colonists; enhanced scenario factors; native resources, needs, research costs and work; speed 3x.":
+                        "[AutonomousRim.ModularTrial] START: five skill-20 colonists; native resources, needs, research, costs and work; speed 3x.");
                 }
                 var tasks = ai.BaseProjects.SelectMany(BaseConstructionManager.Tasks).GroupBy(t => new { t.Position, t.Def, t.Rotation }).Select(g => g.First()).ToList();
                 if (initialPawns.Any(p => p.Dead)) throw new Exception("Starting colonist died; native trial cannot be accepted.");

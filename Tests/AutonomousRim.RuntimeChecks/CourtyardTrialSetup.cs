@@ -30,6 +30,6 @@ namespace AutonomousRim.RuntimeChecks
         }
         private static void Size(GameInitData __instance){if(Fresh)__instance.mapSize=325;}
         private static void Count(ScenPart_ConfigPage_ConfigureStartingPawns __instance)
-        {if(Fresh)AccessTools.Field(typeof(ScenPart_ConfigPage_ConfigureStartingPawns),"pawnCount").SetValue(__instance,5);}
+        {if(Fresh)AccessTools.Field(typeof(ScenPart_ConfigPage_ConfigureStartingPawns),"pawnCount").SetValue(__instance,EnhancedWorldSetup.Enabled?6:5);}
     }
 }

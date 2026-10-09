@@ -14,7 +14,7 @@ if (Test-Path -LiteralPath $destination) {
     if ($existing.ModMetaData.packageId -ne 'LeonardoH21.AutonomousRim') { throw 'Destination belongs to another mod.' }
 }
 New-Item -ItemType Directory -Path $destination -Force | Out-Null
-foreach ($folder in @('About', 'Defs', '1.6')) {
+foreach ($folder in @('About', 'Defs', 'Patches', '1.6')) {
     Copy-Item -LiteralPath (Join-Path $projectRoot $folder) -Destination $destination -Recurse -Force
 }
 Copy-Item -LiteralPath (Join-Path $projectRoot 'LoadFolders.xml') -Destination $destination -Force
