@@ -1,6 +1,6 @@
 # Próxima sessão — prisão, captura, conversão e recrutamento
 
-Status: módulo implementado em 08/10/2026; compilação confirmada, testes de jogo adiados. Complementa [comércio e economia](PLANO-COMERCIO-AUTONOMO.md). Usar ações, tratamento e interações nativas; não alterar lealdade, ideologia, resistência, saúde ou facção artificialmente.
+Status: módulo implementado em 08/10/2026; testes de jogo posteriormente autorizados e em andamento. Captura, tratamento, conversão, recrutamento, liberação e persistência possuem ensaios nativos controlados; contenção de uma fuga armada e adaptação sazonal prolongada ainda estão pendentes. Ver [evidências por etapa](VALIDACAO-ETAPAS.md). Complementa [comércio e economia](PLANO-COMERCIO-AUTONOMO.md). O módulo usa ações, tratamento e interações nativas; não altera lealdade, ideologia, resistência, saúde ou facção artificialmente. Fixtures podem preparar condições iniciais explicitamente registradas, sem representar progressão natural da colônia.
 
 ## Ordem de execução
 
@@ -25,6 +25,6 @@ Fluxo: sobrevivente elegível → captura segura → tratamento → decisão →
 
 ## Limitações e validação futura
 
-Não garantir sobrevivência de todo inimigo derrotado, sucesso de toda conversão/recrutamento ou melhora de relações com todas as facções. Confirmar APIs, interações, critérios de liberação e comportamento de DLCs/mods na instalação local. Testes continuam adiados conforme pedido anterior. Os detalhes da implementação e as limitações atuais estão em [PRISAO-AUTONOMA.md](PRISAO-AUTONOMA.md); compilação não confirma funcionamento no jogo.
+Não garantir sobrevivência de todo inimigo derrotado, sucesso de toda conversão/recrutamento ou melhora de relações com todas as facções. Confirmar APIs, interações, critérios de liberação e comportamento de DLCs/mods na instalação local. O pedido posterior de validação substituiu o adiamento inicial; resultados e pendências estão em [VALIDACAO-ETAPAS.md](VALIDACAO-ETAPAS.md). Os detalhes da implementação e as limitações atuais estão em [PRISAO-AUTONOMA.md](PRISAO-AUTONOMA.md); compilação não confirma funcionamento no jogo.
 
 Referências: [Prisoner](https://rimworldwiki.com/wiki/Prisoners), [Factions](https://rimworldwiki.com/wiki/Factions).

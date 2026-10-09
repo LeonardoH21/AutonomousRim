@@ -1,6 +1,6 @@
 # Próxima sessão — comércio e economia para equipamentos
 
-Status: planejamento solicitado em 08/10/2026 e implementação inicial realizada após o comando do usuário. Ver [fluxo entregue e limites](COMERCIO-AUTONOMO.md). Nenhum teste executado nesta etapa; testes continuam aguardando nova instrução.
+Status: planejamento solicitado em 08/10/2026 e implementação inicial realizada após o comando do usuário. A validação por etapas foi autorizada posteriormente e está em andamento. Ver [fluxo entregue e limites](COMERCIO-AUTONOMO.md) e [evidências dos testes](VALIDACAO-ETAPAS.md). Trocas nativas locais, orbitais e viagem de caravana têm ensaios controlados; a economia sustentável de uma colônia, da fabricação à compra e equipamento, ainda requer validação integrada.
 
 Plano complementar: [prisão, captura, conversão e recrutamento](PLANO-PRISAO-RECRUTAMENTO.md). Considerar alimentação dos prisioneiros e novos colonos nas reservas; preservar médicos/carcereiros necessários ao selecionar negociadores e caravanas.
 
@@ -28,7 +28,7 @@ Objetivo: transformar excedentes agrícolas e produção comercial, inicialmente
 
 Entregar o fluxo completo de demanda, produção, armazenamento, venda, recebimento e integração com equipamentos, incluindo persistência, controles e documentação. Informar claramente o que está implementado e o que ainda não foi validado. O limite de uso da conta não é prazo nem garantia de conclusão; registrar o ponto de retomada se for interrompido.
 
-Os testes ficam adiados por instrução do usuário. A implementação não autoriza marcar como comprovada a economia de uma partida inteira. Disponibilidade de recursos/comerciantes, clima e sobrevivência continuam condicionando a evolução; não garantir a compra de todos os materiais em qualquer mapa.
+O pedido posterior de validar todas as funcionalidades substituiu o adiamento inicial dos testes. A implementação e os ensaios controlados não comprovam a economia de uma partida inteira. Disponibilidade de recursos/comerciantes, clima e sobrevivência continuam condicionando a evolução; não garantir a compra de todos os materiais em qualquer mapa.
 
 ## Referências consultadas
 
