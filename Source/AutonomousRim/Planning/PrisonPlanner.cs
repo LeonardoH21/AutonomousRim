@@ -96,6 +96,7 @@ namespace AutonomousRim.Planning
                 if(prep.MineCells.Count>0 || prep.PlantCells.Count>0)projects.Add(prep);
                 projects.Add(access);
             }
+            ModularInteriorPlanner.ReconcileFurniture(map,projects);
             foreach(var finish in projects.Where(p=>p.LayoutSlot?.StartsWith("prison:finish:")==true).ToList())Wire(map,projects,finish);
         }
         private static void Wire(Map map,List<RoomProject> projects,RoomProject finish)

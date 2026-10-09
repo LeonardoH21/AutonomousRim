@@ -108,10 +108,14 @@ namespace AutonomousRim.Planning
                     heat.Furniture[0].TargetTemperature = 21;
                     projects.Add(heat);
                 }
+            ReconcileFurniture(map,projects);
+        }
+        public static void ReconcileFurniture(Map map,List<RoomProject> projects)
+        {
             // Keep built furniture intact when migrating finishing plans from older saves.
-            foreach (var finish in projects.Where(p => p.LayoutSlot?.StartsWith("interior:") == true).ToList())
+            foreach (var finish in projects.Where(p => p.LayoutSlot?.StartsWith("interior:") == true || p.LayoutSlot?.StartsWith("prison:finish:")==true).ToList())
             {
-                var room = projects.FirstOrDefault(p => "interior:" + p.LayoutSlot == finish.LayoutSlot);
+                var room = projects.FirstOrDefault(p => "interior:" + p.LayoutSlot == finish.LayoutSlot || p.LayoutSlot==finish.LayoutSlot.Replace("prison:finish:","prison:cell:"));
                 if (room == null) continue;
                 if (room.Kind == "Oficina" || room.Kind == "Fabricação" || room.Kind == "Laboratório") finish.Priority = ConstructionPriority.High;
                 foreach (var task in finish.Furniture.Where(t => !t.Issued && !t.WasCompleted && !t.CancelledByPlayer))

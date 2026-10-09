@@ -98,6 +98,9 @@ namespace AutonomousRim.RuntimeChecks
                 Check(oldLamp.Position!=lampCell && bedroom.Shell.Any(w=>w.Position==oldLamp.Position+IntVec3.North) && (oldLamp.Position+IntVec3.North).GetEdifice(map)==null,"Unissued lamp kept unsupported door as support.");
                 oldLamp.Position=lampCell;oldLamp.CancelledByPlayer=true;ModularInteriorPlanner.Plan(map,interiors);Check(oldLamp.Position==lampCell,"Cancelled lamp plan relocated.");
                 Log.Message("[ConstructionDependencyTests] PASS: unissued door-backed lamp relocated to a planned wall; cancelled lamp preserved.");
+                bedroom.LayoutSlot="prison:cell:0";finish.LayoutSlot="prison:finish:0";oldLamp.CancelledByPlayer=false;ModularInteriorPlanner.ReconcileFurniture(map,interiors);
+                Check(oldLamp.Position!=lampCell,"Saved prison lamp remained attached to an unsupported door.");
+                Log.Message("[ConstructionDependencyTests] PASS: prison finishing also migrates unissued lamps away from unsupported doors.");
                 Log.Message("[ConstructionDependencyTests] DONE: controlled contracts only; native checkpoint continuation required.");
             }
             catch(Exception ex){Log.Error("[ConstructionDependencyTests] FAIL: "+ex);}
