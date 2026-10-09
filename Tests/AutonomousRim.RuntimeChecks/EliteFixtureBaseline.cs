@@ -10,6 +10,7 @@ namespace AutonomousRim.RuntimeChecks
     public sealed class EliteFixtureBaseline : MapComponent
     {
         private static bool loaded;
+        private static List<string> originalIds;
         public static bool Enabled => GenCommandLine.CommandLineArgPassed("autonomousrimfixturebaseline");
         public static bool Ready => !Enabled || loaded;
         public EliteFixtureBaseline(Map map) : base(map) { }
@@ -28,7 +29,19 @@ namespace AutonomousRim.RuntimeChecks
                 Find.Storyteller.def.defName != "Cassandra" || Find.Storyteller.difficultyDef.defName != "Medium" ||
                 pawns.Count != 6 || names.Any(n => pawns.Count(p => p.Name is NameTriple name && name.Nick == n) != 1))
                 throw new InvalidOperationException("Fixture requires the original six Enhanced World profiles and Cassandra/Medium.");
-            return names.Select(n => pawns.Single(p => ((NameTriple)p.Name).Nick == n)).ToList();
+            foreach (var factor in new[] { Tuple.Create("MiningYield", 5f), Tuple.Create("PlantHarvestYield", 3f), Tuple.Create("ConstructionSpeed", 2f), Tuple.Create("ResearchSpeed", 3f) })
+                if (Current.Game.Scenario.GetStatFactor(DefDatabase<StatDef>.GetNamed(factor.Item1)) != factor.Item2)
+                    throw new InvalidOperationException("Fixture scenario factor changed: " + factor.Item1);
+            var result = names.Select(n => pawns.Single(p => ((NameTriple)p.Name).Nick == n)).ToList();
+            originalIds = result.Select(p => p.GetUniqueLoadID()).ToList();
+            return result;
+        }
+        public static void VerifyOriginalsPresent(Map map)
+        {
+            if (!Enabled) return;
+            if (originalIds == null || originalIds.Count != 6 || originalIds.Any(id =>
+                !map.mapPawns.FreeColonistsSpawned.Any(p => !p.Dead && p.GetUniqueLoadID() == id)))
+                throw new InvalidOperationException("An original EliteSix colonist died, was replaced or did not return to the fixture map.");
         }
     }
 }

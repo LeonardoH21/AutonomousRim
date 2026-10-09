@@ -208,6 +208,7 @@ namespace AutonomousRim.RuntimeChecks
                 }
                 if(stage==2)
                 {
+                    EliteFixtureBaseline.VerifyOriginalsPresent(map);
                     Check(ai.CommerceAutomation && ai.Commerce.LastTrade>0 && ai.Commerce.History.Count>0,"Trade state lost after native save/load.");
                     Pass("native save/load preserves completed transaction, history and toggle");
                     ai.SetCommerceAutomation(false);Check(ai.Commerce.Bills.Count==0 && ai.Commerce.JobId==null,"Commerce disable retained owned jobs/bills.");
@@ -230,6 +231,7 @@ namespace AutonomousRim.RuntimeChecks
                     Pass("native trade transfers drugs and needed materials, preserves silver reserve and protected goods, closes session");
                     if(Orbital)Pass("orbital drop pods landed; in-transit purchases cleared against real accessible stock");
                     if(CaravanTest){Check(caravanDeparted && map.mapPawns.FreeColonistsSpawnedCount==ExpectedResidents,"Couriers did not return alive to original map.");Pass("native world travel, settlement trade and return deliver actual purchases to the colony");}
+                    EliteFixtureBaseline.VerifyOriginalsPresent(map);
                     stage=2;GameDataSaveLoader.SaveGame("CommerceRoundtrip");GameDataSaveLoader.LoadGame("CommerceRoundtrip");return;
                 }
                 if(Find.TickManager.TicksGame%3000==0)Log.Message("[CommerceTests] progress: "+ai.Commerce.Status+" job="+ai.Commerce.Negotiator?.CurJob?.def.defName);

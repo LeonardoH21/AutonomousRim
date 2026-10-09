@@ -170,6 +170,7 @@ namespace AutonomousRim.RuntimeChecks
             try
             {
                 if(stage==0){Setup();return;}
+                EliteFixtureBaseline.VerifyOriginalsPresent(map);
                 var ai=map.GetComponent<AutonomousRimMapComponent>();
                 if(stage==3)
                 {
