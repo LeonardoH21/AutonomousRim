@@ -28,6 +28,14 @@ namespace AutonomousRim.RuntimeChecks
         private void Check(bool ok,string text){if(!ok)throw new InvalidOperationException(text);}
         private void Pass(string text)=>Log.Message("[CommerceTests] PASS: "+text);
         private int Stock(string name)=>CommercePlanner.Stock(map,DefDatabase<ThingDef>.GetNamed(name));
+        private int OwnedStock(string name)
+        {
+            var def=DefDatabase<ThingDef>.GetNamed(name);
+            return map.listerThings.ThingsOfDef(def).Where(t=>t.Spawned).Sum(t=>t.stackCount)+
+                map.mapPawns.FreeColonistsSpawned.Sum(p=>p.inventory.innerContainer.Where(t=>t.def==def).Sum(t=>t.stackCount)+
+                    (p.equipment?.Primary?.def==def?p.equipment.Primary.stackCount:0)+
+                    (p.carryTracker.CarriedThing?.def==def?p.carryTracker.CarriedThing.stackCount:0));
+        }
         private Thing Item(string name,int count=1)
         {
             var def=DefDatabase<ThingDef>.GetNamed(name);var thing=ThingMaker.MakeThing(def,def.MadeFromStuff?ThingDefOf.Steel:null);
@@ -117,7 +125,7 @@ namespace AutonomousRim.RuntimeChecks
             var projects=(List<RoomProject>)HarmonyLib.AccessTools.Field(typeof(AutonomousRimMapComponent),"baseProjects").GetValue(ai);
             var essential=new RoomProject{Kind="Energia e climatização",Origin=center+new IntVec3(-16,0,0),InteriorSize=4,RequiresRoof=false,Priority=ConstructionPriority.High};
             essential.Furniture.Add(new ConstructionTask{Def=DefDatabase<ThingDef>.GetNamed("Battery"),Position=essential.Origin});projects.Add(essential);
-            beforeSteel=Stock("Steel");beforeDrug=Stock("SmokeleafJoint");beforeMedicine=Stock("MedicineHerbal");beforeWeapon=Stock("MeleeWeapon_Knife");
+            beforeSteel=Stock("Steel");beforeDrug=Stock("SmokeleafJoint");beforeMedicine=OwnedStock("MedicineHerbal");beforeWeapon=OwnedStock("MeleeWeapon_Knife");
             ai.SetAutomation(false,false);
             if(Orbital){start=Find.TickManager.TicksGame;stage=4;return;}
             if(SafetyTest)SafetySetup(ai);
@@ -204,7 +212,7 @@ namespace AutonomousRim.RuntimeChecks
                 if(CaravanTest && !caravanDeparted && ai.Commerce.Expedition?.Spawned==true)
                 {caravanDeparted=true;Pass("couriers packed real goods, left map and formed native world caravan");}
                 bool caravanUnloaded=!CaravanTest || ai.Commerce.ExpeditionPawns.Count==0 &&
-                    (Stock("Steel")>beforeSteel || Stock("ComponentIndustrial")>0) && Stock("MedicineHerbal")==beforeMedicine;
+                    (Stock("Steel")>beforeSteel || Stock("ComponentIndustrial")>0) && OwnedStock("MedicineHerbal")==beforeMedicine;
                 if(ai.Commerce.LastTrade>0 && caravanUnloaded)
                 {
                     if(Orbital && (ai.Commerce.Deliveries.Count>0 || Stock("Silver")<250))
@@ -212,7 +220,8 @@ namespace AutonomousRim.RuntimeChecks
                     Check(Stock("SmokeleafJoint")<beforeDrug,"Commercial products not actually sold.");
                     Check(Stock("Steel")>beforeSteel || Stock("ComponentIndustrial")>0,"Needed materials were not actually delivered.");
                     Check(Stock("Silver")>=250,"Cash reserve spent below ordinary survival threshold.");
-                    Check(Stock("MedicineHerbal")==beforeMedicine && Stock("MeleeWeapon_Knife")==beforeWeapon,"Protected medicine/weapon sold.");
+                    Check(OwnedStock("MedicineHerbal")==beforeMedicine && OwnedStock("MeleeWeapon_Knife")==beforeWeapon,"Protected medicine/weapon ownership changed: medicine="+OwnedStock("MedicineHerbal")+"/"+beforeMedicine+"; weapon="+OwnedStock("MeleeWeapon_Knife")+"/"+beforeWeapon+"; carried="+
+                        string.Join(";",map.mapPawns.FreeColonistsSpawned.Select(p=>p.LabelShort+":equipment="+p.equipment?.Primary?.def.defName+":inventory="+string.Join(",",p.inventory.innerContainer.Select(t=>t.def.defName+"x"+t.stackCount))+":carry="+p.carryTracker.CarriedThing?.def.defName)));
                     Check(!TradeSession.Active,"Automatic trade session was left active.");
                     Pass("native trade transfers drugs and needed materials, preserves silver reserve and protected goods, closes session");
                     if(Orbital)Pass("orbital drop pods landed; in-transit purchases cleared against real accessible stock");
@@ -222,7 +231,7 @@ namespace AutonomousRim.RuntimeChecks
                 if(Find.TickManager.TicksGame%3000==0)Log.Message("[CommerceTests] progress: "+ai.Commerce.Status+" job="+ai.Commerce.Negotiator?.CurJob?.def.defName);
                 Check(Find.TickManager.TicksGame-start<(CaravanTest?300000:20000),"No transaction completed: "+ai.Commerce.Status+" / "+ai.Commerce.CaravanStatus);
             }
-            catch(Exception ex){stage=99;Log.Error("[CommerceTests] FAIL: "+ex);}
+            catch(Exception ex){stage=99;GameDataSaveLoader.SaveGame("CommerceFailure");Log.Error("[CommerceTests] FAIL: "+ex);}
         }
     }
 }
