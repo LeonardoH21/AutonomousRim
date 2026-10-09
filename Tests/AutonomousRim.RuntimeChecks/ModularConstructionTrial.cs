@@ -16,6 +16,7 @@ namespace AutonomousRim.RuntimeChecks
         private bool started, finished;
         public int InitialResearch = -1;
         public System.Collections.Generic.HashSet<string> Crafted = new System.Collections.Generic.HashSet<string>();
+        public System.Collections.Generic.HashSet<string> CompletedRecipes = new System.Collections.Generic.HashSet<string>();
         public System.Collections.Generic.HashSet<int> UsedBenches = new System.Collections.Generic.HashSet<int>();
         private static bool resumed;
         private int startTick;
@@ -33,11 +34,13 @@ namespace AutonomousRim.RuntimeChecks
             Scribe_Values.Look(ref startTick,"nativeTrialStartTick");
             Scribe_Collections.Look(ref milestones,"nativeTrialMilestones",LookMode.Value);
             Scribe_Collections.Look(ref Crafted, "nativeCraftProof", LookMode.Value);
+            Scribe_Collections.Look(ref CompletedRecipes,"nativeRecipeProof",LookMode.Value);
             Scribe_Collections.Look(ref UsedBenches, "usedBenchProof", LookMode.Value);
             Scribe_Collections.Look(ref initialPawns, "initialPawnProof", LookMode.Reference);
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
             {
                 Crafted = Crafted ?? new System.Collections.Generic.HashSet<string>();
+                CompletedRecipes=CompletedRecipes??new System.Collections.Generic.HashSet<string>();
                 UsedBenches = UsedBenches ?? new System.Collections.Generic.HashSet<int>();
                 initialPawns = initialPawns ?? new System.Collections.Generic.List<Pawn>();
                 milestones=milestones??new System.Collections.Generic.HashSet<string>();

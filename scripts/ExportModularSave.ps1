@@ -10,16 +10,20 @@ $projectRoot=Split-Path $PSScriptRoot -Parent
 $profile=if($ValidationProfile){(Resolve-Path -LiteralPath $ValidationProfile).Path}else{Join-Path $projectRoot ('.tools\modular-construction-'+$RunName)}
 if($ValidationProfile){$RunName=Split-Path $profile -Leaf}
 $source=Join-Path $profile $(if($Integrated){'Saves\IntegratedTwentyDaysComplete.rws'}elseif($Progression){'Saves\ModularSteelComplete.rws'}else{'Saves\ModularInitialComplete.rws'})
-$logs=@(Get-ChildItem -LiteralPath $profile -Filter 'Player*.log')
-if(!(Test-Path -LiteralPath $source) -or !($logs|Where-Object {
- $text=Get-Content -LiteralPath $_.FullName -Raw
- $text.Contains('[AutonomousRim.ModularTrial] PASS:') -and $text.Contains('MILESTONE refrigeration:') -and
- (!$Progression -or $text.Contains('native research, organized workshop')) -and
- (!$Integrated -or $text.Contains('[AutonomousRim.ModularTrial] PASS: integrated twenty days;'))
-})){throw 'Completed native trial with working refrigeration is required.'}
+if(!(Test-Path -LiteralPath $source)){throw 'Completed native trial with working refrigeration is required.'}
 $document=New-Object System.Xml.XmlDocument
 $document.PreserveWhitespace=$true
 $document.Load($source)
+$savedMilestones=@($document.SelectNodes("//*[@Class='AutonomousRim.RuntimeChecks.ModularConstructionTrial']/nativeTrialMilestones/li") | ForEach-Object {$_.InnerText})
+$logs=@(Get-ChildItem -LiteralPath $profile -Filter 'Player*.log')
+if(!($logs|Where-Object {
+ $text=Get-Content -LiteralPath $_.FullName -Raw
+ # Resumed trials preserve the refrigeration milestone in the save rather than repeat its first log entry.
+ $coldProof=$text.Contains('MILESTONE refrigeration:') -or ($Integrated -and 'refrigeration' -in $savedMilestones)
+ $text.Contains('[AutonomousRim.ModularTrial] PASS:') -and $coldProof -and
+ (!$Progression -or $text.Contains('native research, organized workshop')) -and
+ (!$Integrated -or $text.Contains('[AutonomousRim.ModularTrial] PASS: integrated twenty days;'))
+})){throw 'Completed native trial with working refrigeration is required.'}
 if($Progression -or $Integrated){
  $craftProof=@($document.SelectNodes("//*[@Class='AutonomousRim.RuntimeChecks.ModularConstructionTrial']/nativeCraftProof/li") | ForEach-Object {$_.InnerText})
  foreach($required in @('Apparel_SimpleHelmet','Apparel_PlateArmor','MeleeWeapon_LongSword')){

@@ -4,7 +4,7 @@ Objetivo: testar todas as funcionalidades, corrigir falhas e permitir retomada s
 
 ## Estado de retomada
 
-Em andamento: etapa 7, ensaio integrado iniciado em 09/10. Etapas 0–3 aprovadas no escopo indicado; prisão nativa, comércio local, orbital e caravana passaram. Etapa 6 tem limitações explícitas e cenários adicionais pendentes. Correções e regressões de combate/resgate salvas no Git até `027a6da`.
+Em andamento: etapa 7, ensaio integrado iniciado em 09/10. Etapas 0–3 aprovadas no escopo indicado; prisão nativa, comércio local, orbital e caravana passaram. Etapa 6 tem limitações explícitas e cenários adicionais pendentes. Correções de combate/resgate e armazenamento salvas no Git até `3e9de0f`; revisões posteriores detalhadas abaixo.
 
 | Etapa | Escopo | Estado / evidência |
 |---|---|---|
@@ -12,10 +12,10 @@ Em andamento: etapa 7, ensaio integrado iniciado em 09/10. Etapas 0–3 aprovada
 | 1 | Carregamento, XML, allow, comida, equipamento e construção básica | PASS: carregamento, allow, Bills, jobs reais de equipamento e desligamento; log `Player-20261008-204405-289.log`. Construção antiga excluída desta etapa; layout modular terá ensaio próprio |
 | 2 | Prioridades, agenda, emergência e resgate | PASS: 14 verificações de trabalho/agenda, emergência com recuperação/restauração e resgates nativos com/sem cama |
 | 3 | Progressão, pesquisa, produção e armazenamento | PASS: sete grupos, incluindo fabricação nativa de capacete, substituição de parede por pedra, prateleira construída e salvar/carregar. Progressão prolongada ainda na etapa 7 |
-| 4 | Prisão: construção, captura, alimentação, tratamento, conversão, recrutamento, liberação, controle manual e salvar/carregar | PASS parcial: captura, tratamento, conversão, recrutamento, liberação, salvar/carregar e desligamento. Construção natural da prisão e cenários adicionais de segurança/manual pendentes |
+| 4 | Prisão: construção, captura, alimentação, tratamento, conversão, recrutamento, liberação, controle manual e salvar/carregar | PASS parcial: captura, tratamento, conversão, recrutamento, liberação, salvar/carregar e desligamento. Ensaio integrado atingiu três vagas construídas; cenários adicionais de segurança/manual pendentes |
 | 5 | Comércio: produção, interação local/orbital, orçamento, entrega, caravana, controles e persistência | PASS parcial: comércio local e orbital, entrega real, reserva, itens protegidos, salvar/carregar e desligamento. PASS: caravana nativa com viagem, compra, retorno e descarga. Produção econômica prolongada e cenários de interrupção/manual pendentes |
 | 6 | Combate: cenários variados, colaboração melee/ranged, retirada e resgate | Falhas identificadas; revisão em validação. Resultados individuais abaixo |
-| 7 | Autonomia integrada: construção completa, inverno e sobrevivência prolongada | Pendente |
+| 7 | Autonomia integrada: construção completa, inverno e sobrevivência prolongada | Em andamento, checkpoint preservado em 12,9875 dias; ainda sem aprovação |
 | 8 | HUD, relatório final, saves para revisão, instalação e Git | Pendente |
 
 Logs ficam em `.tools`, saves/checkpoints de partidas também. Não chamar uma etapa de aprovada apenas porque compilou ou emitiu uma ordem: confirmar o resultado real exigido pelo cenário. Registrar falhas, correção e repetição, incluindo limites de cobertura.
@@ -120,3 +120,19 @@ Correção: prateleiras reservam espaços de interação de bancadas existentes 
 `storage-interaction-regression-20261009-094847-146` passou; repetição com conduítes em todas as células (`095106-925`) também passou nos sete grupos, incluindo reserva de interação, reparo de plano antigo, cancelamento manual, fabricação/construção nativa e persistência. As 57 verificações de políticas passaram. Tentativas de retomada `095143-308`, `095604-323` e `100004-793` foram reprovadas pela geometria: a suspensão criada ao carregar ainda impedia a conciliação inicial. Nenhuma aprovação derivada dessas tentativas.
 
 Perfil vivo após corrigir a sequência de retomada: `.tools/validation/integrated-shelf-resume-20261009-100236-258/`, carregado de `BeforeShelfFix.rws`. Mantém cinco colonos originais e início original, passou novamente na geometria, retomou construção e iniciou pesquisa nativa depois do quinto dia. Usar seu `Saves/ModularCheckpoint.rws` para a próxima retomada. A alteração da sequência de ativação ainda precisa da regressão final de controles; o ensaio integrado continua sem aprovação até vinte dias e todos os marcos.
+
+### Retomada após limite de mensagens do jogo
+
+O perfil `integrated-shelf-resume-20261009-100236-258` atingiu o limite de mensagens do RimWorld: `Reached max messages limit. Stopping logging to avoid spam.` A colônia continuava avançando em saves nativos; não confundir ausência de novas linhas com paralisação da IA. Interrupção intencional registrada no manifesto, com `Saves/BeforeLogThrottle.rws` preservado em 779370 ticks (12,9875 dias desde o início). Cinco colonos originais vivos, refrigeração e prisão construída registradas, dois postos de pesquisa usados, estoque/oficina concluídos e fabricação nativa de calça, camisa e capacete. Armadura, espada, equipamento completo e hospital ainda não aprovados.
+
+Correção: limpeza de reservas mantém intervalo de 600 ticks; diagnóstico de recuperação passa a registrar a primeira ocorrência, mudança com intervalo mínimo de seis horas de jogo e repetição no máximo uma vez por dia. Último motivo/tick são persistidos para não reiniciar o spam ao carregar. Compilação limpa e 57 verificações de política passaram. `storage-log-regression-20261009-102916-771` passou nos sete grupos nativos, incluindo produção, construção de parede/prateleira e salvar/carregar.
+
+Observador ampliado para registrar receitas concluídas que não declaram produtos fixos, como abate, e contadores nativos de caça/refeições. Compilado; sua execução prolongada será verificada na próxima retomada. Nenhum recurso ou pesquisa é concedido pelo novo observador.
+
+Exportação corrigida para aceitar a evidência de refrigeração persistida no save de uma retomada, mantendo exigência de PASS integrado e prova de crafting. Contrato sintético isolado `export-resume-contract-20261009-102516` passou: remoção exclusiva do observador, preservação da colônia, recusa de sobrescrita e de exportação incompleta. Isso não representa exportação/carregamento do ensaio integrado real.
+
+Ensaio variado contra seis manhunters: `combat-varied-4-20261009-103015-981`, vitória nativa em 2687 ticks, zero mortos, um derrubado e três feridos; todos os inimigos neutralizados. Ainda não comprova tratamento completo após esse combate.
+
+Contra cinco mechanoides, `combat-varied-5-20261009-103125-541` terminou em derrota em 2190 ticks: um morto, três derrubados, quatro feridos e cinco inimigos ainda ativos. Manifesto `TACTICAL_FAILURE`; nenhuma aprovação de combate contra mechanoides. A investigação deve verificar retirada coletiva e apoio: aliados já recuando ainda entram na força local usada por `Overwhelmed`, embora sejam excluídos do apoio de avanço melee. Não alterar o resultado da rodada nem considerar uma hipótese como correção validada.
+
+Regressão final de controles: `Player-20261009-103252-488.log` passou no carregamento, comida, equipamento, allow e nos novos controles de construção: desligar suspende projetos; religar retoma pausas automáticas; cancelamento manual continua preservado. A construção completa usa o ensaio integrado, separado deste teste de controles.

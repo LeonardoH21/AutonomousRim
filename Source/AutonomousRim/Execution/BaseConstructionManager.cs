@@ -344,7 +344,19 @@ namespace AutonomousRim.Execution
                     p.BlockReason = PendingReason(map, p, builders);
                     if (p.BlockReason.StartsWith("Material ")) p.State = ConstructionState.WaitingMaterials;
                     else if (p.BlockReason.StartsWith("Obras")) p.State = ConstructionState.Blocked;
-                    if (ticks - p.LastRecoveryTick >= 600) { p.LastRecoveryTick = ticks; ConstructionWorkManager.CleanInvalidReservations(map, projects); Log.Message($"[AutonomousRim] Recovery: {p.Kind}: {p.BlockReason}"); }
+                    if (ticks - p.LastRecoveryTick >= 600)
+                    {
+                        p.LastRecoveryTick = ticks;
+                        ConstructionWorkManager.CleanInvalidReservations(map, projects);
+                        // Keep recovery cadence independent of diagnostics. Repeated messages can
+                        // exhaust RimWorld's log limit during long games and hide later failures.
+                        int logInterval = p.LastRecoveryLogReason == p.BlockReason ? GenDate.TicksPerDay : GenDate.TicksPerDay / 4;
+                        if (p.LastRecoveryLogReason == null || ticks - p.LastRecoveryLogTick >= logInterval)
+                        {
+                            p.LastRecoveryLogTick = ticks; p.LastRecoveryLogReason = p.BlockReason;
+                            Log.Message($"[AutonomousRim] Recovery: {p.Kind}: {p.BlockReason}");
+                        }
+                    }
                 }
             }
             if (danger) return "Construção suspensa: hostis no mapa.";

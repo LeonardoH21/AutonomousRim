@@ -96,6 +96,8 @@ namespace AutonomousRim.Planning
         public int LastProgressTick;
         public float LastProgress;
         public int LastRecoveryTick;
+        public int LastRecoveryLogTick;
+        public string LastRecoveryLogReason;
         public bool Stalled;
         public bool FunctionalStorage;
         public int Height => InteriorHeight > 0 ? InteriorHeight : InteriorSize;
@@ -130,6 +132,8 @@ namespace AutonomousRim.Planning
             Scribe_Values.Look(ref BlockReason, "blockReason");
             Scribe_Values.Look(ref LastProgressTick, "lastProgressTick"); Scribe_Values.Look(ref LastProgress, "lastProgress");
             Scribe_Values.Look(ref LastRecoveryTick, "lastRecoveryTick"); Scribe_Values.Look(ref FunctionalStorage, "functionalStorage");
+            Scribe_Values.Look(ref LastRecoveryLogTick, "lastRecoveryLogTick");
+            Scribe_Values.Look(ref LastRecoveryLogReason, "lastRecoveryLogReason");
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
             {
                 Shell = Shell ?? new List<ConstructionTask>(); Furniture = Furniture ?? new List<ConstructionTask>();

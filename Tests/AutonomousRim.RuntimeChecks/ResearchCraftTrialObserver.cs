@@ -23,10 +23,12 @@ namespace AutonomousRim.RuntimeChecks
         private static void CompletedBill(Bill_Production __instance, Pawn billDoer)
         {
             if (billDoer.Faction != Faction.OfPlayer) return;
+            var proof=billDoer.Map.GetComponent<ModularConstructionTrial>();
+            proof.CompletedRecipes.Add(__instance.recipe.defName);
+            Log.Message("[AutonomousRim.CraftTrial] NATIVE BILL COMPLETE: " + __instance.recipe.defName + "; worker=" + billDoer.LabelShort);
             foreach (var product in __instance.recipe.products)
             {
-                billDoer.Map.GetComponent<ModularConstructionTrial>().Crafted.Add(product.thingDef.defName);
-                Log.Message("[AutonomousRim.CraftTrial] NATIVE BILL COMPLETE: " + __instance.recipe.defName + "; worker=" + billDoer.LabelShort);
+                proof.Crafted.Add(product.thingDef.defName);
             }
         }
         public static bool Complete(Map map, AutonomousRimMapComponent ai)
@@ -50,6 +52,10 @@ namespace AutonomousRim.RuntimeChecks
             if (Find.TickManager.TicksGame % 2490 == 0)
             {
                 Log.Message("[AutonomousRim.CraftTrial] CHECKPOINT research=" + research + "; benchesUsed=" + proof.UsedBenches.Count + "; workshop=" + workshop + "; storage=" + storage + "; crafted=" + crafted + "; equipped=" + dressed + "; research=" + Find.ResearchManager.GetProject()?.defName);
+                var colonists=map.mapPawns.FreeColonistsSpawned.ToList();
+                float record(string name)=>colonists.Sum(p=>p.records.GetValue(DefDatabase<RecordDef>.GetNamed(name)));
+                Log.Message("[AutonomousRim.CraftTrial] NATIVE RECORDS animalKills="+record("KillsAnimals")+"; huntingTicks="+record("TimeHunting")+
+                    "; mealsCooked="+record("MealsCooked")+"; recipes="+string.Join(",",proof.CompletedRecipes));
                 foreach (var prep in ai.BaseProjects.Where(p => p.Kind == "Preparação do terreno" && !p.Completed))
                     Log.Message("[AutonomousRim.CraftTrial] CLEARANCE " + prep.LayoutSlot + ": " + string.Join(";", prep.MineCells.Where(c => c.GetEdifice(map) is Mineable).Select(c => c + ":designated=" + (map.designationManager.DesignationAt(c, DesignationDefOf.Mine) != null) + ":reachable=" + map.mapPawns.FreeColonistsSpawned.Any(p => p.CanReach(c, Verse.AI.PathEndMode.Touch, Danger.None)))));
             }
