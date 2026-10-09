@@ -196,11 +196,17 @@ namespace AutonomousRim.Execution
         private static bool Issue(CombatOrder order, Job job, string role)
         {
             var p=order.Pawn;
-            if (p.CurJob?.def==job.def && p.CurJob.targetA==job.targetA) { order.Role=role; return false; }
+            // Waiting in a defensive position must retain native ranged fire.
+            // FireAtWill=false suppresses JobDriver_Wait auto-attacks entirely,
+            // leaving sheltered shooters unable to cover a withdrawing ally.
+            bool defensiveFire=job.def==JobDefOf.Wait_Combat && Ranged(p);
+            if (p.CurJob?.def==job.def && p.CurJob.targetA==job.targetA)
+            { p.drafter.FireAtWill=defensiveFire; order.Role=role; return false; }
             job.expiryInterval=job.def==JobDefOf.AttackStatic?1800:600; job.checkOverrideOnExpire=true;
             job.preventFriendlyFire=true;
             if(job.def==JobDefOf.Goto) job.locomotionUrgency=LocomotionUrgency.Sprint;
             if (!p.jobs.TryTakeOrderedJob(job,JobTag.Misc,false)) return false;
+            p.drafter.FireAtWill=defensiveFire;
             order.JobId=job.GetUniqueLoadID(); order.LastOrderTick=Find.TickManager.TicksGame; order.Role=role;
             Log.Message($"[AutonomousRim.Combat] {p.LabelShort}: {role}; {job.def.defName} → {job.targetA}");
             return true;
