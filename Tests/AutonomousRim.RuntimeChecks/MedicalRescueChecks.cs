@@ -153,9 +153,9 @@ namespace AutonomousRim.RuntimeChecks
                 Log.Message($"[MedicalRescueTests] PASS release {stage}: helper released automatically after native care.");
                 if(stage==1 && !Elite){stage=2;started=false;Setup();return;}
                 var ai=map.GetComponent<AutonomousRimMapComponent>();ai.SetEmergencyAutomation(false);
-                doctor.drafter.Drafted=true;var manual=JobMaker.MakeJob(JobDefOf.Wait_Combat);doctor.jobs.TryTakeOrderedJob(manual,JobTag.Misc,false);
+                doctor.drafter.Drafted=true;doctor.drafter.FireAtWill=false;var manual=JobMaker.MakeJob(JobDefOf.Wait_Combat);doctor.jobs.TryTakeOrderedJob(manual,JobTag.Misc,false);
                 ai.SetEmergencyAutomation(true);
-                Check(doctor.Drafted && doctor.CurJob.GetUniqueLoadID()==manual.GetUniqueLoadID(),"Manual order was overwritten.");
+                Check(doctor.Drafted && !doctor.drafter.FireAtWill && doctor.CurJob.GetUniqueLoadID()==manual.GetUniqueLoadID(),"Manual order or fire setting was overwritten.");
                 var unsafeEnemy=Spawn(false,center+new IntVec3(30,0,10),"Gun_Revolver",1);
                 var liveThreat=AutonomousRim.Perception.ThreatScanner.Scan(map,ColonyStateScanner.Scan(map));
                 Check(!MedicalRescueManager.Safe(map,unsafeEnemy.Position,liveThreat),"Rescue safety allowed an active enemy contact cell.");

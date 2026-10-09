@@ -347,6 +347,9 @@ namespace AutonomousRim.RuntimeChecks
                     Check(!CombatManager.Enemies(map).Except(enemies).Any(),"Unrelated hostile pawn appeared during the fixture.");
                     foreach(var order in ai.CombatOrders)
                     {
+                        if(CombatManager.Ranged(order.Pawn) && order.Pawn.CurJob?.def==JobDefOf.Wait_Combat &&
+                            order.Pawn.CurJob.GetUniqueLoadID()==order.JobId)
+                            Check(order.Pawn.drafter.FireAtWill,"Owned defensive waiting disabled native ranged fire: "+order.Pawn.LabelShort);
                         if(order.Retreated)retreat++;
                         if(order.Role=="Interceptar / ajudar aliado" || order.Role?.StartsWith("Melee:")==true)melee++;
                         if(order.Role=="Melee: flanco coordenado")flankSamples++;
