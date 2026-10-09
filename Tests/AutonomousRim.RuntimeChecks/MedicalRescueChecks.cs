@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using AutonomousRim.Core;
 using AutonomousRim.Execution;
@@ -18,6 +19,9 @@ namespace AutonomousRim.RuntimeChecks
         private Pawn doctor,patient;
         private Pawn[] fighters,enemies;
         private IntVec3 center;
+        private bool Elite=>GenCommandLine.CommandLineArgPassed("autonomousrimelitesix");
+        private List<Pawn> eliteRoster=new List<Pawn>();
+        private int eliteSpawnIndex;
         public MedicalRescueChecks(Map map):base(map){}
         private void Check(bool c,string m){if(!c)throw new InvalidOperationException(m);}
         private ThingWithComps Item(string name)
@@ -29,19 +33,26 @@ namespace AutonomousRim.RuntimeChecks
         private Pawn Spawn(bool friendly,IntVec3 pos,string weapon,int medical)
         {
             Pawn p;
+            if(friendly && Elite)p=eliteRoster[eliteSpawnIndex++];
+            else
+            {
             do { p=PawnGenerator.GeneratePawn(new PawnGenerationRequest(PawnKindDefOf.Colonist,friendly?Faction.OfPlayer:Faction.OfAncientsHostile,forceGenerateNewPawn:true,canGeneratePawnRelations:false)); }
             while(p.health.hediffSet.hediffs.Count>0 || p.skills.skills.Any(s=>s.TotallyDisabled));
             foreach(var trait in p.story.traits.allTraits.ToList())p.story.traits.RemoveTrait(trait);
             foreach(var skill in p.skills.skills)skill.Level=friendly?20:6;
             p.skills.GetSkill(SkillDefOf.Medicine).Level=medical;
+            }
             foreach(var t in p.equipment.AllEquipmentListForReading.ToList())p.equipment.Remove(t);
             if(weapon!=null)p.equipment.AddEquipment(Item(weapon));
             foreach(var t in p.apparel.WornApparel.ToList())p.apparel.Remove(t);
             p.apparel.Wear((Apparel)Item("Apparel_PowerArmor"));
             p.apparel.Wear((Apparel)Item("Apparel_SimpleHelmet"));
             GenSpawn.Spawn(p,pos,map);
-            if(p.needs.food!=null)p.needs.food.CurLevel=1;if(p.needs.rest!=null)p.needs.rest.CurLevel=1;
-            if(p.needs.joy!=null)p.needs.joy.CurLevel=1;if(p.needs.mood!=null)p.needs.mood.CurLevel=1;
+            if(!(friendly && Elite))
+            {
+                if(p.needs.food!=null)p.needs.food.CurLevel=1;if(p.needs.rest!=null)p.needs.rest.CurLevel=1;
+                if(p.needs.joy!=null)p.needs.joy.CurLevel=1;if(p.needs.mood!=null)p.needs.mood.CurLevel=1;
+            }
             return p;
         }
         private void Build(string name,int x,int z)
@@ -53,15 +64,21 @@ namespace AutonomousRim.RuntimeChecks
         private void Setup()
         {
             var ai=map.GetComponent<AutonomousRimMapComponent>();ai.DisableAll();center=map.Center;
-            var peaceful=DefDatabase<DifficultyDef>.GetNamed("Peaceful");Find.Storyteller.difficultyDef=peaceful;Find.Storyteller.difficulty.CopyFrom(peaceful);
-            foreach(var p in map.mapPawns.AllPawnsSpawned.ToList()){p.DeSpawn();Find.WorldPawns.PassToWorld(p,PawnDiscardDecideMode.KeepForever);}
+            if(Elite)
+            {
+                var originals=EliteFixtureBaseline.Roster(map);
+                eliteRoster=new[]{"Alpha","Delta","Bravo","Foxtrot","Charlie","Echo"}.Select(n=>originals.Single(p=>((NameTriple)p.Name).Nick==n)).ToList();
+                eliteSpawnIndex=0;
+            }
+            else {var peaceful=DefDatabase<DifficultyDef>.GetNamed("Peaceful");Find.Storyteller.difficultyDef=peaceful;Find.Storyteller.difficulty.CopyFrom(peaceful);}
+            foreach(var p in map.mapPawns.AllPawnsSpawned.ToList()){p.DeSpawn();if(!eliteRoster.Contains(p))Find.WorldPawns.PassToWorld(p,PawnDiscardDecideMode.KeepForever);}
             foreach(var t in map.listerThings.AllThings.Where(t=>t is Hive || !(t is Pawn)&&t is IAttackTarget&&t.HostileTo(Faction.OfPlayer)).ToList())t.Destroy(DestroyMode.Vanish);
             foreach(var c in new CellRect(center.x-35,center.z-16,71,33).Cells)
             {
                 foreach(var t in c.GetThingList(map).ToList()){if(t.def.destroyable)t.Destroy(DestroyMode.Vanish);else t.DeSpawn();}
                 map.terrainGrid.SetTerrain(c,TerrainDefOf.Soil);map.roofGrid.SetRoof(c,null);map.fogGrid.Unfog(c);
             }
-            foreach(var p in map.mapPawns.AllPawnsSpawned.ToList()){p.DeSpawn();Find.WorldPawns.PassToWorld(p,PawnDiscardDecideMode.KeepForever);}
+            foreach(var p in map.mapPawns.AllPawnsSpawned.ToList()){p.GetLord()?.Notify_PawnLost(p,PawnLostCondition.ExitedMap);p.DeSpawn();Find.WorldPawns.PassToWorld(p,PawnDiscardDecideMode.KeepForever);}
             foreach(var bed in map.listerBuildings.AllBuildingsColonistOfClass<Building_Bed>().ToList())bed.Destroy(DestroyMode.Vanish);
             for(int x=-18;x<=-4;x++)for(int z=-5;z<=5;z++)
             {
@@ -73,23 +90,24 @@ namespace AutonomousRim.RuntimeChecks
             patient=Spawn(true,center+new IntVec3(-10,0,2),null,1);
             fighters=new[]{Spawn(true,center+new IntVec3(1,0,-2),"MeleeWeapon_LongSword",1),
                 Spawn(true,center+new IntVec3(1,0,2),"MeleeWeapon_Mace",1),Spawn(true,center+new IntVec3(-3,0,0),"Gun_AssaultRifle",1)};
+            if(Elite)fighters=fighters.Concat(new[]{Spawn(true,center+new IntVec3(-3,0,4),"Gun_AssaultRifle",1)}).ToArray();
             enemies=Enumerable.Range(0,6).Select(i=>Spawn(false,center+new IntVec3(i<2?2:24,0,i<2?i*4-2:i*2-4),"Gun_Revolver",1)).ToArray();
             foreach(var e in enemies.Skip(2))e.health.AddHediff(HediffDefOf.Anesthetic);
             patient.health.AddHediff(HediffDefOf.Anesthetic);
-            var cut=HediffMaker.MakeHediff(DefDatabase<HediffDef>.GetNamed("Cut"),patient,patient.health.hediffSet.GetNotMissingParts().First(b=>b.def==BodyPartDefOf.Leg));
+            var cut=HediffMaker.MakeHediff(DefDatabase<HediffDef>.GetNamed("Cut"),patient,patient.health.hediffSet.GetNotMissingParts().First(b=>b.def==(Elite?BodyPartDefOf.Torso:BodyPartDefOf.Leg)));
             cut.Severity=10;patient.health.AddHediff(cut);
             var blood=HediffMaker.MakeHediff(HediffDefOf.BloodLoss,patient);blood.Severity=stage==1?.4f:.985f;patient.health.AddHediff(blood);
             patient.playerSettings.medCare=MedicalCareCategory.Best;
             var meds=ThingMaker.MakeThing(DefDatabase<ThingDef>.GetNamed("MedicineHerbal"));meds.stackCount=8;GenSpawn.Spawn(meds,center+new IntVec3(-14,0,0),map);
             LordMaker.MakeNewLord(Faction.OfAncientsHostile,new LordJob_AssaultColony(Faction.OfAncientsHostile,false,false,false,false,false),map,enemies.Take(2));
             ai.SetCombatAutomation(true);
-            Check(ai.CombatOrders.Count==4,"Expected four owned drafted fighters before rescue.");
+            Check(ai.CombatOrders.Count==(Elite?5:4),"Expected all capable combatants drafted before rescue.");
             ai.SetEmergencyAutomation(true);
             Check(ai.CurrentState.Threat.ActiveCount==2,"Four neutralized enemies must not count as active.");
             Check(ai.Emergency.Medical.Count==1 && ai.Emergency.Medical[0].Helper==doctor,"Weak armed medical specialist was not selected.");
-            Check(ai.CombatOrders.Count==3 && !doctor.Drafted,"Rescue must leave three defenders versus two enemies.");
+            Check(ai.CombatOrders.Count==(Elite?4:3) && !doctor.Drafted,"Rescue must retain the remaining defenders versus two enemies.");
             Check(doctor.CurJob?.def==(stage==1?JobDefOf.Rescue:JobDefOf.TendPatient),"Wrong rescue/stabilization native job.");
-            Log.Message($"[MedicalRescueTests] PASS dispatch {stage}: 5 colonists; 6 enemies, 4 neutralized; 3 defenders vs 2; doctor20 detached; deathTicks={HealthUtility.TicksUntilDeathDueToBloodLoss(patient)}; job={doctor.CurJob.def.defName}");
+            Log.Message($"[MedicalRescueTests] PASS dispatch {stage}: {(Elite?6:5)} colonists; 6 enemies, 4 neutralized; {(Elite?4:3)} defenders vs 2; doctor20 detached; deathTicks={HealthUtility.TicksUntilDeathDueToBloodLoss(patient)}; job={doctor.CurJob.def.defName}");
             started=true;careReported=false;start=Find.TickManager.TicksGame;
         }
         public override void MapComponentUpdate()
@@ -100,10 +118,12 @@ namespace AutonomousRim.RuntimeChecks
         }
         public override void MapComponentTick()
         {
+            if(!EliteFixtureBaseline.Ready)return;
             if(done||!GenCommandLine.CommandLineArgPassed("autonomousrimmedicalrescuetest")||Find.TickManager.TicksGame<300)return;
             try
             {
-                if(!started){stage=1;Setup();return;}
+                if(!started){stage=GenCommandLine.CommandLineArgPassed("autonomousrimmedicalfieldtest")?2:1;Setup();return;}
+                EliteFixtureBaseline.VerifyOriginalsPresent(map);
                 Check(!patient.Dead,"Patient died of bleeding before native treatment.");
                 if(patient.health.hediffSet.BleedRateTotal>0)
                 {
@@ -131,7 +151,7 @@ namespace AutonomousRim.RuntimeChecks
                     return;
                 }
                 Log.Message($"[MedicalRescueTests] PASS release {stage}: helper released automatically after native care.");
-                if(stage==1){stage=2;started=false;Setup();return;}
+                if(stage==1 && !Elite){stage=2;started=false;Setup();return;}
                 var ai=map.GetComponent<AutonomousRimMapComponent>();ai.SetEmergencyAutomation(false);
                 doctor.drafter.Drafted=true;var manual=JobMaker.MakeJob(JobDefOf.Wait_Combat);doctor.jobs.TryTakeOrderedJob(manual,JobTag.Misc,false);
                 ai.SetEmergencyAutomation(true);
@@ -143,7 +163,7 @@ namespace AutonomousRim.RuntimeChecks
                 Log.Message("[MedicalRescueTests] PASS safety/manual: enemy contact rejected; player draft/order preserved.");
                 ai.DisableAll();Log.Message("[MedicalRescueTests] DONE");done=true;Find.TickManager.CurTimeSpeed=TimeSpeed.Paused;
             }
-            catch(Exception ex){done=true;Log.Error("[MedicalRescueTests] FAIL: "+ex);Find.TickManager.CurTimeSpeed=TimeSpeed.Paused;}
+            catch(Exception ex){GameDataSaveLoader.SaveGame("MedicalRescueFailure");done=true;Log.Error("[MedicalRescueTests] FAIL: "+ex);Find.TickManager.CurTimeSpeed=TimeSpeed.Paused;}
         }
     }
 }
