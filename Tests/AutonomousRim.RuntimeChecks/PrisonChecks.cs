@@ -17,7 +17,9 @@ namespace AutonomousRim.RuntimeChecks
         private int start;
         private Pawn recruit,release;
         private bool capturedReported,tendedReported,convertedReported;
-        private bool diagnosed;
+        private bool diagnosed,breakStarted,breakDraft,breakDowned;
+        private int breakTick;
+        private bool BreakTrial=>GenCommandLine.CommandLineArgPassed("autonomousrimprisonbreaktest");
         public PrisonChecks(Map map):base(map){}
         private void Check(bool value,string text){if(!value)throw new InvalidOperationException(text);}
         private void Pass(string text)=>Log.Message("[PrisonTests] PASS: "+text);
@@ -128,7 +130,16 @@ namespace AutonomousRim.RuntimeChecks
                 foreach(var t in cell.GetThingList(map).ToList()){if(t.def.destroyable)t.Destroy(DestroyMode.Vanish);else t.DeSpawn();}
                 map.terrainGrid.SetTerrain(cell,TerrainDefOf.Soil);map.roofGrid.SetRoof(cell,null);map.fogGrid.Unfog(cell);
             }
-            for(int i=0;i<5;i++)SpawnPawn(Faction.OfPlayer,center+new IntVec3(i*2,0,-12));
+            for(int i=0;i<5;i++)
+            {
+                var helper=SpawnPawn(Faction.OfPlayer,center+new IntVec3(i*2,0,-12));
+                if(BreakTrial && i<4)
+                {
+                    helper.equipment.AddEquipment((ThingWithComps)ThingMaker.MakeThing(DefDatabase<ThingDef>.GetNamed(i<2?"MeleeWeapon_LongSword":"Gun_AssaultRifle"),i<2?ThingDefOf.Steel:null));
+                    foreach(string name in new[]{"Apparel_FlakVest","Apparel_SimpleHelmet"})
+                    {var def=DefDatabase<ThingDef>.GetNamed(name);helper.apparel.Wear((Apparel)ThingMaker.MakeThing(def,def.MadeFromStuff?ThingDefOf.Steel:null));}
+                }
+            }
             for(int i=0;i<7;i++)Room(center+new IntVec3(-25+i*7,0,8),false,false);
             Room(center+new IntVec3(-15,0,-4),true,true);Room(center+new IntVec3(-8,0,-4),true,false);
             SpawnThing("MealSimple",center+new IntVec3(1,0,-10),75);SpawnThing("MealSimple",center+new IntVec3(3,0,-10),75);
@@ -141,12 +152,12 @@ namespace AutonomousRim.RuntimeChecks
             Check(AutonomousRim.Planning.PrisonPlanner.CandidateScore(map,recruit)>=8 && AutonomousRim.Planning.PrisonPlanner.CandidateScore(map,release)<8,"Controlled candidate scores incorrect.");
             Wound(recruit);Wound(release);
             if(GenCommandLine.CommandLineArgPassed("autonomousrimprisonsafetytest"))SafetySetupChecks();
-            ai.SetAutomation(false,false);ai.SetPrisonAutomation(true);start=Find.TickManager.TicksGame;stage=1;
+            ai.SetAutomation(false,false);ai.SetPrisonAutomation(true);if(BreakTrial){ai.SetCombatAutomation(true);ai.SetEmergencyAutomation(true);ai.SetScheduleAutomation(true);}start=Find.TickManager.TicksGame;stage=1;
             Pass("fixture: five healthy skill-20 colonists, separate prison/hospital beds and native enemy eligibility");
         }
         public override void MapComponentTick()
         {
-            if(stage==99 || !(GenCommandLine.CommandLineArgPassed("autonomousrimprisontest") || GenCommandLine.CommandLineArgPassed("autonomousrimprisonsafetytest")) || Find.TickManager.TicksGame<300)return;
+            if(stage==99 || !(GenCommandLine.CommandLineArgPassed("autonomousrimprisontest") || GenCommandLine.CommandLineArgPassed("autonomousrimprisonsafetytest") || BreakTrial) || Find.TickManager.TicksGame<300)return;
             try
             {
                 if(stage==0){Setup();return;}
@@ -184,10 +195,30 @@ namespace AutonomousRim.RuntimeChecks
                     Check(map.listerBuildings.AllBuildingsColonistOfClass<Building_Bed>().Count(b=>!b.ForPrisoners)>=7,"Colonist beds converted into prison beds.");
                     var food=ColonyStateScanner.Scan(map);Check(food.PrisonerCount==2 && food.DailyFoodNutrition>0,"Prisoner demand missing.");
                     recruit.guest.resistance=.01f;if(recruit.ideo!=null)HarmonyLib.AccessTools.Field(typeof(Pawn_IdeoTracker),"certaintyInt").SetValue(recruit.ideo,.001f);
+                    if(BreakTrial)foreach(var patient in new[]{recruit,release}){patient.guest.SetExclusiveInteraction(PrisonerInteractionModeDefOf.MaintainOnly);ai.Prison.Prisoners.Single(x=>x.Pawn==patient).Manual=true;}
                     capturedReported=true;Pass("two native capture jobs finish in separate beds; recruitment/release selection and food demand");
                 }
                 if(capturedReported && !tendedReported && !recruit.health.HasHediffsNeedingTend() && !release.health.HasHediffsNeedingTend())
                 {tendedReported=true;Pass("native doctor treatment stops untreated injuries and bleeding");}
+                if(BreakTrial && capturedReported)
+                {
+                    if(!breakStarted && tendedReported && !recruit.Downed && PrisonBreakUtility.CanParticipateInPrisonBreak(recruit))
+                    {
+                        GameDataSaveLoader.SaveGame("BeforeNativePrisonBreak");PrisonBreakUtility.StartPrisonBreak(recruit);
+                        Check(PrisonBreakUtility.IsPrisonBreaking(recruit) && ThreatScanner.Active(recruit),"Native rebellion not detected as an active threat.");
+                        breakStarted=true;breakTick=Find.TickManager.TicksGame;Pass("native LordJob prison break detected; mixed armed defense enabled");
+                    }
+                    if(breakStarted)
+                    {
+                        Check(recruit.MapHeld==map,"Rebel escaped the map.");
+                        breakDraft|=map.mapPawns.FreeColonistsSpawned.Any(p=>p.Drafted);breakDowned|=recruit.Downed;
+                        Check(map.mapPawns.FreeColonistsSpawned.All(p=>!p.Dead),"Colonist died during containment.");
+                        if(breakDraft && breakDowned && recruit.InBed() && !recruit.health.HasHediffsNeedingTend() && recruit.health.hediffSet.BleedRateTotal==0 && !PrisonBreakUtility.IsPrisonBreaking(recruit) && !ai.CurrentState.Threat.Immediate)
+                        {GameDataSaveLoader.SaveGame("PrisonBreakContained");stage=99;Pass("native mixed defense neutralized rebellion; living prisoner returned to bed and treated");Log.Message("[PrisonBreakTests] DONE");return;}
+                        Check(Find.TickManager.TicksGame-breakTick<120000,"Rebellion did not reach safe containment/treatment within two days.");
+                    }
+                    Check(Find.TickManager.TicksGame-start<300000,"Prison break setup/recovery exceeded five days.");return;
+                }
                 if(tendedReported && !convertedReported && ModsConfig.IdeologyActive && recruit.Ideo==Faction.OfPlayer.ideos.PrimaryIdeo)
                 {convertedReported=true;Pass("native warden conversion reaches colony ideology");}
                 if(capturedReported && recruit.Faction==Faction.OfPlayer && !recruit.IsPrisoner && !release.IsPrisonerOfColony &&
