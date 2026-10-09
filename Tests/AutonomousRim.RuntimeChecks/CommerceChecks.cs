@@ -21,6 +21,7 @@ namespace AutonomousRim.RuntimeChecks
         private Building_CommsConsole console;
         private bool Orbital=>GenCommandLine.CommandLineArgPassed("autonomousrimorbitaltest");
         private bool CaravanTest=>GenCommandLine.CommandLineArgPassed("autonomousrimcaravantest");
+        private bool SafetyTest=>GenCommandLine.CommandLineArgPassed("autonomousrimcommercesafetytest");
         private bool caravanDeparted;
         private IntVec3 center;
         public CommerceChecks(Map map):base(map){}
@@ -119,6 +120,7 @@ namespace AutonomousRim.RuntimeChecks
             beforeSteel=Stock("Steel");beforeDrug=Stock("SmokeleafJoint");beforeMedicine=Stock("MedicineHerbal");beforeWeapon=Stock("MeleeWeapon_Knife");
             ai.SetAutomation(false,false);
             if(Orbital){start=Find.TickManager.TicksGame;stage=4;return;}
+            if(SafetyTest)SafetySetup(ai);
             ai.SetCommerceAutomation(true);
             if(CaravanTest)
             {
@@ -135,9 +137,51 @@ namespace AutonomousRim.RuntimeChecks
             Pass("deficit plan, bounded production bill and native negotiator dispatch from idle state");
             start=Find.TickManager.TicksGame;stage=1;
         }
+        private void SafetySetup(AutonomousRimMapComponent ai)
+        {
+            var manualNegotiator=map.mapPawns.FreeColonistsSpawned.First();
+            TradeSession.SetupWith(trader,manualNegotiator,false);
+            var manualDeal=TradeSession.deal;
+            try
+            {
+                ai.SetCommerceAutomation(true);
+                Check(TradeSession.Active && TradeSession.deal==manualDeal && TradeSession.playerNegotiator==manualNegotiator &&
+                    ai.Commerce.JobId==null && ai.Commerce.LastTrade==0 && Stock("SmokeleafJoint")==beforeDrug && Stock("Steel")==beforeSteel,
+                    "Automatic commerce replaced/executed an active manual trade session.");
+                ai.SetCommerceAutomation(false);
+                Check(TradeSession.Active && TradeSession.deal==manualDeal,"Disable closed the player's trade session.");
+                Pass("native manual TradeSession survives enable/disable with unchanged goods and no automatic transaction");
+            }
+            finally {TradeSession.Close();TradeSession.deal=null;TradeSession.playerNegotiator=null;}
+            ai.Commerce.NextAttempt=0;ai.SetCommerceAutomation(true);
+            Check(ai.Commerce.JobId!=null,"Owned negotiation was not dispatched before fire suspension.");
+            // This fire is an explicit setup fixture, removed before the ordinary roundtrip.
+            var fire=ThingMaker.MakeThing(ThingDefOf.Fire);
+            GenSpawn.Spawn(fire,center+new IntVec3(0,0,-7),map);
+            try
+            {
+                Check(EmergencyManager.LocalFire(map),"Safety fire fixture was not a nearby threat.");
+                ai.SetCommerceAutomation(true);
+                Check(ai.Commerce.JobId==null && ai.Commerce.LastTrade==0 && Stock("SmokeleafJoint")==beforeDrug && Stock("Steel")==beforeSteel,
+                    "Commerce dispatched/executed during a nearby fire.");
+                ai.SetCommerceAutomation(false);
+                Pass("native nearby fire suspends an owned negotiator and prevents transactions without changing stock");
+            }
+            finally {fire.Destroy(DestroyMode.Vanish);}
+            ai.Commerce.NextAttempt=0;ai.SetCommerceAutomation(true);
+            Check(ai.Commerce.JobId!=null && ai.Commerce.Negotiator!=null,"Owned negotiator setup missing for manual takeover.");
+            var pawn=ai.Commerce.Negotiator;
+            pawn.jobs.TryTakeOrderedJob(JobMaker.MakeJob(JobDefOf.Wait,3000),JobTag.Misc);
+            var manualJob=pawn.CurJob;
+            Check(manualJob?.playerForced==true && manualJob.GetUniqueLoadID()!=ai.Commerce.JobId,"Native manual order did not replace the owned trade job.");
+            ai.SetCommerceAutomation(false);
+            Check(pawn.CurJob==manualJob && pawn.CurJob.playerForced && ai.Commerce.JobId==null,"Disable interrupted the replacement manual job.");
+            Pass("native ordered job replaces automatic negotiator; disable preserves player control");
+            ai.Commerce.NextAttempt=0;
+        }
         public override void MapComponentTick()
         {
-            if(stage==99 || !(GenCommandLine.CommandLineArgPassed("autonomousrimcommercetest") || Orbital || CaravanTest) || Find.TickManager.TicksGame<300)return;
+            if(stage==99 || !(GenCommandLine.CommandLineArgPassed("autonomousrimcommercetest") || Orbital || CaravanTest || SafetyTest) || Find.TickManager.TicksGame<300)return;
             try
             {
                 var ai=map.GetComponent<AutonomousRimMapComponent>();
