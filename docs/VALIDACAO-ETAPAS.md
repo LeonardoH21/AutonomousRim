@@ -213,3 +213,9 @@ Auditoria de HUD preparada com `HudInteractionChecks` e `FunctionalStage.ps1 -Vi
 - `Saves/HudAuditComplete.rws` verificado diretamente: todas as 12 opções desligadas, conforme campos/defaults do Scribe; nenhuma Blueprint/Frame pendente. `HudAuditComplete.png` preservado. Texto de planta atualizado para núcleos modulares, mantendo descrição separada para saves antigos em anel.
 - HUD usa partida pausada para isolar os cliques. Ensaios de gameplay continuam em 3×. Esta aprovação não representa construção, comércio ou combate autônomo completo.
 - Próxima retomada: nova partida integrada com correções atuais, mantendo prazo nativo de trinta dias. Depois: rebelião com defensores equipados; variações humanas de combate; fabricação comercial orgânica/interrupções; inverno real; revisão e exportação da base aprovada.
+
+### Partida integrada após correções — em execução
+
+`integrated-compact-defense-20261009-163653-326`, revisão `90672c6`, velocidade 3×, dificuldade nativa Peaceful. Cinco colonos com skills 20; recursos, pesquisa, construção, necessidades e fabricação nativos. Primeiro checkpoint confirmou sete paredes construídas após 4.800 ticks (1,92 horas), pesquisa Smithing selecionada e ausência de falhas nativas até esse ponto. Ainda não é aprovação do ensaio longo. Manter o prazo de trinta dias e inspecionar conectividade da planta final.
+
+Retomada: primeiro verificar processo/PID 28724 e sessão do executor 20407. Não iniciar outro jogo enquanto este estiver ativo. Saves `ModularStart.rws` e `ModularCheckpoint.rws` estão no perfil acima. Se o executor terminar por tempo real, usar o checkpoint preservando o início e o prazo nativos; se terminar por falha funcional, investigar antes de repetir.
