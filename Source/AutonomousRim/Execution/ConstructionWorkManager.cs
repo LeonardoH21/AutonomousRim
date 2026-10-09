@@ -85,7 +85,7 @@ namespace AutonomousRim.Execution
         public static void Apply(Map map, IReadOnlyList<RoomProject> projects, List<ConstructionOrder> orders)
         {
             if (map.mapPawns.AllPawnsSpawned.Any(p => !p.Dead && !p.Downed && p.HostileTo(Faction.OfPlayer))) return;
-            foreach (var o in orders) if (o.Pending && o.Pawn?.CurJob?.GetUniqueLoadID() != o.JobId) o.Pending = false;
+            foreach (var o in orders) if (o.Pending && o.Pawn?.jobs?.AllJobs().Any(j=>j.GetUniqueLoadID()==o.JobId)!=true) o.Pending = false;
             var targets = projects.Where(BaseConstructionManager.CanContinueExistingWork).OrderBy(p => p.Priority).SelectMany(p => BaseConstructionManager.CurrentStage(map, p)
                 .Where(t => t.Pending?.Spawned == true && t.RetryAfter <= Find.TickManager.TicksGame).Select(t => new { Project = p, Task = t })).ToList();
             var workers = map.mapPawns.FreeColonistsSpawned.Where(WorkPriorityManager.CanWork).OrderByDescending(p => p.skills.GetSkill(SkillDefOf.Construction).Level).ToList();
@@ -137,7 +137,10 @@ namespace AutonomousRim.Execution
             job.workGiverDef = def; job.playerForced = false; job.ignoreForbidden = false;
             string id = job.GetUniqueLoadID();
             p.jobs.StartJob(job, JobCondition.InterruptOptional, tag: JobTag.Misc, preToilReservationsCanFail: true);
-            if (p.CurJob?.GetUniqueLoadID() != id) return false;
+            // Native StartJob may insert opportunistic hauling and queue this job.
+            // Acceptance includes that queue; retrying immediately interrupts the
+            // prefix repeatedly and can hit the native ten-jobs-per-tick guard.
+            if (!p.jobs.AllJobs().Any(j=>j.GetUniqueLoadID()==id)) return false;
             orders.Add(new ConstructionOrder { Pawn = p, JobId = id, Target = target, IssuedTick = Find.TickManager.TicksGame, Pending = true });
             return true;
         }
@@ -168,6 +171,11 @@ namespace AutonomousRim.Execution
         }
         public static void Stop(List<ConstructionOrder> orders)
         {
+            foreach(var group in orders.Where(o=>o.Pending && o.Pawn?.jobs!=null).GroupBy(o=>o.Pawn))
+            {
+                var ids=group.Select(o=>o.JobId).ToHashSet();
+                group.Key.jobs.jobQueue.RemoveAll(group.Key,j=>!j.playerForced && ids.Contains(j.GetUniqueLoadID()));
+            }
             foreach (var o in orders.Where(o => o.Pending && o.Pawn?.CurJob?.GetUniqueLoadID() == o.JobId))
                 if (!o.Pawn.CurJob.playerForced) o.Pawn.jobs.EndCurrentJob(JobCondition.InterruptOptional);
             orders.Clear();

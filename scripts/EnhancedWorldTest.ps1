@@ -1,6 +1,9 @@
 param(
  [string]$RimWorldDir='C:\Users\Administrador\Downloads\RimWorld.v1.6.4633\RimWorld.v1.6.4633\game',
- [ValidateSet('Setup','Construction','Integrated')][string]$Stage='Setup',
+ [ValidateSet('Setup','Construction','Integrated','Combat')][string]$Stage='Setup',
+ [ValidateRange(1,5)][int]$Case=1,
+ [switch]$Disadvantage,
+ [switch]$PostBattleCare,
  [string]$ResumeSave,
  [switch]$Visible
 )
@@ -19,6 +22,13 @@ if($Stage -eq 'Setup'){
  }
  [xml]$taskSave=Get-Content -LiteralPath $ResumeSave -Raw
  if($taskSave.savegame.game.scenario.name -ne 'AutonomousRim Enhanced World'){throw 'This runner requires the enhanced six-colonist campaign.'}
+ if($Stage -eq 'Combat'){
+  $taskFlags=@('autonomousrimelitesix','autonomousrimcombatbaseline','autonomousrimvariedthreats','autonomousrimmeleerevision',('autonomousrimcase'+$Case))
+  if($Disadvantage){$taskFlags+='autonomousrimdisadvantage'}
+  if($PostBattleCare){$taskFlags+='autonomousrimpostbattlecare'}
+  & "$PSScriptRoot\FunctionalStage.ps1" -RimWorldDir $RimWorldDir -Stage ('enhanced-combat-'+$Case) -Flag autonomousrimcombatfive -ExtraFlags $taskFlags -ResumeSave $ResumeSave -SuccessMarker '[FiveCombatTrials] DONE' -TimeoutSeconds 3600 -Visible:$Visible
+  return
+ }
  $taskFlags=@('autonomousrimelitesix')
  $taskMarker='[AutonomousRim.ModularTrial] PASS: initial rooms'
  if($Stage -eq 'Integrated'){$taskFlags+=@('autonomousrimintegratedtest','autonomousrimprogressiontrial');$taskMarker='[AutonomousRim.ModularTrial] PASS: integrated twenty days'}

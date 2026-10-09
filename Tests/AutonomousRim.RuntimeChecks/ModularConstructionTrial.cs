@@ -178,7 +178,7 @@ namespace AutonomousRim.RuntimeChecks
                     if(tick-startTick>=20*GenDate.TicksPerDay && cold && progressionComplete && services && nativeMeals && ai.Prison.Capacity>=3)
                     {
                         GameDataSaveLoader.SaveGame("IntegratedTwentyDaysComplete");finished=true;Find.TickManager.CurTimeSpeed=TimeSpeed.Paused;
-                        Log.Message("[AutonomousRim.ModularTrial] PASS: integrated twenty days; five original colonists alive; native core/floors/refrigeration, research/crafting/equipment, cooking, hospital, workshop and usable prison. No resources granted after native start.");
+                        Log.Message("[AutonomousRim.ModularTrial] PASS: integrated twenty days; "+initialPawns.Count+" original colonists alive; native core/floors/refrigeration, research/crafting/equipment, cooking, hospital, workshop and usable prison. No resources granted after native start.");
                     }
                 }
                 if (tick - startTick > (Progression || Integrated ? 1800000 : 180000) && !finished) throw new Exception("Native trial deadline reached without its required milestones; inspect checkpoint.");

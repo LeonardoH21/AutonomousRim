@@ -19,6 +19,9 @@ namespace AutonomousRim.RuntimeChecks
     public sealed class FiveCombatTrials : MapComponent
     {
         private List<Pawn> allies=new List<Pawn>(), enemies=new List<Pawn>();
+        private List<Pawn> eliteRoster=new List<Pawn>();
+        private bool Elite=>GenCommandLine.CommandLineArgPassed("autonomousrimelitesix");
+        private int ExpectedAllies=>Elite?6:4;
         private HashSet<int> initialMelee=new HashSet<int>();
         private bool started, finished, hard;
         private int number, start, seed, cover, melee, retreat;
@@ -57,7 +60,7 @@ namespace AutonomousRim.RuntimeChecks
         }
         public override void MapComponentUpdate()
         {
-            if(GenCommandLine.CommandLineArgPassed("autonomousrimcombatresume") && !resumeLoaded && Current.ProgramState==ProgramState.Playing)
+            if((GenCommandLine.CommandLineArgPassed("autonomousrimcombatresume") || GenCommandLine.CommandLineArgPassed("autonomousrimcombatbaseline")) && !resumeLoaded && Current.ProgramState==ProgramState.Playing)
             {resumeLoaded=true;GameDataSaveLoader.LoadGame("ModularResume");return;}
             if(finished || !GenCommandLine.CommandLineArgPassed("autonomousrimcombatfive"))return;
             foreach(var w in Find.WindowStack.Windows.Where(w=>w.forcePause).ToList())w.Close(false);
@@ -75,6 +78,14 @@ namespace AutonomousRim.RuntimeChecks
         private Pawn Spawn(string kind,Faction faction,IntVec3 cell,string weapon,bool friendly)
         {
             Pawn pawn;
+            if(friendly && Elite)
+            {
+                string name=new[]{"Alpha","Charlie","Bravo","Foxtrot","Delta","Echo"}[allies.Count];
+                pawn=eliteRoster.Single(p=>p.Name.ToStringShort==name);
+                Check(!pawn.Dead && !pawn.Downed,"Original EliteSix combatant unavailable: "+name);
+            }
+            else
+            {
             do
             {
                 pawn=PawnGenerator.GeneratePawn(new PawnGenerationRequest(DefDatabase<PawnKindDef>.GetNamed(kind),faction,forceGenerateNewPawn:true,canGeneratePawnRelations:false));
@@ -90,6 +101,7 @@ namespace AutonomousRim.RuntimeChecks
                 pawn.skills.GetSkill(SkillDefOf.Melee).Level=friendly?10:random.Next(6,13);
                 if(Revision && friendly){pawn.skills.GetSkill(SkillDefOf.Shooting).Level=20;pawn.skills.GetSkill(SkillDefOf.Melee).Level=20;}
             }
+            }
             if(weapon!=null)
             {
                 foreach(var old in pawn.equipment.AllEquipmentListForReading.ToList())pawn.equipment.Remove(old);
@@ -103,7 +115,7 @@ namespace AutonomousRim.RuntimeChecks
                 if(friendly || random.NextDouble()<0.25)pawn.apparel.Wear((Apparel)Item("Apparel_SimpleHelmet"));
             }
             GenSpawn.Spawn(pawn,cell,map);
-            if(Revision && friendly)
+            if(Revision && friendly && !Elite)
             {
                 if(pawn.needs.food!=null)pawn.needs.food.CurLevelPercentage=1;
                 if(pawn.needs.rest!=null)pawn.needs.rest.CurLevelPercentage=1;
@@ -128,13 +140,18 @@ namespace AutonomousRim.RuntimeChecks
             Check(number>0,"Select a case from 1 to 5.");
             hard=GenCommandLine.CommandLineArgPassed("autonomousrimdisadvantage"); seed=20261007+number*101+(hard?10000:0); random=new Random(seed);
             var ai=map.GetComponent<AutonomousRimMapComponent>(); ai.DisableAll(); center=map.Center;
-            if(Revision)
+            if(Revision && !Elite)
             {
                 var preset=DefDatabase<DifficultyDef>.GetNamed("Peaceful");Find.Storyteller.difficultyDef=preset;Find.Storyteller.difficulty.CopyFrom(preset);
                 CombatTacticalPlanner.ParallelEnabled=!GenCommandLine.CommandLineArgPassed("autonomousrimsynchronous");
                 CombatTacticalPlanner.MinimumPairs=1;
             }
-            foreach(var pawn in map.mapPawns.AllPawnsSpawned.ToList()) { pawn.DeSpawn(); Find.WorldPawns.PassToWorld(pawn,PawnDiscardDecideMode.KeepForever); }
+            if(Elite)
+            {
+                eliteRoster=map.mapPawns.FreeColonistsSpawned.ToList();
+                Check(eliteRoster.Count==6 && Current.Game.Scenario.name=="AutonomousRim Enhanced World","Combat fixture requires six original Enhanced World colonists");
+            }
+            foreach(var pawn in map.mapPawns.AllPawnsSpawned.ToList()) { pawn.DeSpawn(); if(!eliteRoster.Contains(pawn))Find.WorldPawns.PassToWorld(pawn,PawnDiscardDecideMode.KeepForever); }
             foreach(var thing in map.listerThings.AllThings.Where(t=>t is Hive || !(t is Pawn) && t is Verse.AI.IAttackTarget && t.HostileTo(Faction.OfPlayer)).ToList())thing.Destroy(DestroyMode.Vanish);
             foreach(var c in new CellRect(center.x-50,center.z-40,101,81).Cells)
             {
@@ -155,6 +172,12 @@ namespace AutonomousRim.RuntimeChecks
             allies.Add(Spawn("Colonist",Faction.OfPlayer,center+new IntVec3(-13,0,3),gun2,true));
             allies.Add(Spawn("Colonist",Faction.OfPlayer,center+new IntVec3(-10,0,-1),"MeleeWeapon_LongSword",true));
             allies.Add(Spawn("Colonist",Faction.OfPlayer,center+new IntVec3(-10,0,1),"MeleeWeapon_Mace",true));
+            if(Elite)
+            {
+                allies.Add(Spawn("Colonist",Faction.OfPlayer,center+new IntVec3(-15,0,-5),"Gun_BoltActionRifle",true));
+                allies.Add(Spawn("Colonist",Faction.OfPlayer,center+new IntVec3(-15,0,5),"Gun_Revolver",true));
+                Check(allies.Select(p=>p.thingIDNumber).ToHashSet().SetEquals(eliteRoster.Select(p=>p.thingIDNumber)),"Combat must preserve all six original pawn IDs");
+            }
             foreach(var pawn in allies.Where(p=>!CombatManager.Ranged(p)))initialMelee.Add(pawn.thingIDNumber);
             if(PostBattleCare)
             {
@@ -169,10 +192,10 @@ namespace AutonomousRim.RuntimeChecks
                     else map.terrainGrid.SetTerrain(cell,DefDatabase<TerrainDef>.GetNamed("WoodPlankFloor"));
                     map.roofGrid.SetRoof(cell,RoofDefOf.RoofConstructed);map.areaManager.Home[cell]=true;
                 }
-                for(int i=0;i<4;i++)
+                for(int i=0;i<ExpectedAllies;i++)
                 {
                     var bed=(Building_Bed)ThingMaker.MakeThing(ThingDefOf.Bed,ThingDefOf.WoodLog);bed.SetFaction(Faction.OfPlayer);bed.Medical=true;
-                    GenSpawn.Spawn(bed,center+new IntVec3(-42+i*2,0,5),map);
+                    GenSpawn.Spawn(bed,center+new IntVec3(-42+i%3*3,0,5-i/3*4),map);
                 }
                 void careFurniture(string name,IntVec3 offset)
                 {
@@ -194,9 +217,9 @@ namespace AutonomousRim.RuntimeChecks
                 // Build() records doors; the hospital entrance must not replace
                 // the combat refuge used by the retreat outcome assertion.
                 door=fallbackDoor;
-                Log.Message("[FiveCombatTrials] CARE SETUP: four medical beds, table/chairs, recreation, fueled torch, 80 survival meals, 30 herbal medicine; native recovery only.");
+                Log.Message("[FiveCombatTrials] CARE SETUP: "+ExpectedAllies+" medical beds, table/chairs, recreation, fueled torch, 80 survival meals, 30 herbal medicine; native recovery only.");
             }
-            Check(allies.Count(CombatManager.Ranged)==2 && allies.All(p=>p.apparel.WornApparel.Any(a=>a.def.defName=="Apparel_FlakVest" || Revision && a.def.defName=="Apparel_PlateArmor") &&
+            Check(allies.Count(CombatManager.Ranged)==(Elite?4:2) && allies.Count==ExpectedAllies && allies.All(p=>p.apparel.WornApparel.Any(a=>a.def.defName=="Apparel_FlakVest" || Revision && a.def.defName=="Apparel_PlateArmor") &&
                 p.apparel.WornApparel.Any(a=>a.def.defName=="Apparel_SimpleHelmet")),"Expected two ranged, two melee, four vests and four helmets.");
             if(number==1)
             {
@@ -221,6 +244,7 @@ namespace AutonomousRim.RuntimeChecks
                 for(int z=-6;z<=6;z++)if(z!=0)Build("Sandbags",-12,z);
             }
             int count=Revision && !Varied?(number==3?8:4):(hard?new[]{3,4,6,6,5}:new[]{3,4,4,4,2})[number-1];
+            if(Elite)count=(hard?new[]{6,6,10,12,9}:new[]{4,6,9,8,6})[number-1];
             for(int i=0;i<count;i++)
             {
                 var cell=center+new IntVec3(13+i%2,0,(i-count/2)*3);
@@ -241,7 +265,7 @@ namespace AutonomousRim.RuntimeChecks
             }
             if(number!=4 || Revision && !Varied)LordMaker.MakeNewLord(Faction.OfAncientsHostile,new LordJob_AssaultColony(Faction.OfAncientsHostile,false,false,false,false,false),map,enemies);
             Check(!CombatManager.Enemies(map).Except(enemies).Any(),"Unrelated hostile pawn contaminates the fixture.");
-            if(Revision)
+            if(Revision && !Elite)
             {
                 if(!Varied)layout=new[]{"portas e paredes: atiradores inimigos","cooperação melee contra arqueiros","retirada contra oito rifles","interceptação e proteção dos ranged","combate misto e flanqueamento"}[number-1];
                 foreach(var p in allies)Log.Message("[FiveCombatTrials] SETUP CHECK "+p.LabelShort+" skills="+string.Join(",",p.skills.skills.Select(s=>s.def.defName+":"+s.Level))+" traits="+p.story.traits.allTraits.Count+" hediffs="+string.Join(",",p.health.hediffSet.hediffs.Select(h=>h.def.defName)));
@@ -250,8 +274,8 @@ namespace AutonomousRim.RuntimeChecks
                 foreach(var p in allies.Concat(enemies)){var value=CombatEquipmentScanner.Copy(p);Log.Message("[FiveCombatTrials] EQUIPMENT "+p.LabelShort+" power="+value.Power+" armorSharp="+value.Sharp+" armorBlunt="+value.Blunt+" penetration="+value.Penetration);}
             }
             weapons=string.Join(" | ",allies.Select(Manifest)); roster=string.Join(" | ",enemies.Select(Manifest));
-            Log.Message($"[FiveCombatTrials] START case={number}; seed={seed}; hard={hard}; {layout}; 2 melee+2 ranged; armor="+
-                (Revision?"2 steel plates, 2 flak vests, 4 helmets":"4 flak vests, 4 helmets")+"; third speed selected; no scripted healing");
+            Log.Message($"[FiveCombatTrials] START case={number}; seed={seed}; hard={hard}; {layout}; "+(Elite?"six original EliteSix; 2 melee+4 ranged; Cassandra/Medium; preserved traits, skills, implants and scenario factors; ":"2 melee+2 ranged; ")+"armor="+
+                (Elite?"2 steel plates, 4 flak vests, 6 helmets":Revision?"2 steel plates, 2 flak vests, 4 helmets":"4 flak vests, 4 helmets")+"; controlled initial combat facilities/equipment only; third speed selected; no scripted healing");
             Log.Message("[FiveCombatTrials] ALLIES "+weapons); Log.Message("[FiveCombatTrials] ENEMIES "+roster);
             start=Find.TickManager.TicksGame; started=true; ai.SetEmergencyAutomation(true);
         }
@@ -282,10 +306,10 @@ namespace AutonomousRim.RuntimeChecks
             if(finished || !GenCommandLine.CommandLineArgPassed("autonomousrimcombatfive") || Find.TickManager.TicksGame<300)return;
             try
             {
-                if(GenCommandLine.CommandLineArgPassed("autonomousrimcombatresume") && !resumeLoaded)return;
+                if((GenCommandLine.CommandLineArgPassed("autonomousrimcombatresume") || GenCommandLine.CommandLineArgPassed("autonomousrimcombatbaseline")) && !resumeLoaded)return;
                 if(GenCommandLine.CommandLineArgPassed("autonomousrimcombatresume"))
                 {
-                    Check(started && careStarted && PostBattleCare && allies.Count==4 && !string.IsNullOrEmpty(combatResult),"Resume requires a native care checkpoint; participants cannot be replaced.");
+                    Check(started && careStarted && PostBattleCare && allies.Count==ExpectedAllies && !string.IsNullOrEmpty(combatResult),"Resume requires a native care checkpoint; participants cannot be replaced.");
                     if(!resumeResultLogged){resumeResultLogged=true;Log.Message("[FiveCombatTrials] RESULT "+combatResult+"; restoredFromCheckpoint=True");}
                 }
                 if(!started) { Setup(); return; }
@@ -294,7 +318,7 @@ namespace AutonomousRim.RuntimeChecks
                 if(careStarted)
                 {
                     if(Find.TickManager.TicksGame%30!=0)return;
-                    Check(allies.Count==4 && allies.All(p=>p!=null && !p.Dead),"An original combatant died during native recovery.");
+                    Check(allies.Count==ExpectedAllies && allies.All(p=>p!=null && !p.Dead),"An original combatant died during native recovery.");
                     var recurrentThreats=CombatManager.Enemies(map);
                     Check(!recurrentThreats.Except(enemies).Any(),"Unrelated new threat interrupted post-battle recovery.");
                     hospitalWitness|=allies.Any(p=>p.InBed() && p.CurrentBed()?.Medical==true);
@@ -308,7 +332,7 @@ namespace AutonomousRim.RuntimeChecks
                     if(recovered && hospitalWitness && tends>0 && ai.Emergency.Phase==EmergencyPhase.Normal)
                     {
                         ai.DisableAll();GameDataSaveLoader.SaveGame("CombatCareComplete");
-                        Log.Message("[FiveCombatTrials] CARE PASS: four original combatants alive, native hospital/tending, no bleeding or medical rest, health >=90%, undrafted, emergency returned to Normal; residual scars/injuries may remain.");
+                        Log.Message("[FiveCombatTrials] CARE PASS: "+ExpectedAllies+" original combatants alive, native hospital/tending, no bleeding or medical rest, health >=90%, undrafted, emergency returned to Normal; residual scars/injuries may remain.");
                         finished=true;Log.Message("[FiveCombatTrials] DONE");Find.TickManager.CurTimeSpeed=TimeSpeed.Paused;return;
                     }
                     if(Find.TickManager.TicksGame%2490==0)
