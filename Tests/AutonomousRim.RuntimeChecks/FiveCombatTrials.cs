@@ -27,6 +27,7 @@ namespace AutonomousRim.RuntimeChecks
         private string layout, weapons, roster;
         private Random random;
         private bool Revision=>GenCommandLine.CommandLineArgPassed("autonomousrimmeleerevision");
+        private bool Varied=>GenCommandLine.CommandLineArgPassed("autonomousrimvariedthreats");
         private int flankSamples,approachSamples,idleSamples,firstMeleeTick=-1;
         public FiveCombatTrials(Map map):base(map){}
         public override void MapComponentUpdate()
@@ -152,14 +153,14 @@ namespace AutonomousRim.RuntimeChecks
                 layout=hard?"desvantagem: superioridade mechanoid":"vantagem numerica: quatro contra dois mechs";
                 for(int z=-6;z<=6;z++)if(z!=0)Build("Sandbags",-12,z);
             }
-            int count=Revision?(number==3?8:4):(hard?new[]{3,4,6,6,5}:new[]{3,4,4,4,2})[number-1];
+            int count=Revision && !Varied?(number==3?8:4):(hard?new[]{3,4,6,6,5}:new[]{3,4,4,4,2})[number-1];
             for(int i=0;i<count;i++)
             {
                 var cell=center+new IntVec3(13+i%2,0,(i-count/2)*3);
                 if(hard && number==3 && i>=count/2)cell=center+new IntVec3(-7+(i-count/2)*3,0,19);
                 string kind=number==4?Pick("Wolf_Timber","WildBoar","Warg"):number==5?Pick("Mech_Scyther","Mech_Lancer"):"Colonist";
                 string weapon=number<4?Pick("Gun_Revolver","Gun_Autopistol","Gun_BoltActionRifle","MeleeWeapon_Knife","MeleeWeapon_Mace"):null;
-                if(Revision)
+                if(Revision && !Varied)
                 {
                     kind="Colonist";
                     weapon=number==1?"Gun_Revolver":number==2?"Bow_Short":number==3?"Gun_AssaultRifle":number==4?"MeleeWeapon_Knife":i<2?"Gun_Revolver":"MeleeWeapon_Mace";
@@ -168,14 +169,14 @@ namespace AutonomousRim.RuntimeChecks
                     if(number==4)cell=center+new IntVec3(4+i%2,0,(i-count/2)*3);
                 }
                 var enemy=Spawn(kind,number==4?null:Faction.OfAncientsHostile,cell,weapon,false); enemies.Add(enemy);
-                if(Revision && number==4)enemy.SetFaction(Faction.OfAncientsHostile);
-                if(number==4 && !Revision)Check(enemy.mindState.mentalStateHandler.TryStartMentalState(MentalStateDefOf.ManhunterPermanent),"Manhunter setup failed.");
+                if(Revision && !Varied && number==4)enemy.SetFaction(Faction.OfAncientsHostile);
+                if(number==4 && (!Revision || Varied))Check(enemy.mindState.mentalStateHandler.TryStartMentalState(MentalStateDefOf.ManhunterPermanent),"Manhunter setup failed.");
             }
-            if(number!=4 || Revision)LordMaker.MakeNewLord(Faction.OfAncientsHostile,new LordJob_AssaultColony(Faction.OfAncientsHostile,false,false,false,false,false),map,enemies);
+            if(number!=4 || Revision && !Varied)LordMaker.MakeNewLord(Faction.OfAncientsHostile,new LordJob_AssaultColony(Faction.OfAncientsHostile,false,false,false,false,false),map,enemies);
             Check(!CombatManager.Enemies(map).Except(enemies).Any(),"Unrelated hostile pawn contaminates the fixture.");
             if(Revision)
             {
-                layout=new[]{"portas e paredes: atiradores inimigos","cooperação melee contra arqueiros","retirada contra oito rifles","interceptação e proteção dos ranged","combate misto e flanqueamento"}[number-1];
+                if(!Varied)layout=new[]{"portas e paredes: atiradores inimigos","cooperação melee contra arqueiros","retirada contra oito rifles","interceptação e proteção dos ranged","combate misto e flanqueamento"}[number-1];
                 foreach(var p in allies)Log.Message("[FiveCombatTrials] SETUP CHECK "+p.LabelShort+" skills="+string.Join(",",p.skills.skills.Select(s=>s.def.defName+":"+s.Level))+" traits="+p.story.traits.allTraits.Count+" hediffs="+string.Join(",",p.health.hediffSet.hediffs.Select(h=>h.def.defName)));
                 Check(allies.All(p=>p.skills.skills.All(s=>s.Level==20) && p.story.traits.allTraits.Count==0 && p.health.hediffSet.hediffs.Count==0),"Level-20 healthy trait-free starting colonists required.");
                 Log.Message("[FiveCombatTrials] MELEE REVISION: Peaceful; all colonist skills 20; no initial hediffs or traits; parallel="+CombatTacticalPlanner.ParallelEnabled);

@@ -81,4 +81,22 @@ Correções em validação: porta não conta como abrigo; exposição considera 
 
 Teste específico de contato: a primeira fixture confirmou a ordem inicial, mas exigia neutralização durante retirada contra atirador que podia se afastar. Falhou em `contact-defense-20261008-214658-640`; tentativa seguinte foi interrompida. Outra tentativa (`215147-301`) também não neutralizou o inimigo. A fixture final isola autodefesa em contato e exige dano nativo sem derrubar o defensor, sem alegar vitória. PASS e DONE em `contact-defense-20261008-215257-002`.
 
-Regressão final dos três controles: `combat-final-controls-20261008-215329-735`, três PASS; dois cenários neutralizados, retirada contra superioridade numérica, zero mortos/derrubados, dois feridos por cenário. Inclui verificações de probabilidade nativa de tiro, parede bloqueando tiro, porta excluída de abrigo e sangramento recuperável. As 57 verificações de política passaram novamente. Cinco casos finais ainda em execução.
+Regressão dos três controles: `combat-final-controls-20261008-215329-735`, três PASS; dois cenários neutralizados, retirada contra superioridade numérica, zero mortos/derrubados, dois feridos por cenário. Inclui verificações de probabilidade nativa de tiro, parede bloqueando tiro, porta excluída de abrigo e sangramento recuperável. As 57 verificações de política passaram novamente.
+
+Rodada `combat-final-*`, código `60f93f3`:
+
+| Caso / perfil | Resultado | Mortos | Derrubados | Feridos |
+|---|---|---|---|---|
+| 1 / `215434-060` | Derrota, 3 inimigos restantes | 0 | 4 | 4 |
+| 2 / `215600-952` | Vitória em 2033 ticks | 0 | 1 | 3 |
+| 3 / `215703-322` | Retirada com abrigo em 1800 ticks | 0 | 0 | 4 |
+| 4 / `215757-583` | Vitória em 1424 ticks | 0 | 1 | 2 |
+| 5 / `215847-904` | Vitória em 1760 ticks | 0 | 0 | 3 |
+
+O caso 1 permanece reprovado. A rodada não comprova recuperação completa no hospital; o resgate/cuidado tem ensaio próprio. Correção seguinte em validação: considerar todos os atiradores na exposição da rota melee e incluir entradas de cômodos próprios até 50 células na busca de abrigo, com limite de 16 portas e verificação de caminho. Repetir controles, caso 1, resgate e emergência antes do ensaio integrado.
+
+Revisão da busca de abrigo: `combat-refuge-controls-20261008-220030-564` passou nos três controles, incluindo abrigo além do raio local; zero mortos/derrubados. O caso 1 (`combat-refuge-1-20261008-220131-472`) terminou sem desfecho em 6000 ticks: um inimigo restante, zero mortos, dois derrubados, quatro feridos. Dois sobreviventes se abrigaram; isso não comprova resgate dos derrubados ou vitória.
+
+Regressões posteriores: `medical-rescue-regression-20261008-220338-207` passou nos sete controles, com resgate/tratamento nativo no hospital, estabilização no chão antes do prazo e preservação manual. `emergency-regression-20261008-220433-252` passou em detecção, suspensão, evacuação, recuperação gradual, reentrada em perigo e restauração. Nenhum processo de teste permaneceu aberto após essas rodadas.
+
+Pendências de combate: cenário difícil ainda inconclusivo; recuperação integral depois de confrontos mistos; ensaios variados contra manhunters/mechs preparados com `autonomousrimvariedthreats`, ainda não executados. Próxima etapa: autonomia integrada por vinte dias, com checkpoints nativos.

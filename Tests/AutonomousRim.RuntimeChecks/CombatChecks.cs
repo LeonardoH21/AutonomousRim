@@ -136,6 +136,17 @@ namespace AutonomousRim.RuntimeChecks
                 var shelter=HarmonyLib.AccessTools.Method(typeof(CombatManager),"Shelter");
                 Check(!(bool)shelter.Invoke(null,new object[]{map,retreatDoor.Position,enemies}),"Doorway was incorrectly classified as a retreat shelter.");
                 Check((bool)shelter.Invoke(null,new object[]{map,center+new IntVec3(-14,0,0),enemies}),"Enclosed interior was rejected as a retreat shelter.");
+                var originalPosition=allies[0].Position;
+                try
+                {
+                    allies[0].Position=center+new IntVec3(8,0,-10);
+                    var farOrder=new CombatOrder{Pawn=allies[0],Anchor=allies[0].Position};
+                    var destination=(IntVec3)HarmonyLib.AccessTools.Method(typeof(CombatManager),"Position").Invoke(null,
+                        new object[]{map,farOrder,enemies[0],enemies,allies,true,new HashSet<IntVec3>()});
+                    Check(destination.DistanceTo(allies[0].Position)>12 && (bool)shelter.Invoke(null,new object[]{map,destination,enemies}),
+                        "Retreat ignored a known reachable shelter beyond the local search radius.");
+                }
+                finally{allies[0].Position=originalPosition;}
                 var cut=HediffMaker.MakeHediff(DefDatabase<HediffDef>.GetNamed("Cut"),civilian,civilian.health.hediffSet.GetNotMissingParts().First(b=>b.def==BodyPartDefOf.Leg));
                 cut.Severity=16;civilian.health.AddHediff(cut);
                 Check(civilian.health.hediffSet.BleedRateTotal>.35f && HealthUtility.TicksUntilDeathDueToBloodLoss(civilian)>12000,"Non-immediate bleeding fixture invalid.");

@@ -92,7 +92,14 @@ namespace AutonomousRim.Execution
             float min = verb?.verbProps.minRange ?? 0;
             float preferred = Math.Max(min+3, Math.Min(range*0.72f, 24));
             var candidates = GenRadial.RadialCellsAround(p.Position, retreat ? 12 : 8, true)
-                .Concat(GenRadial.RadialCellsAround(order.Anchor, 6, true)).Distinct().Where(c => SafeCell(map,p,c) && !occupied.Contains(c));
+                .Concat(GenRadial.RadialCellsAround(order.Anchor, 6, true));
+            if(retreat)
+                // A local search can walk away from a usable refuge just beyond
+                // its radius. Include entrances of known nearby colony rooms.
+                candidates=candidates.Concat(map.listerBuildings.allBuildingsColonist.OfType<Building_Door>()
+                    .Where(d=>d.Position.DistanceTo(p.Position)<=50).OrderBy(d=>d.Position.DistanceTo(p.Position)).Take(16)
+                    .SelectMany(d=>GenAdj.CardinalDirections.Select(v=>d.Position+v)).Where(c=>c.InBounds(map) && Shelter(map,c,enemies)));
+            candidates=candidates.Distinct().Where(c => SafeCell(map,p,c) && !occupied.Contains(c));
             if (retreat)
                 candidates = candidates.Where(c => c == p.Position ||
                     Distance(c,enemies)>Distance(p.Position,enemies)+1 || Shelter(map,c,enemies));

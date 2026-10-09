@@ -34,7 +34,7 @@ namespace AutonomousRim.Planning
             var own=CombatEquipmentScanner.Copy(pawn);
             // Arrival time matters: armor reduces expected exposure, never removes it.
             float exposure=0;
-            foreach(var enemy in nearby.Where(CombatManager.Ranged))
+            foreach(var enemy in enemies.Where(CombatManager.Ranged))
             {
                 var weapon=CombatEquipmentScanner.Copy(enemy);
                 if(enemy.Position.DistanceTo(pawn.Position)<=weapon.Range && GenSight.LineOfSight(enemy.Position,pawn.Position,map))
@@ -62,7 +62,7 @@ namespace AutonomousRim.Planning
                     // A wall at the starting cell must not hide the exposure of
                     // the rest of the route. Estimate the time actually in firing lanes.
                     float routeExposure=0;
-                    foreach(var shooter in nearby.Where(CombatManager.Ranged))
+                    foreach(var shooter in enemies.Where(CombatManager.Ranged))
                     {
                         var weapon=CombatEquipmentScanner.Copy(shooter);
                         float damage=path.NodesReversed.Sum(c=>CombatManager.ExpectedRangedDps(shooter,c,weapon.Dps));
