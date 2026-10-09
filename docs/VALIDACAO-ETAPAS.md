@@ -4,7 +4,7 @@ Objetivo: testar todas as funcionalidades, corrigir falhas e permitir retomada s
 
 ## Estado de retomada
 
-Em andamento: etapa 7, ensaio integrado iniciado em 09/10. Etapas 0–3 aprovadas no escopo indicado; prisão nativa, comércio local, orbital e caravana passaram. Etapa 6 tem limitações explícitas e cenários adicionais pendentes. Correções de combate/resgate e armazenamento salvas no Git até `3e9de0f`; revisões posteriores detalhadas abaixo.
+Em andamento: etapa 6, controles de retirada e recuperação clínica por checkpoint. Etapas 0–3 aprovadas no escopo indicado; prisão nativa, comércio local, orbital e caravana passaram. Ensaio integrado chegou a trinta dias com cinco sobreviventes, mas reprovou progressão militar e conectividade modular; não exportar como aprovado. Correções e evidências salvas no Git até `03e1b94`; revisões posteriores detalhadas abaixo.
 
 | Etapa | Escopo | Estado / evidência |
 |---|---|---|
@@ -15,7 +15,7 @@ Em andamento: etapa 7, ensaio integrado iniciado em 09/10. Etapas 0–3 aprovada
 | 4 | Prisão: construção, captura, alimentação, tratamento, conversão, recrutamento, liberação, controle manual e salvar/carregar | PASS parcial: captura, tratamento, conversão, recrutamento, liberação, salvar/carregar e desligamento. Ensaio integrado atingiu três vagas construídas; cenários adicionais de segurança/manual pendentes |
 | 5 | Comércio: produção, interação local/orbital, orçamento, entrega, caravana, controles e persistência | PASS parcial: comércio local e orbital, entrega real, reserva, itens protegidos, salvar/carregar e desligamento. PASS: caravana nativa com viagem, compra, retorno e descarga. Produção econômica prolongada e cenários de interrupção/manual pendentes |
 | 6 | Combate: cenários variados, colaboração melee/ranged, retirada e resgate | Falhas identificadas; revisão em validação. Resultados individuais abaixo |
-| 7 | Autonomia integrada: construção completa, inverno e sobrevivência prolongada | Em andamento, checkpoint preservado em 12,9875 dias; ainda sem aprovação |
+| 7 | Autonomia integrada: construção completa, inverno e sobrevivência prolongada | FAIL aos trinta dias: cinco sobreviventes, mas conjunto militar incompleto e hospital separado do núcleo. Save final preservado. Correções de pesquisa/expansão passaram em controles; nova partida prolongada pendente |
 | 8 | HUD, relatório final, saves para revisão, instalação e Git | Pendente |
 
 Logs ficam em `.tools`, saves/checkpoints de partidas também. Não chamar uma etapa de aprovada apenas porque compilou ou emitiu uma ordem: confirmar o resultado real exigido pelo cenário. Registrar falhas, correção e repetição, incluindo limites de cobertura.
@@ -174,3 +174,13 @@ Checagem da geometria no save final de trinta dias reprovou conectividade: hospi
 Retomada clínica em execução: `combat-care-resume-4-20261009-114351-458`, de `CombatCareFailure.rws`. Quatro referências originais e resultado do confronto restaurados; contagem não reiniciada. Após reaparecer um manhunter, emergência voltou a Danger e depois a Recovery. Até 6,22 horas de recuperação, sete tratamentos nativos e ocupação de cama médica observados, sem ameaça ativa; recuperação final ainda pendente. Próxima retomada: mesmas flags de cuidado + `autonomousrimcombatresume`, usando o `Saves/CombatCareCheckpoint.rws` desse perfil.
 
 Retirada: controle falho começou com nove inimigos melee a aproximadamente vinte células. O limite fixo de dezesseis células só reconhecia inferioridade quando a carga já se aproximava da porta. Correção adicional preparada inclui até cinco segundos de aproximação melee (mínimo 16, máximo 26 células), mantendo força de apoio ativa. Compilação e 57 políticas passaram; ainda não instalada/validada nativamente no processo clínico atual. Repetir controles de combate após seu término.
+
+Interrupção clínica intencional para regressões registrada como `INTERRUPTED_FOR_REGRESSION`, mantendo erro original do executor. Checkpoint imutável `combat-care-resume-4-20261009-114351-458/Saves/BeforeCombatControls.rws`, SHA256 `51672C3E5084105063A85487C703288AB482CDBC7A4FDFC4B8B71329328A7439`. Retomar com as mesmas flags de cuidado/retomada; não reiniciar participantes, ferimentos ou prazo nativo.
+
+`combat-early-withdrawal-controls-20261009-114926-406` passou nos três controles: vitória favorável, vitória com cobertura e retirada para abrigo com porta fechada diante de nove inimigos. Zero mortos/derrubados nos três; dois feridos por cenário. Isso valida a retirada neste controle, sem apagar a reprovação anterior nem assegurar todos os combates variados. Resgate/emergência após essa revisão em verificação.
+
+Regressões após retirada antecipada: `medical-early-withdrawal-regression-20261009-115050-504` passou nos sete controles, incluindo resgate hospitalar, estabilização no chão antes de morte por sangramento (1499 ticks), liberação do médico e preservação manual. `emergency-early-withdrawal-regression-20261009-115202-003` passou em detecção, evacuação/resgate, rejeição de rota exposta, reentrada em perigo, recuperação clínica e restauração de controles.
+
+Retomada clínica mais recente: `combat-care-final-resume-4`, iniciada do checkpoint imutável `BeforeCombatControls.rws` com a revisão instalada. O diretório completo contém timestamp e manifesto. Recuperação final ainda precisa do marcador `[FiveCombatTrials] CARE PASS:`; mera conclusão do combate ou ocupação de cama não concede aprovação.
+
+Próxima ampliação de prisão preparada: flag `autonomousrimprisonsafetytest`, marcador `[PrisonTests] DONE`. Além de captura/conversão/recrutamento/liberação nativos, verifica durante o setup controlado: helpers drafted preservados, ameaça imediata suspende captura, ferido próprio tem precedência, ausência de cama válida bloqueia captura e reserva simulada menor que dois dias bloqueia novos presos. Compilação passou; execução nativa desse novo flag pendente. Ferimentos artificiais desse controle são removidos ainda no setup; depois do início da captura, tratamento continua inteiramente nativo.

@@ -75,6 +75,38 @@ namespace AutonomousRim.RuntimeChecks
             var injury=HediffMaker.MakeHediff(DefDatabase<HediffDef>.GetNamed("Cut"),pawn,pawn.health.hediffSet.GetNotMissingParts().First(p=>p.def==BodyPartDefOf.Leg));
             injury.Severity=3;pawn.health.AddHediff(injury);
         }
+        private void SafetySetupChecks()
+        {
+            // Initial controlled policy fixtures, before native capture begins.
+            var residents=map.mapPawns.FreeColonistsSpawned.ToList();
+            var state=new PrisonState();var projects=new System.Collections.Generic.List<AutonomousRim.Planning.RoomProject>();
+            foreach(var pawn in residents)pawn.drafter.Drafted=true;
+            PrisonManager.Apply(map,ColonyStateScanner.Scan(map),projects,state,false);
+            Check(state.Orders.Count==0 && residents.All(p=>p.Drafted),"Capture overrode player drafts.");
+            foreach(var pawn in residents)pawn.drafter.Drafted=false;
+            Pass("safety: drafted helpers preserved; no capture order issued");
+            var blocker=SpawnPawn(Faction.OfAncientsHostile,map.Center+new IntVec3(5,0,-12));
+            var danger=ColonyStateScanner.Scan(map);Check(danger.Threat.Immediate,"Safety fixture failed to create an immediate threat.");
+            state.NextAction=0;PrisonManager.Apply(map,danger,projects,state,false);
+            Check(state.Orders.Count==0,"Capture started during an immediate threat.");
+            blocker.DeSpawn();Find.WorldPawns.PassToWorld(blocker,PawnDiscardDecideMode.KeepForever);
+            Pass("safety: immediate hostile threat suspends captures");
+            var ownPatient=residents[0];var originalHediffs=ownPatient.health.hediffSet.hediffs.ToList();Wound(ownPatient);
+            state.NextAction=0;PrisonManager.Apply(map,ColonyStateScanner.Scan(map),projects,state,false);
+            Check(state.Orders.Count==0,"Enemy capture displaced care of a bleeding/downed colonist.");
+            foreach(var fixtureHediff in ownPatient.health.hediffSet.hediffs.Except(originalHediffs).ToList())ownPatient.health.RemoveHediff(fixtureHediff);
+            Pass("safety: own bleeding/downed colonist takes precedence over capture");
+            var beds=map.listerBuildings.AllBuildingsColonistOfClass<Building_Bed>().Where(b=>b.ForPrisoners).ToList();
+            foreach(var bed in beds){bed.ForPrisoners=false;bed.GetDistrict()?.Notify_RoomShapeOrContainedBedsChanged();bed.GetRoom()?.Notify_RoomShapeChanged();}
+            state.NextAction=0;PrisonManager.Apply(map,ColonyStateScanner.Scan(map),projects,state,false);
+            Check(state.Capacity==0 && state.Orders.Count==0,"Capture issued without a valid prison bed.");
+            foreach(var bed in beds)Check(PrisonManager.ConfigureBed(bed),"Prison bed fixture did not restore.");
+            Pass("safety: no valid prison bed means no capture");
+            var shortage=ColonyStateScanner.Scan(map);shortage.EstimatedFoodDays=1.5f;
+            state.NextAction=0;PrisonManager.Apply(map,shortage,projects,state,false);
+            Check(state.Orders.Count==0,"Capture ignored the two-day food reserve gate.");
+            Pass("safety: low reserve blocks new prisoners (controlled reserve input)");
+        }
         private void Setup()
         {
             var ai=map.GetComponent<AutonomousRimMapComponent>();ai.DisableAll();
@@ -101,12 +133,13 @@ namespace AutonomousRim.RuntimeChecks
             foreach(var skill in release.skills.skills){skill.Level=0;skill.passion=Passion.None;}
             Check(AutonomousRim.Planning.PrisonPlanner.CandidateScore(map,recruit)>=8 && AutonomousRim.Planning.PrisonPlanner.CandidateScore(map,release)<8,"Controlled candidate scores incorrect.");
             Wound(recruit);Wound(release);
+            if(GenCommandLine.CommandLineArgPassed("autonomousrimprisonsafetytest"))SafetySetupChecks();
             ai.SetAutomation(false,false);ai.SetPrisonAutomation(true);start=Find.TickManager.TicksGame;stage=1;
             Pass("fixture: five healthy skill-20 colonists, separate prison/hospital beds and native enemy eligibility");
         }
         public override void MapComponentTick()
         {
-            if(stage==99 || !GenCommandLine.CommandLineArgPassed("autonomousrimprisontest") || Find.TickManager.TicksGame<300)return;
+            if(stage==99 || !(GenCommandLine.CommandLineArgPassed("autonomousrimprisontest") || GenCommandLine.CommandLineArgPassed("autonomousrimprisonsafetytest")) || Find.TickManager.TicksGame<300)return;
             try
             {
                 if(stage==0){Setup();return;}
