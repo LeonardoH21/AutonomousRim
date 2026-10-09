@@ -42,6 +42,7 @@ namespace AutonomousRim.RuntimeChecks
             original=ThingUtility.InteractionCellsWhenAt((ThingDef)stove.Def,stove.Position,stove.Rotation,map).First();
             chunk=ThingMaker.MakeThing(DefDatabase<ThingDef>.GetNamed("ChunkGranite"));GenSpawn.Spawn(chunk,original,map);chunk.SetForbidden(false,false);
             projects=new List<RoomProject>{new RoomProject{Kind="Cozinha",Started=true,RequiresRoof=false,Origin=map.Center-new IntVec3(4,0,4),InteriorSize=9,Furniture=new List<ConstructionTask>{stove}}};
+            Check(RingBasePlanner.Validate(map,projects),"Plan validator rejected a clearable interaction obstacle.");
             Check(!GenConstruct.CanPlaceBlueprintAt(stove.Def,stove.Position,stove.Rotation,map),"Chunk failed to block the actual interaction cell.");
             Check(map.mapPawns.FreeColonistsSpawned.Any(p=>ConstructionWorkManager.CanDispatch(p,WorkTypeDefOf.Hauling)),"Controlled fixture lacks an eligible hauler before protection guards.");
             foreach(var pawn in map.mapPawns.FreeColonistsSpawned.ToList())pawn.drafter.Drafted=true;
@@ -54,8 +55,9 @@ namespace AutonomousRim.RuntimeChecks
             Check(forbiddenCorpse?.Spawned==true,"Corpse fixture did not spawn.");forbiddenCorpse.SetForbidden(true,false);
             Check(forbiddenCorpse.IsForbidden(Faction.OfPlayer),"Forbidden guard fixture must actually be forbiddable.");
             ConstructionWorkManager.Apply(map,projects,orders);Check(orders.Count==0 && forbiddenCorpse.IsForbidden(Faction.OfPlayer),"Forbidden obstacle moved or allowed by clearance.");
-            forbiddenCorpse.Destroy();GenSpawn.Spawn(chunk,original,map);
-            Log.Message("[InteractionClearanceTests] PASS: actual blocked interaction; manual draft and forbidden item preserved.");
+            forbiddenCorpse.Destroy();var solidWall=ThingMaker.MakeThing(ThingDefOf.Wall,ThingDefOf.WoodLog);solidWall.SetFaction(Faction.OfPlayer);GenSpawn.Spawn(solidWall,original,map);
+            Check(!GenConstruct.CanPlaceBlueprintAt(stove.Def,stove.Position,stove.Rotation,map) && !RingBasePlanner.Validate(map,projects),"Solid interaction obstruction was accepted as haulable.");solidWall.Destroy();GenSpawn.Spawn(chunk,original,map);
+            Log.Message("[InteractionClearanceTests] PASS: actual blocked interaction; manual draft and forbidden item preserved; solid wall rejects the plan.");
             start=Find.TickManager.TicksGame;started=true;
         }
         public override void MapComponentTick()
