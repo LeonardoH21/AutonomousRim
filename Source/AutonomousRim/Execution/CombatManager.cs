@@ -66,7 +66,10 @@ namespace AutonomousRim.Execution
             (p.needs?.rest?.CurLevel ?? 1)<0.08f;
         private static bool Overwhelmed(Pawn p, List<CombatOrder> orders, List<Pawn> enemies)
         {
-            var near = enemies.Where(e => e.Position.DistanceTo(p.Position) < 16).ToList();
+            // Begin withdrawing before a fast melee wave reaches the old
+            // 16-cell threshold and catches a slower/wounded pawn at a door.
+            var near = enemies.Where(e => e.Position.DistanceTo(p.Position) <
+                (Ranged(e) ? 16 : Math.Max(16, Math.Min(26, e.GetStatValue(StatDefOf.MoveSpeed)*5)))).ToList();
             // A sheltered or withdrawing ally cannot fund another pawn's decision
             // to hold an exposed line. Include the evaluated pawn so recovery
             // remains possible when it can handle the remaining threat alone.

@@ -71,6 +71,22 @@ namespace AutonomousRim.RuntimeChecks
                     map.terrainGrid.SetTerrain(c,DefDatabase<TerrainDef>.GetNamed("Soil"));map.roofGrid.SetRoof(c,null);map.fogGrid.Unfog(c);
                 }
                 foreach(var hostile in map.mapPawns.AllPawnsSpawned.Where(p=>p.HostileTo(Faction.OfPlayer)).ToList())hostile.DeSpawn();
+                var compactRooms=new List<RoomProject>{new RoomProject{Kind="Estoque",LayoutSlot="mod:0:0:15",Origin=anchor,InteriorSize=11}};
+                var blockedNeighbors=new List<Thing>();
+                foreach(var offset in GenAdj.CardinalDirections)
+                {
+                    var wall=ThingMaker.MakeThing(ThingDefOf.Wall,DefDatabase<ThingDef>.GetNamed("BlocksGranite"));wall.SetFaction(Faction.OfPlayer);
+                    GenSpawn.Spawn(wall,anchor+offset*ModularBasePlanner.Stride,map);blockedNeighbors.Add(wall);
+                }
+                var addRoom=AccessTools.Method(typeof(ModularBasePlanner),"AddRoom");
+                Check(!(bool)addRoom.Invoke(null,new object[]{map,compactRooms,anchor,"Hospital",2}),
+                    "Compact expansion skipped blocked adjacent modules and created an isolated hospital.");
+                blockedNeighbors[0].Destroy(DestroyMode.Vanish);
+                Check((bool)addRoom.Invoke(null,new object[]{map,compactRooms,anchor,"Hospital",2}),"Expansion did not use the freed adjacent module.");
+                var newSlot=compactRooms.Last(ModularBasePlanner.IsModular).LayoutSlot.Split(':');
+                Check(Math.Abs(int.Parse(newSlot[1]))+Math.Abs(int.Parse(newSlot[2]))==1,"New hospital is not adjacent to the nucleus.");
+                foreach(var wall in blockedNeighbors.Where(t=>!t.Destroyed))wall.Destroy(DestroyMode.Vanish);
+                Log.Message("[AutonomousRim.StrategyTests] PASS compact expansion: blocked adjacent modules prevent isolated construction; freeing a neighbor permits hospital planning.");
                 var shipNames=new[]{"ShipBasics","ShipCryptosleep","ShipReactor","ShipEngine","ShipComputerCore","ShipSensorCluster"};
                 var route=StrategicPlanner.ResearchRoute(shipNames.Select(n=>DefDatabase<ResearchProjectDef>.GetNamed(n)));
                 Check(shipNames.All(n=>route.Any(r=>r.defName==n)),"Missing ship research def.");
@@ -99,6 +115,20 @@ namespace AutonomousRim.RuntimeChecks
                 var reblocked=supplies.First(t=>!t.IsForbidden(Faction.OfPlayer));reblocked.SetForbidden(true,false);
                 LootAccessManager.Apply(map,ColonyStateScanner.Scan(map),false,new List<RoomProject>(),new List<ManagedApparel>(),p=>true,history,out released);
                 Check(reblocked.IsForbidden(Faction.OfPlayer),"Manual reprohibition overridden.");
+                foreach(string n in new[]{"Electricity","AirConditioning","ComplexFurniture","ComplexClothing","Stonecutting","Smithing"})
+                    Find.ResearchManager.FinishProject(DefDatabase<ResearchProjectDef>.GetNamed(n),false,null,false);
+                var optionalConsole=new RoomProject{Kind="Comércio",Priority=ConstructionPriority.Normal};
+                optionalConsole.Furniture.Add(new ConstructionTask{Def=DefDatabase<ThingDef>.GetNamed("CommsConsole"),Position=anchor});
+                var defenseState=ColonyStateScanner.Scan(map);defenseState.EstimatedFoodDays=3;defenseState.HostilePawnCount=0;
+                var defensePlan=new StrategicPlan();
+                Check(DefenseProductionPlan.Stage(map)==0,"Research contention fixture already has its initial loadout.");
+                StrategicPlanner.Evaluate(map,defenseState,new[]{optionalConsole},defensePlan,false);
+                var initialDefense=defensePlan.Route.FindIndex(r=>r.defName=="LongBlades" || r.defName=="PlateArmor");
+                var optionalTrade=defensePlan.Route.FindIndex(r=>r.defName=="MicroelectronicsBasics");
+                Check(initialDefense>=0 && optionalTrade>initialDefense,"Optional trade infrastructure displaced the first military checkpoint.");
+                Check(Find.ResearchManager.GetProject()==manual && !DefDatabase<ResearchProjectDef>.GetNamed("LongBlades").IsFinished,
+                    "Planning-only contention test changed the manual project or granted defense research.");
+                Log.Message("[AutonomousRim.StrategyTests] PASS contention: initial military research precedes optional trade console; manual selection and real research progress preserved.");
                 foreach(string n in new[]{"Electricity","Batteries","AirConditioning","ComplexFurniture","ComplexClothing","Stonecutting","MicroelectronicsBasics","MultiAnalyzer","Fabrication","DrugProduction","Machining","Smithing"})
                     Find.ResearchManager.FinishProject(DefDatabase<ResearchProjectDef>.GetNamed(n),false,null,false);
                 var rooms=RingBasePlanner.Create(map,anchor,3);

@@ -87,7 +87,7 @@ namespace AutonomousRim.Planning
             {
                 string prefix = $"mod:{grid.x}:{grid.z}:";
                 if (projects.Any(p => p.LayoutSlot?.StartsWith(prefix) == true)) continue;
-                if (!projects.Where(IsModular).Any(p => Math.Abs(int.Parse(p.LayoutSlot.Split(':')[1]) - grid.x) + Math.Abs(int.Parse(p.LayoutSlot.Split(':')[2]) - grid.z) <= 2)) continue;
+                if (!projects.Where(IsModular).Any(p => Math.Abs(int.Parse(p.LayoutSlot.Split(':')[1]) - grid.x) + Math.Abs(int.Parse(p.LayoutSlot.Split(':')[2]) - grid.z) == 1)) continue;
                 var origin = root + new IntVec3(grid.x * Stride, 0, grid.z * Stride);
                 var rect = new CellRect(origin.x, origin.z, Size, Size);
                 if (projects.Any(p=>p.LayoutSlot=="prison:reserve" && p.Footprint.ExpandedBy(2).Overlaps(rect)) || !Site(map, rect) || rect.Any(c => c.GetEdifice(map) != null || c.Roofed(map) || c.GetTerrain(map).fertility < rice.plant.fertilityMin)) continue;
@@ -106,7 +106,7 @@ namespace AutonomousRim.Planning
                 int used = existing.Aggregate(0, (mask, p) => mask | int.Parse(p.LayoutSlot.Split(':')[3]));
                 var origin = anchor + new IntVec3(grid.x * Stride, 0, grid.z * Stride);
                 if (existing.Count == 0 && projects.Any(IsModular) && !projects.Where(IsModular).Any(p =>
-                    Math.Abs(int.Parse(p.LayoutSlot.Split(':')[1]) - grid.x) + Math.Abs(int.Parse(p.LayoutSlot.Split(':')[2]) - grid.z) <= 2)) continue;
+                    Math.Abs(int.Parse(p.LayoutSlot.Split(':')[1]) - grid.x) + Math.Abs(int.Parse(p.LayoutSlot.Split(':')[2]) - grid.z) == 1)) continue;
                 if (projects.Any(p=>p.LayoutSlot=="prison:reserve" && p.Footprint.ExpandedBy(2).Overlaps(new CellRect(origin.x,origin.z,Size,Size))) || existing.Count == 0 && !Site(map, new CellRect(origin.x, origin.z, Size, Size))) continue;
                 foreach (int mask in parts == 4 ? new[] { 15 } : parts == 2 ? new[] { 3, 12 } : new[] { 1, 2, 4, 8 })
                 {

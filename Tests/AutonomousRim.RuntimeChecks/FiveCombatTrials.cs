@@ -18,8 +18,8 @@ namespace AutonomousRim.RuntimeChecks
     // colony loses. Only harness/setup faults abort a case as FAIL.
     public sealed class FiveCombatTrials : MapComponent
     {
-        private readonly List<Pawn> allies=new List<Pawn>(), enemies=new List<Pawn>();
-        private readonly HashSet<int> initialMelee=new HashSet<int>();
+        private List<Pawn> allies=new List<Pawn>(), enemies=new List<Pawn>();
+        private HashSet<int> initialMelee=new HashSet<int>();
         private bool started, finished, hard;
         private int number, start, seed, cover, melee, retreat;
         private IntVec3 center;
@@ -29,9 +29,36 @@ namespace AutonomousRim.RuntimeChecks
         private bool Revision=>GenCommandLine.CommandLineArgPassed("autonomousrimmeleerevision");
         private bool Varied=>GenCommandLine.CommandLineArgPassed("autonomousrimvariedthreats");
         private int flankSamples,approachSamples,idleSamples,firstMeleeTick=-1;
+        private bool careStarted, hospitalWitness;
+        private int careStart;
+        private float initialTends;
+        private string combatResult;
+        private bool resumeResultLogged;
+        private bool PostBattleCare=>GenCommandLine.CommandLineArgPassed("autonomousrimpostbattlecare");
+        private static bool resumeLoaded;
         public FiveCombatTrials(Map map):base(map){}
+        public override void ExposeData()
+        {
+            Scribe_Collections.Look(ref allies,"combatAllies",LookMode.Reference);
+            Scribe_Collections.Look(ref enemies,"combatEnemies",LookMode.Reference);
+            Scribe_Collections.Look(ref initialMelee,"combatInitialMelee",LookMode.Value);
+            Scribe_Values.Look(ref started,"combatStarted");Scribe_Values.Look(ref finished,"combatFinished");
+            Scribe_Values.Look(ref number,"combatCase");Scribe_Values.Look(ref start,"combatStart");Scribe_Values.Look(ref seed,"combatSeed");
+            Scribe_Values.Look(ref hard,"combatHard");Scribe_Values.Look(ref center,"combatCenter");Scribe_References.Look(ref door,"combatDoor");
+            Scribe_Values.Look(ref layout,"combatLayout");Scribe_Values.Look(ref weapons,"combatWeapons");Scribe_Values.Look(ref roster,"combatRoster");
+            Scribe_Values.Look(ref cover,"combatCover");Scribe_Values.Look(ref melee,"combatMelee");Scribe_Values.Look(ref retreat,"combatRetreat");
+            Scribe_Values.Look(ref flankSamples,"combatFlank");Scribe_Values.Look(ref approachSamples,"combatApproach");Scribe_Values.Look(ref idleSamples,"combatIdle");
+            Scribe_Values.Look(ref firstMeleeTick,"combatFirstMelee",-1);
+            Scribe_Values.Look(ref careStarted,"combatCareStarted");Scribe_Values.Look(ref careStart,"combatCareStart");
+            Scribe_Values.Look(ref hospitalWitness,"combatHospitalWitness");Scribe_Values.Look(ref initialTends,"combatInitialTends");
+            Scribe_Values.Look(ref combatResult,"combatResult");
+            if(Scribe.mode==LoadSaveMode.PostLoadInit)
+            {allies=allies??new List<Pawn>();enemies=enemies??new List<Pawn>();initialMelee=initialMelee??new HashSet<int>();}
+        }
         public override void MapComponentUpdate()
         {
+            if(GenCommandLine.CommandLineArgPassed("autonomousrimcombatresume") && !resumeLoaded && Current.ProgramState==ProgramState.Playing)
+            {resumeLoaded=true;GameDataSaveLoader.LoadGame("ModularResume");return;}
             if(finished || !GenCommandLine.CommandLineArgPassed("autonomousrimcombatfive"))return;
             foreach(var w in Find.WindowStack.Windows.Where(w=>w.forcePause).ToList())w.Close(false);
             Find.TickManager.CurTimeSpeed=TimeSpeed.Superfast;
@@ -129,6 +156,46 @@ namespace AutonomousRim.RuntimeChecks
             allies.Add(Spawn("Colonist",Faction.OfPlayer,center+new IntVec3(-10,0,-1),"MeleeWeapon_LongSword",true));
             allies.Add(Spawn("Colonist",Faction.OfPlayer,center+new IntVec3(-10,0,1),"MeleeWeapon_Mace",true));
             foreach(var pawn in allies.Where(p=>!CombatManager.Ranged(p)))initialMelee.Add(pawn.thingIDNumber);
+            if(PostBattleCare)
+            {
+                var fallbackDoor=door;
+                // Controlled initial facilities/supplies. Subsequent damage, rescue,
+                // tending and healing are native; no health edits after setup.
+                var hospital=new CellRect(center.x-44,center.z-8,12,17);
+                foreach(var cell in hospital)
+                {
+                    var offset=cell-center;
+                    if(hospital.IsOnEdge(cell))Build(cell==center+new IntVec3(-33,0,0)?"Door":"Wall",offset.x,offset.z);
+                    else map.terrainGrid.SetTerrain(cell,DefDatabase<TerrainDef>.GetNamed("WoodPlankFloor"));
+                    map.roofGrid.SetRoof(cell,RoofDefOf.RoofConstructed);map.areaManager.Home[cell]=true;
+                }
+                for(int i=0;i<4;i++)
+                {
+                    var bed=(Building_Bed)ThingMaker.MakeThing(ThingDefOf.Bed,ThingDefOf.WoodLog);bed.SetFaction(Faction.OfPlayer);bed.Medical=true;
+                    GenSpawn.Spawn(bed,center+new IntVec3(-42+i*2,0,5),map);
+                }
+                void careFurniture(string name,IntVec3 offset)
+                {
+                    var def=DefDatabase<ThingDef>.GetNamed(name);
+                    var furniture=ThingMaker.MakeThing(def,def.MadeFromStuff?ThingDefOf.WoodLog:null);furniture.SetFaction(Faction.OfPlayer);
+                    GenSpawn.Spawn(furniture,center+offset,map);
+                    var fuel=(furniture as ThingWithComps)?.TryGetComp<CompRefuelable>();
+                    if(fuel!=null)fuel.Refuel(fuel.Props.fuelCapacity);
+                }
+                careFurniture("Table1x2c",new IntVec3(-40,0,-1));
+                careFurniture("DiningChair",new IntVec3(-41,0,-1));careFurniture("DiningChair",new IntVec3(-39,0,-1));
+                careFurniture("HorseshoesPin",new IntVec3(-35,0,-4));careFurniture("TorchLamp",new IntVec3(-38,0,2));
+                for(int i=0;i<8;i++)
+                {
+                    var supply=Item("MealSurvivalPack");supply.stackCount=10;GenSpawn.Spawn(supply,center+new IntVec3(-42+i,0,-5),map);supply.SetForbidden(false,false);
+                }
+                var medicine=Item("MedicineHerbal");medicine.stackCount=30;GenSpawn.Spawn(medicine,center+new IntVec3(-41,0,-3),map);medicine.SetForbidden(false,false);
+                initialTends=Record(allies,"TimesTendedOther");
+                // Build() records doors; the hospital entrance must not replace
+                // the combat refuge used by the retreat outcome assertion.
+                door=fallbackDoor;
+                Log.Message("[FiveCombatTrials] CARE SETUP: four medical beds, table/chairs, recreation, fueled torch, 80 survival meals, 30 herbal medicine; native recovery only.");
+            }
             Check(allies.Count(CombatManager.Ranged)==2 && allies.All(p=>p.apparel.WornApparel.Any(a=>a.def.defName=="Apparel_FlakVest" || Revision && a.def.defName=="Apparel_PlateArmor") &&
                 p.apparel.WornApparel.Any(a=>a.def.defName=="Apparel_SimpleHelmet")),"Expected two ranged, two melee, four vests and four helmets.");
             if(number==1)
@@ -184,19 +251,30 @@ namespace AutonomousRim.RuntimeChecks
             }
             weapons=string.Join(" | ",allies.Select(Manifest)); roster=string.Join(" | ",enemies.Select(Manifest));
             Log.Message($"[FiveCombatTrials] START case={number}; seed={seed}; hard={hard}; {layout}; 2 melee+2 ranged; armor="+
-                (Revision?"2 steel plates, 2 flak vests, 4 helmets":"4 flak vests, 4 helmets")+"; third speed selected; no healing during battle");
+                (Revision?"2 steel plates, 2 flak vests, 4 helmets":"4 flak vests, 4 helmets")+"; third speed selected; no scripted healing");
             Log.Message("[FiveCombatTrials] ALLIES "+weapons); Log.Message("[FiveCombatTrials] ENEMIES "+roster);
             start=Find.TickManager.TicksGame; started=true; ai.SetEmergencyAutomation(true);
         }
         private float Record(IEnumerable<Pawn> pawns,string name)=>pawns.Sum(p=>p.records?.GetValue(DefDatabase<RecordDef>.GetNamed(name))??0);
         private void Finish(string outcome,int ticks,bool neutralized,bool escaped)
         {
-            var ai=map.GetComponent<AutonomousRimMapComponent>(); ai.DisableAll();
+            var ai=map.GetComponent<AutonomousRimMapComponent>();
+            if(!PostBattleCare || !neutralized || allies.Any(p=>p.Dead))ai.DisableAll();
             GameDataSaveLoader.SaveGame("AutonomousRim-Combate-Misto-"+number);
             string row=$"case={number}; seed={seed}; outcome={outcome}; ticks={ticks}; enemies={enemies.Count}; remaining={enemies.Count(p=>!p.Dead&&!p.Downed&&p.Spawned)}; deaths={allies.Count(p=>p.Dead)}; downed={allies.Count(p=>!p.Dead&&p.Downed)}; injured={allies.Count(p=>p.health.hediffSet.hediffs.Any(h=>h is Hediff_Injury && h.Severity>0))}; neutralized={neutralized}; sheltered={escaped}; alliedShots={Record(allies,"ShotsFired")}; enemyShots={Record(enemies,"ShotsFired")}; alliedDamage={Record(allies,"DamageDealt").ToString(CultureInfo.InvariantCulture)}; coverSamples={cover}; interceptSamples={melee}; retreatSamples={retreat}; flankSamples={flankSamples}; approachSamples={approachSamples}; idleMeleeSamples={idleSamples}; firstMeleeTick={firstMeleeTick}; meleeDamage={Record(allies.Where(p=>initialMelee.Contains(p.thingIDNumber)),"DamageDealt")}; workerJobs={AnalysisWorker.Completed}; workerMs={AnalysisWorker.Milliseconds:F2}; combatCalls={CombatManager.AnalysisCalls}; combatMs={CombatManager.AnalysisMilliseconds:F2}";
             Log.Message("[FiveCombatTrials] RESULT "+row);
+            combatResult=row;
             File.WriteAllText(Path.Combine(GenFilePaths.SaveDataFolderPath,"result.txt"),row+Environment.NewLine+layout+Environment.NewLine+"ALLIES "+weapons+Environment.NewLine+"ENEMIES "+roster);
             foreach(var pawn in allies)Log.Message($"[FiveCombatTrials] COLONIST {pawn.LabelShort}: dead={pawn.Dead}; downed={pawn.Downed}; health={pawn.health.summaryHealth.SummaryHealthPercent}; bleed={pawn.health.hediffSet.BleedRateTotal}; position={pawn.Position}");
+            if(PostBattleCare && neutralized && !allies.Any(p=>p.Dead))
+            {
+                Check(allies.Any(p=>p.Downed || p.health.hediffSet.hediffs.Any(h=>h is Hediff_Injury)),"No injured combatant to validate post-battle care.");
+                careStarted=true;careStart=Find.TickManager.TicksGame;
+                ai.SetAutomation(false,true);ai.SetScheduleAutomation(true);ai.SetEmergencyAutomation(true);
+                GameDataSaveLoader.SaveGame("CombatCareCheckpoint");
+                Log.Message("[FiveCombatTrials] CARE START: victory recorded; recovery not yet approved.");return;
+            }
+            if(PostBattleCare)Log.Message("[FiveCombatTrials] CARE NOT VERIFIED: combat did not leave a living victorious team.");
             finished=true; Log.Message("[FiveCombatTrials] DONE"); Find.TickManager.CurTimeSpeed=TimeSpeed.Paused;
         }
         public override void MapComponentTick()
@@ -204,9 +282,42 @@ namespace AutonomousRim.RuntimeChecks
             if(finished || !GenCommandLine.CommandLineArgPassed("autonomousrimcombatfive") || Find.TickManager.TicksGame<300)return;
             try
             {
+                if(GenCommandLine.CommandLineArgPassed("autonomousrimcombatresume") && !resumeLoaded)return;
+                if(GenCommandLine.CommandLineArgPassed("autonomousrimcombatresume"))
+                {
+                    Check(started && careStarted && PostBattleCare && allies.Count==4 && !string.IsNullOrEmpty(combatResult),"Resume requires a native care checkpoint; participants cannot be replaced.");
+                    if(!resumeResultLogged){resumeResultLogged=true;Log.Message("[FiveCombatTrials] RESULT "+combatResult+"; restoredFromCheckpoint=True");}
+                }
                 if(!started) { Setup(); return; }
                 int ticks=Find.TickManager.TicksGame-start;
                 var ai=map.GetComponent<AutonomousRimMapComponent>();
+                if(careStarted)
+                {
+                    if(Find.TickManager.TicksGame%30!=0)return;
+                    Check(allies.Count==4 && allies.All(p=>p!=null && !p.Dead),"An original combatant died during native recovery.");
+                    var recurrentThreats=CombatManager.Enemies(map);
+                    Check(!recurrentThreats.Except(enemies).Any(),"Unrelated new threat interrupted post-battle recovery.");
+                    hospitalWitness|=allies.Any(p=>p.InBed() && p.CurrentBed()?.Medical==true);
+                    float tends=Record(allies,"TimesTendedOther")-initialTends;
+                    // A downed original enemy may recover naturally. Keep the
+                    // original care deadline and let emergency/combat handle it.
+                    bool recovered=recurrentThreats.Count==0 && allies.All(p=>p.Spawned && !p.Downed && !p.Drafted && !p.InMentalState &&
+                        (p.needs.food?.CurLevelPercentage??1)>.15f && (p.needs.rest?.CurLevelPercentage??1)>.15f &&
+                        p.health.hediffSet.BleedRateTotal==0 && !p.health.HasHediffsNeedingTend() &&
+                        !HealthAIUtility.ShouldSeekMedicalRest(p) && p.health.summaryHealth.SummaryHealthPercent>=.9f);
+                    if(recovered && hospitalWitness && tends>0 && ai.Emergency.Phase==EmergencyPhase.Normal)
+                    {
+                        ai.DisableAll();GameDataSaveLoader.SaveGame("CombatCareComplete");
+                        Log.Message("[FiveCombatTrials] CARE PASS: four original combatants alive, native hospital/tending, no bleeding or medical rest, health >=90%, undrafted, emergency returned to Normal; residual scars/injuries may remain.");
+                        finished=true;Log.Message("[FiveCombatTrials] DONE");Find.TickManager.CurTimeSpeed=TimeSpeed.Paused;return;
+                    }
+                    if(Find.TickManager.TicksGame%2490==0)
+                    {
+                        GameDataSaveLoader.SaveGame("CombatCareCheckpoint");
+                        Log.Message($"[FiveCombatTrials] CARE PROGRESS hours={(Find.TickManager.TicksGame-careStart)/2500f:F2}; tends={tends}; hospital={hospitalWitness}; recovered={recovered}; recurrentThreats={recurrentThreats.Count}; emergency={ai.Emergency.Phase}");
+                    }
+                    Check(Find.TickManager.TicksGame-careStart<GenDate.TicksPerDay*8,"Native recovery exceeded eight days without meeting its criteria.");return;
+                }
                 if(ticks%60==0)
                 {
                     Check(!CombatManager.Enemies(map).Except(enemies).Any(),"Unrelated hostile pawn appeared during the fixture.");
@@ -229,7 +340,11 @@ namespace AutonomousRim.RuntimeChecks
                 else if(ticks>=1800 && escaped && retreat>0)Finish("RETIRADA",ticks,false,true);
                 else if(ticks>=6000)Finish("SEM_DESFECHO",ticks,false,escaped);
             }
-            catch(Exception ex) { finished=true; Log.Error("[FiveCombatTrials] FAIL case="+number+": "+ex); Find.TickManager.CurTimeSpeed=TimeSpeed.Paused; }
+            catch(Exception ex)
+            {
+                if(PostBattleCare && started)GameDataSaveLoader.SaveGame("CombatCareFailure");
+                finished=true; Log.Error("[FiveCombatTrials] FAIL case="+number+": "+ex); Find.TickManager.CurTimeSpeed=TimeSpeed.Paused;
+            }
         }
     }
 }

@@ -112,7 +112,10 @@ namespace AutonomousRim.Planning
             bool advancedReady=state.EstimatedFoodDays>=3 && energy && colonists.Any(p=>
                 p.skills?.GetSkill(SkillDefOf.Crafting).Level>=8 && !p.WorkTypeIsDisabled(DefDatabase<WorkTypeDef>.GetNamed("Smithing")));
             if((stable && (equipmentStage<3 || advancedReady)) || equipmentStage==0 && state.EstimatedFoodDays>=1 && state.HostilePawnCount==0)
-                foreach(var name in DefenseProductionPlan.Research(map)) target(name, 78);
+                // Secure the first usable loadout before optional infrastructure
+                // (e.g. a planned trade console) consumes several research days.
+                // Electricity and urgent cooling keep their higher/equal scores.
+                foreach(var name in DefenseProductionPlan.Research(map)) target(name, equipmentStage==0 ? 98 : 78);
             else if(equipmentStage>=3)plan.EquipmentStatus+=" Etapa avançada aguarda energia funcional, reserva de 3 dias e fabricante 8+.";
             var targets=priorities.OrderByDescending(p=>p.Item2).ThenBy(p=>p.Item1,StringComparer.Ordinal).Select(p=>DefDatabase<ResearchProjectDef>.GetNamedSilentFail(p.Item1)).Where(r=>r!=null).ToList();
             plan.Route=ResearchRoute(targets);

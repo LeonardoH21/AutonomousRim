@@ -57,6 +57,10 @@ try {
      if(!$outcome){throw 'Combat completed without a recorded outcome.'}
      $manifest.outcome=$outcome
      $manifest.result=if($outcome -eq 'DERROTA'){'TACTICAL_FAILURE'}elseif($outcome -eq 'SEM_DESFECHO'){'INCONCLUSIVE'}else{'COMPLETED'}
+     if('autonomousrimpostbattlecare' -in $ExtraFlags){
+      $manifest.careResult=if($body.Contains('[FiveCombatTrials] CARE PASS:')){'PASS'}else{'NOT_VERIFIED'}
+      if($manifest.careResult -eq 'NOT_VERIFIED' -and $manifest.result -eq 'COMPLETED'){$manifest.result='INCONCLUSIVE'}
+     }
     }
     $manifest|ConvertTo-Json|Set-Content -LiteralPath "$profile\manifest.json" -Encoding utf8
     Select-String -LiteralPath $log -Pattern 'PASS\b|DONE|FiveCombatTrials\] RESULT'|ForEach-Object {$_.Line};return
@@ -68,8 +72,9 @@ try {
 }catch {
  if($manifest){
   $manifest.result='FAIL';$manifest.error=$_.Exception.Message
-  if($manifest.error.StartsWith('Stage timeout;') -and $Flag -eq 'autonomousrimmodulartrial' -and
-     (Test-Path -LiteralPath "$profile\Saves\ModularCheckpoint.rws")){$manifest.result='INCOMPLETE_TIMEOUT'}
+  if($manifest.error.StartsWith('Stage timeout;') -and (
+     $Flag -eq 'autonomousrimmodulartrial' -and (Test-Path -LiteralPath "$profile\Saves\ModularCheckpoint.rws") -or
+     'autonomousrimpostbattlecare' -in $ExtraFlags -and (Test-Path -LiteralPath "$profile\Saves\CombatCareCheckpoint.rws"))){$manifest.result='INCOMPLETE_TIMEOUT'}
   elseif($manifest.error.StartsWith('Logging limit reached;')){$manifest.result='OBSERVABILITY_FAILURE'}
   $manifest|ConvertTo-Json|Set-Content -LiteralPath "$profile\manifest.json" -Encoding utf8
  }

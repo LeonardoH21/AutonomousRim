@@ -67,6 +67,12 @@ namespace AutonomousRim.Planning
                         var weapon=CombatEquipmentScanner.Copy(shooter);
                         float damage=path.NodesReversed.Sum(c=>CombatManager.ExpectedRangedDps(shooter,c,weapon.Dps));
                         routeExposure+=damage*TacticalPolicy.DamageFraction(weapon.BluntDamage?own.Blunt:own.Sharp,weapon.Penetration)/Math.Max(1,own.Speed);
+                        // Arriving alive is insufficient if the attacker must then
+                        // fight in the same crossfire. Keep a short, bounded combat
+                        // window; wounded targets require less finishing time.
+                        float engagementSeconds=Math.Max(.5f,Math.Min(3f,target.health.summaryHealth.SummaryHealthPercent*3f));
+                        routeExposure+=CombatManager.ExpectedRangedDps(shooter,option.Cell,weapon.Dps)*
+                            TacticalPolicy.DamageFraction(weapon.BluntDamage?own.Blunt:own.Sharp,weapon.Penetration)*engagementSeconds;
                     }
                     if(!TacticalPolicy.CanPress(own.Health,advantage,friends.Count,nearby.Count,distance,routeExposure,nearby.Any(e=>CombatEquipmentScanner.Copy(e).Special)))continue;
                 }
