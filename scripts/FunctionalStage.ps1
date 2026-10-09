@@ -48,6 +48,7 @@ try {
   if($p.HasExited){throw 'Game exited before stage completed.'}
   if(Test-Path -LiteralPath $log){
    $body=Get-Content -LiteralPath $log -Raw
+   if($body.Contains('Reached max messages limit. Stopping logging to avoid spam.')){throw "Logging limit reached; native result cannot be verified: $profile"}
    if($body -match '\] FAIL\b|Exception ticking|Error in MapComponent|Exception from long event|XML error:|Config error:|Patching exception'){throw "Stage failed: $log"}
    if($body.Contains($SuccessMarker)){
     $manifest.result='PASS'
@@ -65,7 +66,13 @@ try {
  }
  throw "Stage timeout; evidence preserved: $profile"
 }catch {
- if($manifest){$manifest.result='FAIL';$manifest.error=$_.Exception.Message;$manifest|ConvertTo-Json|Set-Content -LiteralPath "$profile\manifest.json" -Encoding utf8}
+ if($manifest){
+  $manifest.result='FAIL';$manifest.error=$_.Exception.Message
+  if($manifest.error.StartsWith('Stage timeout;') -and $Flag -eq 'autonomousrimmodulartrial' -and
+     (Test-Path -LiteralPath "$profile\Saves\ModularCheckpoint.rws")){$manifest.result='INCOMPLETE_TIMEOUT'}
+  elseif($manifest.error.StartsWith('Logging limit reached;')){$manifest.result='OBSERVABILITY_FAILURE'}
+  $manifest|ConvertTo-Json|Set-Content -LiteralPath "$profile\manifest.json" -Encoding utf8
+ }
  throw
 }finally {
  if($p -and !$p.HasExited){Stop-Process -Id $p.Id;$p.WaitForExit(10000)|Out-Null}
