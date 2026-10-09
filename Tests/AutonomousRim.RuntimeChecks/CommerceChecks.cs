@@ -23,6 +23,8 @@ namespace AutonomousRim.RuntimeChecks
         private bool CaravanTest=>GenCommandLine.CommandLineArgPassed("autonomousrimcaravantest");
         private bool SafetyTest=>GenCommandLine.CommandLineArgPassed("autonomousrimcommercesafetytest");
         private bool caravanDeparted;
+        private bool Elite=>GenCommandLine.CommandLineArgPassed("autonomousrimelitesix");
+        private int ExpectedResidents=>Elite?6:5;
         private IntVec3 center;
         public CommerceChecks(Map map):base(map){}
         private void Check(bool ok,string text){if(!ok)throw new InvalidOperationException(text);}
@@ -59,17 +61,18 @@ namespace AutonomousRim.RuntimeChecks
         private void Setup()
         {
             var ai=map.GetComponent<AutonomousRimMapComponent>();ai.DisableAll();center=map.Center;
-            var peaceful=DefDatabase<DifficultyDef>.GetNamed("Peaceful");Find.Storyteller.difficultyDef=peaceful;Find.Storyteller.difficulty.CopyFrom(peaceful);
-            map.Biome.constantOutdoorTemperature=21;
-            foreach(var pawn in map.mapPawns.AllPawnsSpawned.ToList()){pawn.DeSpawn();Find.WorldPawns.PassToWorld(pawn,PawnDiscardDecideMode.KeepForever);}
+            var originals=Elite?EliteFixtureBaseline.Roster(map):new List<Pawn>();
+            if(!Elite){var peaceful=DefDatabase<DifficultyDef>.GetNamed("Peaceful");Find.Storyteller.difficultyDef=peaceful;Find.Storyteller.difficulty.CopyFrom(peaceful);map.Biome.constantOutdoorTemperature=21;}
+            foreach(var pawn in map.mapPawns.AllPawnsSpawned.ToList()){pawn.DeSpawn();if(!originals.Contains(pawn))Find.WorldPawns.PassToWorld(pawn,PawnDiscardDecideMode.KeepForever);}
             foreach(var t in map.listerThings.AllThings.Where(t=>t.def.category==ThingCategory.Item || t is Hive || !(t is Pawn) && t is IAttackTarget && t.HostileTo(Faction.OfPlayer)).ToList())t.Destroy(DestroyMode.Vanish);
             foreach(var cell in new CellRect(center.x-20,center.z-20,41,41))
             {
                 foreach(var t in cell.GetThingList(map).ToList()){if(t.def.destroyable)t.Destroy(DestroyMode.Vanish);else t.DeSpawn();}
                 map.terrainGrid.SetTerrain(cell,TerrainDefOf.Soil);map.roofGrid.SetRoof(cell,null);map.fogGrid.Unfog(cell);map.areaManager.Home[cell]=true;
             }
-            for(int i=0;i<5;i++)
+            for(int i=0;i<ExpectedResidents;i++)
             {
+                if(Elite){var original=originals[i];GenSpawn.Spawn(original,center+new IntVec3(i*2,0,-8),map);original.workSettings.EnableAndInitializeIfNotAlreadyInitialized();continue;}
                 Pawn p;do{p=PawnGenerator.GeneratePawn(new PawnGenerationRequest(PawnKindDefOf.Colonist,Faction.OfPlayer,forceGenerateNewPawn:true,canGeneratePawnRelations:false));}
                 while(p.health.hediffSet.hediffs.Count>0 || p.skills.skills.Any(s=>s.TotallyDisabled) || DefDatabase<WorkTypeDef>.AllDefsListForReading.Any(p.WorkTypeIsDisabled));
                 foreach(var trait in p.story.traits.allTraits.ToList())p.story.traits.RemoveTrait(trait);
@@ -189,6 +192,7 @@ namespace AutonomousRim.RuntimeChecks
         }
         public override void MapComponentTick()
         {
+            if(!EliteFixtureBaseline.Ready)return;
             if(stage==99 || !(GenCommandLine.CommandLineArgPassed("autonomousrimcommercetest") || Orbital || CaravanTest || SafetyTest) || Find.TickManager.TicksGame<300)return;
             try
             {
@@ -225,7 +229,7 @@ namespace AutonomousRim.RuntimeChecks
                     Check(!TradeSession.Active,"Automatic trade session was left active.");
                     Pass("native trade transfers drugs and needed materials, preserves silver reserve and protected goods, closes session");
                     if(Orbital)Pass("orbital drop pods landed; in-transit purchases cleared against real accessible stock");
-                    if(CaravanTest){Check(caravanDeparted && map.mapPawns.FreeColonistsSpawnedCount==5,"Couriers did not return alive to original map.");Pass("native world travel, settlement trade and return deliver actual purchases to the colony");}
+                    if(CaravanTest){Check(caravanDeparted && map.mapPawns.FreeColonistsSpawnedCount==ExpectedResidents,"Couriers did not return alive to original map.");Pass("native world travel, settlement trade and return deliver actual purchases to the colony");}
                     stage=2;GameDataSaveLoader.SaveGame("CommerceRoundtrip");GameDataSaveLoader.LoadGame("CommerceRoundtrip");return;
                 }
                 if(Find.TickManager.TicksGame%3000==0)Log.Message("[CommerceTests] progress: "+ai.Commerce.Status+" job="+ai.Commerce.Negotiator?.CurJob?.def.defName);

@@ -21,6 +21,8 @@ namespace AutonomousRim.RuntimeChecks
         private bool diagnosed,breakStarted,breakDraft,breakDowned;
         private int breakTick;
         private readonly List<Pawn> initialDefenders=new List<Pawn>();
+        private bool Elite=>GenCommandLine.CommandLineArgPassed("autonomousrimelitesix");
+        private int ExpectedDefenders=>Elite?6:5;
         private bool BreakTrial=>GenCommandLine.CommandLineArgPassed("autonomousrimprisonbreaktest");
         public PrisonChecks(Map map):base(map){}
         private void Check(bool value,string text){if(!value)throw new InvalidOperationException(text);}
@@ -121,24 +123,27 @@ namespace AutonomousRim.RuntimeChecks
         private void Setup()
         {
             var ai=map.GetComponent<AutonomousRimMapComponent>();ai.DisableAll();
-            var peaceful=DefDatabase<DifficultyDef>.GetNamed("Peaceful");Find.Storyteller.difficultyDef=peaceful;Find.Storyteller.difficulty.CopyFrom(peaceful);
-            Find.Storyteller.difficulty.unwaveringPrisoners=false;
-            foreach(var pawn in map.mapPawns.AllPawnsSpawned.ToList()){pawn.DeSpawn();Find.WorldPawns.PassToWorld(pawn,PawnDiscardDecideMode.KeepForever);}
+            var originals=Elite?EliteFixtureBaseline.Roster(map):new List<Pawn>();
+            if(!Elite){var peaceful=DefDatabase<DifficultyDef>.GetNamed("Peaceful");Find.Storyteller.difficultyDef=peaceful;Find.Storyteller.difficulty.CopyFrom(peaceful);Find.Storyteller.difficulty.unwaveringPrisoners=false;}
+            foreach(var pawn in map.mapPawns.AllPawnsSpawned.ToList()){pawn.DeSpawn();if(!originals.Contains(pawn))Find.WorldPawns.PassToWorld(pawn,PawnDiscardDecideMode.KeepForever);}
             foreach(var t in map.listerThings.AllThings.Where(t=>t is Hive || !(t is Pawn) && t is IAttackTarget && t.HostileTo(Faction.OfPlayer)).ToList())t.Destroy(DestroyMode.Vanish);
             var center=map.Center;
-            map.Biome.constantOutdoorTemperature=21;
+            if(!Elite)map.Biome.constantOutdoorTemperature=21;
             foreach(var cell in new CellRect(center.x-35,center.z-25,71,51))
             {
                 foreach(var t in cell.GetThingList(map).ToList()){if(t.def.destroyable)t.Destroy(DestroyMode.Vanish);else t.DeSpawn();}
                 map.terrainGrid.SetTerrain(cell,TerrainDefOf.Soil);map.roofGrid.SetRoof(cell,null);map.fogGrid.Unfog(cell);
             }
-            for(int i=0;i<5;i++)
+            for(int i=0;i<ExpectedDefenders;i++)
             {
-                var helper=SpawnPawn(Faction.OfPlayer,center+new IntVec3(i*2,0,-12));
+                var helper=Elite?originals[i]:SpawnPawn(Faction.OfPlayer,center+new IntVec3(i*2,0,-12));
+                if(Elite)GenSpawn.Spawn(helper,center+new IntVec3(i*2,0,-12),map);
                 initialDefenders.Add(helper);
-                if(BreakTrial && i<4)
+                bool melee=Elite?(i==1 || i==5):i<2;
+                if(BreakTrial && (Elite || i<4))
                 {
-                    helper.equipment.AddEquipment((ThingWithComps)ThingMaker.MakeThing(DefDatabase<ThingDef>.GetNamed(i<2?"MeleeWeapon_LongSword":"Gun_AssaultRifle"),i<2?ThingDefOf.Steel:null));
+                    foreach(var weapon in helper.equipment.AllEquipmentListForReading.ToList())helper.equipment.Remove(weapon);
+                    helper.equipment.AddEquipment((ThingWithComps)ThingMaker.MakeThing(DefDatabase<ThingDef>.GetNamed(melee?"MeleeWeapon_LongSword":"Gun_AssaultRifle"),melee?ThingDefOf.Steel:null));
                     foreach(string name in new[]{"Apparel_FlakVest","Apparel_SimpleHelmet"})
                     {var def=DefDatabase<ThingDef>.GetNamed(name);helper.apparel.Wear((Apparel)ThingMaker.MakeThing(def,def.MadeFromStuff?ThingDefOf.Steel:null));}
                 }
@@ -156,10 +161,11 @@ namespace AutonomousRim.RuntimeChecks
             Wound(recruit);Wound(release);
             if(GenCommandLine.CommandLineArgPassed("autonomousrimprisonsafetytest"))SafetySetupChecks();
             ai.SetAutomation(false,false);ai.SetPrisonAutomation(true);if(BreakTrial){ai.SetCombatAutomation(true);ai.SetEmergencyAutomation(true);ai.SetScheduleAutomation(true);}start=Find.TickManager.TicksGame;stage=1;
-            Pass("fixture: five healthy skill-20 colonists, separate prison/hospital beds and native enemy eligibility");
+            Pass(Elite?"fixture: six original EliteSix profiles, Cassandra/Medium and scenario factors preserved; disposable prison facilities and patients":"fixture: five healthy skill-20 colonists, separate prison/hospital beds and native enemy eligibility");
         }
         public override void MapComponentTick()
         {
+            if(!EliteFixtureBaseline.Ready)return;
             if(stage==99 || !(GenCommandLine.CommandLineArgPassed("autonomousrimprisontest") || GenCommandLine.CommandLineArgPassed("autonomousrimprisonsafetytest") || BreakTrial) || Find.TickManager.TicksGame<300)return;
             try
             {
@@ -215,7 +221,7 @@ namespace AutonomousRim.RuntimeChecks
                     {
                         Check(recruit.MapHeld==map,"Rebel escaped the map.");
                         breakDraft|=map.mapPawns.FreeColonistsSpawned.Any(p=>p.Drafted);breakDowned|=recruit.Downed;
-                        Check(initialDefenders.Count==5 && initialDefenders.All(p=>p!=null && !p.Dead && !p.Destroyed && p.MapHeld==map),"An original defender died or left the containment map.");
+                        Check(initialDefenders.Count==ExpectedDefenders && initialDefenders.All(p=>p!=null && !p.Dead && !p.Destroyed && p.MapHeld==map),"An original defender died or left the containment map.");
                         if(breakDraft && breakDowned && recruit.InBed() && !recruit.health.HasHediffsNeedingTend() && recruit.health.hediffSet.BleedRateTotal==0 && !PrisonBreakUtility.IsPrisonBreaking(recruit) && !ai.CurrentState.Threat.Immediate)
                         {GameDataSaveLoader.SaveGame("PrisonBreakContained");stage=99;Pass("native mixed defense neutralized rebellion; living prisoner returned to bed and treated");Log.Message("[PrisonBreakTests] DONE");return;}
                         Check(Find.TickManager.TicksGame-breakTick<120000,"Rebellion did not reach safe containment/treatment within two days.");

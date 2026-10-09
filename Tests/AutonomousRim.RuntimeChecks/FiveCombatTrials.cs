@@ -220,7 +220,7 @@ namespace AutonomousRim.RuntimeChecks
                 Log.Message("[FiveCombatTrials] CARE SETUP: "+ExpectedAllies+" medical beds, table/chairs, recreation, fueled torch, 80 survival meals, 30 herbal medicine; native recovery only.");
             }
             Check(allies.Count(CombatManager.Ranged)==(Elite?4:2) && allies.Count==ExpectedAllies && allies.All(p=>p.apparel.WornApparel.Any(a=>a.def.defName=="Apparel_FlakVest" || Revision && a.def.defName=="Apparel_PlateArmor") &&
-                p.apparel.WornApparel.Any(a=>a.def.defName=="Apparel_SimpleHelmet")),"Expected two ranged, two melee, four vests and four helmets.");
+                p.apparel.WornApparel.Any(a=>a.def.defName=="Apparel_SimpleHelmet")),"Expected mixed ranged/melee roster with armor and helmets for every ally.");
             if(number==1)
             {
                 layout="vantagem: cobertura e duas passagens";
@@ -240,7 +240,7 @@ namespace AutonomousRim.RuntimeChecks
             }
             else
             {
-                layout=hard?"desvantagem: superioridade mechanoid":"vantagem numerica: quatro contra dois mechs";
+                layout=hard?"desvantagem: superioridade mechanoid":Elite?"equilibrio numerico: seis contra seis mechs":"vantagem numerica: quatro contra dois mechs";
                 for(int z=-6;z<=6;z++)if(z!=0)Build("Sandbags",-12,z);
             }
             int count=Revision && !Varied?(number==3?8:4):(hard?new[]{3,4,6,6,5}:new[]{3,4,4,4,2})[number-1];

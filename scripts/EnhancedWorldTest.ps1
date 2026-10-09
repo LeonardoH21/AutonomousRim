@@ -1,6 +1,6 @@
 param(
  [string]$RimWorldDir='C:\Users\Administrador\Downloads\RimWorld.v1.6.4633\RimWorld.v1.6.4633\game',
- [ValidateSet('Setup','Construction','Integrated','Combat')][string]$Stage='Setup',
+ [ValidateSet('Setup','Construction','Integrated','Combat','Prison','PrisonSafety','PrisonBreak','Commerce','CommerceSafety','Orbital','Caravan')][string]$Stage='Setup',
  [ValidateRange(1,5)][int]$Case=1,
  [switch]$Disadvantage,
  [switch]$PostBattleCare,
@@ -27,6 +27,21 @@ if($Stage -eq 'Setup'){
   if($Disadvantage){$taskFlags+='autonomousrimdisadvantage'}
   if($PostBattleCare){$taskFlags+='autonomousrimpostbattlecare'}
   & "$PSScriptRoot\FunctionalStage.ps1" -RimWorldDir $RimWorldDir -Stage ('enhanced-combat-'+$Case) -Flag autonomousrimcombatfive -ExtraFlags $taskFlags -ResumeSave $ResumeSave -SuccessMarker '[FiveCombatTrials] DONE' -TimeoutSeconds 3600 -Visible:$Visible
+  return
+ }
+ if($Stage -in @('Prison','PrisonSafety','PrisonBreak','Commerce','CommerceSafety','Orbital','Caravan')){
+  $taskFixtureFlags=@('autonomousrimelitesix','autonomousrimfixturebaseline')
+  $taskFixtureFlag=switch($Stage){
+   Prison {'autonomousrimprisontest'}
+   PrisonSafety {'autonomousrimprisonsafetytest'}
+   PrisonBreak {'autonomousrimprisonbreaktest'}
+   Commerce {'autonomousrimcommercetest'}
+   CommerceSafety {'autonomousrimcommercesafetytest'}
+   Orbital {'autonomousrimorbitaltest'}
+   Caravan {'autonomousrimcaravantest'}
+  }
+  $taskFixtureMarker=if($Stage -eq 'PrisonBreak'){'[PrisonBreakTests] DONE'}elseif($Stage.StartsWith('Prison')){'[PrisonTests] DONE'}else{'[CommerceTests] DONE'}
+  & "$PSScriptRoot\FunctionalStage.ps1" -RimWorldDir $RimWorldDir -Stage ('enhanced-'+$Stage.ToLowerInvariant()) -Flag $taskFixtureFlag -ExtraFlags $taskFixtureFlags -ResumeSave $ResumeSave -SuccessMarker $taskFixtureMarker -TimeoutSeconds 3600 -Visible:$Visible
   return
  }
  $taskFlags=@('autonomousrimelitesix')
