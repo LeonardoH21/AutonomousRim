@@ -10,6 +10,36 @@ namespace AutonomousRim.Execution
 {
     public static class StoneProductionManager
     {
+        private static Dictionary<ThingDef,int> ReserveFutureWalls(Map map,ColonyState state,List<RoomProject> projects)
+        {
+            var category=DefDatabase<ThingCategoryDef>.GetNamed("StoneBlocks");
+            // Native blueprints/frames already reserve their material. Reserve
+            // unissued plans too, once per shared task, on every review.
+            var budget=BaseConstructionManager.Available(map).Where(p=>p.Key.IsWithinCategory(category))
+                .ToDictionary(p=>p.Key,p=>Math.Max(0,p.Value));
+            var future=projects.OrderBy(p=>p.Priority).SelectMany(p=>p.Shell).Distinct()
+                .Where(t=>t.Def==ThingDefOf.Wall && !t.Issued && !t.WasCompleted && !t.CancelledByPlayer &&
+                    t.UpgradeMaterial==null && t.Pending?.Spawned!=true && !t.Complete(map) &&
+                    !t.Position.GetThingList(map).Any(b=>b is Blueprint || b is Frame)).ToList();
+            int cost(ConstructionTask task,ThingDef stuff)=>CostListCalculator.CostListAdjusted(task.Def,stuff)
+                .Where(c=>c.thingDef==stuff).Sum(c=>c.count);
+            foreach(var task in future.Where(t=>t.Stuff?.IsWithinCategory(category)==true))
+            {
+                budget.TryGetValue(task.Stuff,out int remaining);int needed=cost(task,task.Stuff);
+                if(remaining>=needed)budget[task.Stuff]=remaining-needed;
+                else task.Stuff=ThingDefOf.WoodLog; // Only an unissued automatic plan changes.
+            }
+            if(state.EstimatedFoodDays<2)return budget;
+            var eligible=budget.Where(p=>p.Value>=40).Select(p=>p.Key).ToHashSet();
+            foreach(var task in future.Where(t=>t.Stuff==ThingDefOf.WoodLog))
+            {
+                var stone=budget.Where(p=>eligible.Contains(p.Key)).OrderByDescending(p=>p.Value).FirstOrDefault();
+                if(stone.Key==null)break;
+                int needed=cost(task,stone.Key);if(stone.Value<needed)break;
+                task.Stuff=stone.Key;budget[stone.Key]-=needed;
+            }
+            return budget;
+        }
         public static void CancelDemolition(Map map,Thing wall)
         {
             foreach(var pawn in map.mapPawns.FreeColonistsSpawned.Where(p=>p.CurJob?.def==JobDefOf.Deconstruct &&
@@ -27,6 +57,7 @@ namespace AutonomousRim.Execution
                     task.Stuff=task.UpgradeFrom.Stuff;task.UpgradeMaterial=null;task.UpgradeFrom=null;
                     task.UpgradeDeclined=true;task.WasCompleted=true;
                 }
+            var wallBudget=ReserveFutureWalls(map,state,projects);
             var recipe=DefDatabase<RecipeDef>.GetNamedSilentFail("Make_StoneBlocksAny");
             if(recipe==null || !recipe.AvailableNow)return;
             var category=DefDatabase<ThingCategoryDef>.GetNamed("StoneBlocks");
@@ -44,13 +75,7 @@ namespace AutonomousRim.Execution
             var stone=map.listerThings.AllThings.Where(t=>t.Spawned && t.def.IsWithinCategory(category) && !t.IsForbidden(Faction.OfPlayer))
                 .GroupBy(t=>t.def).OrderByDescending(g=>g.Sum(t=>t.stackCount)).FirstOrDefault();
             if(stone==null || blocks<40 || state.EstimatedFoodDays<2)return;
-            int budget=stone.Sum(t=>t.stackCount);
-            foreach(var task in projects.SelectMany(p=>p.Shell).Where(t=>t.Def==ThingDefOf.Wall && !t.Issued && !t.WasCompleted && !t.CancelledByPlayer))
-            {
-                int cost=CostListCalculator.CostListAdjusted(ThingDefOf.Wall,stone.Key).Sum(c=>c.count);
-                if(budget<cost)break;
-                task.Stuff=stone.Key;budget-=cost;
-            }
+            wallBudget.TryGetValue(stone.Key,out int budget);
             // Replace one AI-owned wooden wall at a time, only after basic construction is stable.
             if(state.EstimatedFoodDays<4 || state.HostilePawnCount>0 || state.DownedColonists>0 ||
                 projects.Any(p=>p.Crop==null && !p.Completed && p.Priority<=ConstructionPriority.High) ||

@@ -93,8 +93,10 @@ namespace AutonomousRim.Execution
         private static IEnumerable<RoomProject> NeededBedrooms(Map map, List<RoomProject> all)
         {
             var bedrooms=all.Where(p=>p.Kind=="Quarto");
-            return all.Any(p=>p.Kind==CourtyardBasePlanner.ReservationKind)?bedrooms.Take(map.mapPawns.FreeColonistsSpawnedCount):bedrooms;
+            return all.Any(p=>p.Kind==CourtyardBasePlanner.ReservationKind || p.Kind==ModularBasePlanner.ReservationKind)
+                ?bedrooms.OrderByDescending(p=>p.Completed).Take(map.mapPawns.FreeColonistsSpawnedCount):bedrooms;
         }
+        private static bool EssentialFoodRoom(RoomProject p) => p.Kind=="Cozinha" || p.Kind=="Abate" || p.Kind=="Estoque";
         private static void CompleteDoorFloorPlan(Map map, List<RoomProject> projects)
         {
             if (!projects.Any(p => p.Kind == CourtyardBasePlanner.ReservationKind)) return;
@@ -115,13 +117,13 @@ namespace AutonomousRim.Execution
         private static bool DependsOn(Map map, RoomProject p, List<RoomProject> all)
         {
             if(p.LayoutSlot?.StartsWith("prison:finish:")==true && all.Any(r=>r.LayoutSlot==p.LayoutSlot.Replace("prison:finish:","prison:cell:") && !r.Completed))return true;
-            if(p.LayoutSlot?.StartsWith("prison:")==true && p.Kind!="Preparação do terreno" && all.Any(r=>r.Kind=="Quarto" && !r.Completed && r.State!=ConstructionState.Paused))return true;
+            if(p.LayoutSlot?.StartsWith("prison:")==true && p.Kind!="Preparação do terreno" && NeededBedrooms(map,all).Any(r=>!r.Completed && r.State!=ConstructionState.Paused))return true;
             if (all.Any(r => r.Kind == ModularBasePlanner.ReservationKind))
             {
-                // Finish habitable bedrooms before spending their materials on secondary shells.
-                // Sibling bedrooms still progress independently when one lacks materials.
+                // Feed/store while providing shelter. A spare room for future
+                // recruits must not stop the colony's current production chain.
                 if (p.Kind != "Recreação inicial" && p.Kind != "Preparação do terreno" && p.Kind != ModularBasePlanner.ReservationKind && p.Kind != "Quarto" &&
-                    all.Any(r => r.Kind == "Quarto" && !r.Completed && r.State != ConstructionState.Paused)) return true;
+                    !EssentialFoodRoom(p) && NeededBedrooms(map,all).Any(r => !r.Completed && r.State != ConstructionState.Paused)) return true;
                 if (p.Kind == "Corredor" && all.Any(r => ModularBasePlanner.IsModular(r) && r.Crop == null && !r.Completed)) return true;
                 // Validate obstacles per task below. A rock under one wall or
                 // workbench must not hold every other funded wall in its room.
@@ -195,7 +197,7 @@ namespace AutonomousRim.Execution
             int ticks = Find.TickManager.TicksGame;
             bool danger = map.mapPawns.AllPawnsSpawned.Any(p => !p.Dead && !p.Downed && p.HostileTo(Faction.OfPlayer));
             CompleteDoorFloorPlan(map, projects);
-            if(projects.Any(p=>p.Kind==CourtyardBasePlanner.ReservationKind))
+            if(projects.Any(p=>p.Kind==CourtyardBasePlanner.ReservationKind || p.Kind==ModularBasePlanner.ReservationKind))
             {
                 var needed=new HashSet<RoomProject>(NeededBedrooms(map,projects));
                 foreach(var bedroom in projects.Where(p=>p.Kind=="Quarto"))
@@ -248,7 +250,7 @@ namespace AutonomousRim.Execution
                     if (p.LayoutSlot?.StartsWith("prep:mod:") == true)
                     {
                         var owner = projects.FirstOrDefault(r => "prep:" + r.LayoutSlot == p.LayoutSlot);
-                        if (owner != null && owner.Kind != "Quarto" && projects.Any(r => r.Kind == "Quarto" && !r.Completed))
+                        if (owner != null && owner.Kind != "Quarto" && !EssentialFoodRoom(owner) && NeededBedrooms(map,projects).Any(r => !r.Completed))
                         { p.State = ConstructionState.Blocked; p.BlockReason = "Limpeza aguarda os quartos essenciais."; continue; }
                     }
                     var rocks = p.MineCells.Select(c => c.GetEdifice(map)).Where(t => t is Mineable).ToList();
