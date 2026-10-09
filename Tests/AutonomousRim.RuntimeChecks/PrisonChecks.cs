@@ -8,6 +8,7 @@ using RimWorld;
 using RimWorld.Planet;
 using Verse;
 using Verse.AI;
+using Verse.AI.Group;
 
 namespace AutonomousRim.RuntimeChecks
 {
@@ -137,7 +138,7 @@ namespace AutonomousRim.RuntimeChecks
             // Destroying an ancient chamber during fixture preparation can spawn defenders.
             // Remove only these setup by-products before reintroducing the original colonists.
             foreach(var pawn in map.mapPawns.AllPawnsSpawned.ToList())
-            {pawn.DeSpawn();Find.WorldPawns.PassToWorld(pawn,PawnDiscardDecideMode.KeepForever);}
+            {pawn.GetLord()?.Notify_PawnLost(pawn,PawnLostCondition.ExitedMap);pawn.DeSpawn();Find.WorldPawns.PassToWorld(pawn,PawnDiscardDecideMode.KeepForever);}
             for(int i=0;i<ExpectedDefenders;i++)
             {
                 var helper=Elite?originals[i]:SpawnPawn(Faction.OfPlayer,center+new IntVec3(i*2,0,-12));
