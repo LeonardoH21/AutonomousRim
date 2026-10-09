@@ -133,6 +133,19 @@ namespace AutonomousRim.RuntimeChecks
             }
             if(scenario==3)
             {
+                var originalEnemyPositions=enemies.Take(3).Select(e=>e.Position).ToArray();
+                try
+                {
+                    var nearbyEnemies=enemies.Take(3).ToList();
+                    for(int i=0;i<nearbyEnemies.Count;i++)nearbyEnemies[i].Position=allies[0].Position+new IntVec3(8,0,i);
+                    var supportOrders=allies.Select(a=>new CombatOrder{Pawn=a}).ToList();
+                    var overwhelmed=HarmonyLib.AccessTools.Method(typeof(CombatManager),"Overwhelmed");
+                    Check(!(bool)overwhelmed.Invoke(null,new object[]{allies[0],supportOrders,nearbyEnemies}),"Supported three-versus-three fixture unexpectedly overwhelmed.");
+                    foreach(var helper in supportOrders.Where(o=>o.Pawn!=allies[0]))helper.Retreated=true;
+                    Check((bool)overwhelmed.Invoke(null,new object[]{allies[0],supportOrders,nearbyEnemies}),"Withdrawing allies were counted as active defensive support.");
+                    Check(!(bool)overwhelmed.Invoke(null,new object[]{allies[0],supportOrders,new List<Pawn>()}),"Withdrawing pawn cannot recover after threats disappear.");
+                }
+                finally{for(int i=0;i<originalEnemyPositions.Length;i++)enemies[i].Position=originalEnemyPositions[i];}
                 var shelter=HarmonyLib.AccessTools.Method(typeof(CombatManager),"Shelter");
                 Check(!(bool)shelter.Invoke(null,new object[]{map,retreatDoor.Position,enemies}),"Doorway was incorrectly classified as a retreat shelter.");
                 Check((bool)shelter.Invoke(null,new object[]{map,center+new IntVec3(-14,0,0),enemies}),"Enclosed interior was rejected as a retreat shelter.");

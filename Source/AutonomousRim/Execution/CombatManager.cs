@@ -64,10 +64,15 @@ namespace AutonomousRim.Execution
             p.health.hediffSet.PainTotal > p.GetStatValue(StatDefOf.PainShockThreshold)*0.9f ||
             (p.health.hediffSet.GetFirstHediffOfDef(HediffDefOf.BloodLoss)?.Severity ?? 0)>0.3f ||
             (p.needs?.rest?.CurLevel ?? 1)<0.08f;
-        private static bool Overwhelmed(Pawn p, List<Pawn> allies, List<Pawn> enemies)
+        private static bool Overwhelmed(Pawn p, List<CombatOrder> orders, List<Pawn> enemies)
         {
             var near = enemies.Where(e => e.Position.DistanceTo(p.Position) < 16).ToList();
-            var help = allies.Where(a => !a.Downed && a.Position.DistanceTo(p.Position) < 18).ToList();
+            // A sheltered or withdrawing ally cannot fund another pawn's decision
+            // to hold an exposed line. Include the evaluated pawn so recovery
+            // remains possible when it can handle the remaining threat alone.
+            var help = orders.Where(o => o.Pawn == p || !o.Retreated && !Wounded(o.Pawn))
+                .Select(o => o.Pawn).Where(a => PawnAnalyzer.IsCombatReady(a) &&
+                    a.Position.DistanceTo(p.Position) < 18).ToList();
             return near.Count > 0 && (near.Count > help.Count * 2 ||
                 near.Sum(PawnAnalyzer.EstimateCombatValue) > Math.Max(1, help.Sum(PawnAnalyzer.EstimateCombatValue)) * 1.65f);
         }
@@ -247,7 +252,7 @@ namespace AutonomousRim.Execution
                         p.CanReach(e,PathEndMode.Touch,Danger.Deadly))).FirstOrDefault(e=>e!=null)??target;
                     assignments[p.thingIDNumber]=target.thingIDNumber;
                 }
-                bool danger=globalRetreat||Wounded(p)||Overwhelmed(p,allies,enemies);
+                bool danger=globalRetreat||Wounded(p)||Overwhelmed(p,orders,enemies);
                 if(!Ranged(p) && colonists.Any(a=>a!=p && a.equipment?.Primary!=null && !Ranged(a) &&
                     a.Position.DistanceTo(p.Position)<24 && (!PawnAnalyzer.IsCombatReady(a) || Wounded(a) || orders.Any(o=>o.Pawn==a && o.Retreated))) &&
                     enemies.Count(e=>e.Position.DistanceTo(p.Position)<14)>1 &&
@@ -316,7 +321,7 @@ namespace AutonomousRim.Execution
                 var position=Position(map,order,target,enemies,colonists,retreat,occupied);
                 if(retreat)
                 {
-                    bool canPause=!Overwhelmed(p,allies,enemies) && p.health.summaryHealth.SummaryHealthPercent>=0.8f &&
+                    bool canPause=!Overwhelmed(p,orders,enemies) && p.health.summaryHealth.SummaryHealthPercent>=0.8f &&
                         (!enemies.Any(e=>!Ranged(e)) || enemies.Where(e=>!Ranged(e)).All(e=>e.GetStatValue(StatDefOf.MoveSpeed)<=p.GetStatValue(StatDefOf.MoveSpeed)));
                     if(Ranged(p) && canPause && Distance(p.Position,enemies)>Math.Max(8,enemies.Max(e=>e.GetStatValue(StatDefOf.MoveSpeed))*1.5f+2) &&
                         (CoverUtility.CalculateOverallBlockChance(p.Position,target.Position,map)>0.25f || enemies.All(e=>!Ranged(e))) &&
