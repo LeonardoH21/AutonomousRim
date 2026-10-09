@@ -55,11 +55,17 @@ namespace AutonomousRim.Planning
             !BaseConstructionManager.Tasks(p).Any(t => t.CancelledByPlayer) && p.Shell.All(t => t.Complete(map)) &&
             p.Furniture.Where(t => t.Def.defName != "ShelfSmall").All(t => t.Complete(map)) &&
             (!p.RequiresRoof || p.RoofArea.All(c => c.Roofed(map)));
-        private static bool InitialCoreReady(Map map,List<RoomProject> projects)
+        private static bool ShelterReady(Map map,List<RoomProject> projects)
         {
             int population=map.mapPawns.FreeColonistsSpawnedCount;
             var bedrooms=projects.Where(p=>IsModular(p) && p.Kind=="Quarto").OrderByDescending(p=>Functional(map,p)).Take(population).ToList();
-            return bedrooms.Count==population && bedrooms.All(p=>Functional(map,p)) && projects.Where(p=>IsModular(p) &&
+            return bedrooms.Count==population && bedrooms.All(p=>Functional(map,p));
+        }
+        private static bool CoreServicesReady(Map map,List<RoomProject> projects) => ShelterReady(map,projects) &&
+            projects.Where(p=>IsModular(p) && p.Crop==null && p.Kind!="Quarto").All(p=>Functional(map,p));
+        private static bool InitialCoreReady(Map map,List<RoomProject> projects)
+        {
+            return ShelterReady(map,projects) && projects.Where(p=>IsModular(p) &&
                 (p.Kind=="Cozinha" || p.Kind=="Abate" || p.Kind=="Estoque" || p.Kind=="Freezer" || p.Kind=="Pesquisa" ||
                  p.Kind=="Energia e climatização")).All(p=>Functional(map,p));
         }
@@ -221,8 +227,7 @@ namespace AutonomousRim.Planning
                 if (!AddRoom(map, projects, root, "Quarto", 1)) return "Sem módulo acessível disponível para novos quartos.";
             foreach (var kind in new[] { "Cozinha", "Abate", "Estoque", "Freezer", "Energia e climatização" })
                 if (!projects.Any(p => p.Kind == kind)) AddRoom(map, projects, root, kind, kind == "Estoque" ? 4 : kind == "Freezer" ? 2 : 1);
-            bool functional(RoomProject p) => Functional(map,p);
-            bool coreReady = projects.Where(p => IsModular(p) && p.Crop == null).All(functional);
+            bool coreReady = CoreServicesReady(map,projects);
             // Production must not wait for optional dining, hospital or generator modules.
             bool initialReady = InitialCoreReady(map,projects);
             if (initialReady && projects.Any(p => p.Kind == "Pesquisa" && p.Completed) && !projects.Any(p => p.Kind == "Oficina"))

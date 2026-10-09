@@ -85,12 +85,15 @@ namespace AutonomousRim.RuntimeChecks
                 foreach(var p in dependencies.Where(p=>p.Kind!=ModularBasePlanner.ReservationKind))
                 {p.LayoutSlot="mod:0:0:"+dependencies.IndexOf(p);p.Completed=p!=spare;}
                 bool Ready()=>(bool)AccessTools.Method(typeof(ModularBasePlanner),"InitialCoreReady").Invoke(null,new object[]{map,dependencies});
+                bool ServicesReady()=>(bool)AccessTools.Method(typeof(ModularBasePlanner),"CoreServicesReady").Invoke(null,new object[]{map,dependencies});
                 Check(Ready(),"Spare bedroom withheld workshop planning after occupied shelter/services were ready.");
+                Check(ServicesReady(),"Spare bedroom withheld secondary services despite enough occupied shelter.");
                 var occupiedBedroom=dependencies.First(p=>p.Kind=="Quarto" && p.Completed);
-                occupiedBedroom.Completed=false;Check(!Ready(),"Workshop planned without enough functional bedrooms.");
-                occupiedBedroom.Completed=true;kitchen.Completed=false;Check(!Ready(),"Workshop planned before functional kitchen.");
+                occupiedBedroom.Completed=false;Check(!Ready() && !ServicesReady(),"Production/secondary services planned without enough functional bedrooms.");
+                occupiedBedroom.Completed=true;kitchen.Completed=false;Check(!Ready() && !ServicesReady(),"Production/secondary services planned before functional kitchen.");
                 kitchen.Completed=true;
                 Log.Message("[ConstructionDependencyTests] PASS: workshop readiness uses current population shelter; extra bedroom does not gate production.");
+                Log.Message("[ConstructionDependencyTests] PASS: secondary services share population shelter readiness; spare bedrooms cannot withhold hospital/dining planning.");
                 var lampCell=GenRadial.RadialCellsAround(map.Center,45,true).First(c=>c.InBounds(map) && c.Standable(map) && !c.Fogged(map) && !c.GetThingList(map).Any() && (c+IntVec3.North).InBounds(map) && !(c+IntVec3.North).GetThingList(map).Any());
                 var lampRoom=new RoomProject();lampRoom.Furniture.Add(new ConstructionTask{Def=DefDatabase<ThingDef>.GetNamed("WallLamp"),Position=lampCell,Rotation=Rot4.North});
                 Check(!RingBasePlanner.Validate(map,new List<RoomProject>{lampRoom}),"Unsupported lamp accepted.");
