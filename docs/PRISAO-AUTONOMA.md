@@ -38,6 +38,8 @@ Fugas nativas de prisão entram explicitamente no detector de ameaças. O módul
 
 Prisioneiros que já estavam no save permanecem manuais. Alterações do jogador em interação ou ideologia de conversão cedem o controle. Draft e novas ordens forçadas preservam o auxiliar manual. Ao desligar, encerra somente ordens próprias, restaura interações que ainda lhe pertencem e interrompe obras pendentes da prisão; mantém estruturas concluídas e capturas já realizadas. Estado, destinos, ordens e histórico são salvos.
 
-## Validação pendente
+## Validação por etapas
 
-Validar construção em save real, marcação das camas após teto, energia, alimentação, tratamento sem medicina, estabilização/captura, conversão com DLC, recrutamento, liberação e diplomacia, fuga, intervenção manual e salvar/carregar durante transporte. O primeiro planejamento térmico é conservador; adaptar equipamentos a mudanças posteriores de estação é melhoria futura. Layouts antigos que não sejam modulares precisam já ter cama de colono sobrando para o recrutamento automático. Nenhum teste de combate ou partida foi executado nesta revisão.
+O ensaio nativo `prison-20261008-210807-417` passou em captura de dois inimigos, tratamento, conversão com Ideology, recrutamento real, liberação, persistência e desligamento. A fixture prepara camas e candidatos e reduz resistência/certainty inicialmente para acelerar as interações; isso não descreve uma economia natural nem altera o módulo de produção. Corrigido também o cache nativo da célula de prisão ao configurar camas depois da construção.
+
+O ensaio integrado atingiu três vagas construídas naturalmente e registradas no checkpoint do 13º dia. Ainda faltam cenários específicos de segurança, fuga, intervenção manual, tratamento sem medicina e salvar/carregar durante transporte; liberação não comprova ganho diplomático contra facção permanentemente hostil. O primeiro planejamento térmico é conservador; adaptação sazonal prolongada permanece pendente. Layouts antigos que não sejam modulares precisam já ter cama de colono sobrando para o recrutamento automático. Evidências e próximos passos em `VALIDACAO-ETAPAS.md`.
