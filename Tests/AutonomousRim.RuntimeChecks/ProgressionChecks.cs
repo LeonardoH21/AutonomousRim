@@ -145,12 +145,28 @@ namespace AutonomousRim.RuntimeChecks
                 protectedBill.Bill.hpRange=originalRange;
                 FoodManager.RemoveOwnedBills(clothes);
                 var storage=new RoomProject{Kind="Estoque",Origin=center+new IntVec3(-20,0,-20),InteriorSize=7,Completed=true,RequiresRoof=false};storage.StorageCells=storage.Interior.Cells.ToList();
+                var spotDef=DefDatabase<ThingDef>.GetNamed("CraftingSpot");
+                Check(spotDef.hasInteractionCell,"Crafting spot interaction fixture invalid.");
+                var interaction=storage.Interior.Cells.First();
+                var spot=(Building)Spawn("CraftingSpot",interaction-spotDef.interactionCellOffset);
+                foreach(var cell in storage.Interior.Cells)Spawn("PowerConduit",cell);
+                Check(spot.Spawned,"Conduit fixture removed the workstation.");
+                var plannedSpot=new ConstructionTask{Def=spotDef,Position=storage.Interior.CenterCell+new IntVec3(1,0,1)};
+                storage.Furniture.Add(plannedSpot);
                 var projects=new List<RoomProject>{storage};
                 for(int i=0;i<70;i++)Spawn("Steel",center+new IntVec3(-35+i%10,0,20+i/10));
                 StoragePolicy.ManageFoodStorage(map,state,projects);
                 Check(storage.Furniture.Count(t=>t.Def.defName=="ShelfSmall")==2,"Storage upgrade must queue only two shelves at a time under capacity pressure.");
+                Check(storage.Furniture.Where(t=>t.Def.defName=="ShelfSmall").All(t=>t.Position!=spot.InteractionCell &&
+                    t.Position!=plannedSpot.Position+spotDef.interactionCellOffset),"Shelf plan blocks native or planned workstation interaction.");
                 StoragePolicy.ManageFoodStorage(map,state,projects);
-                Check(storage.Furniture.Count==2,"Unfinished storage upgrade duplicated shelves.");
+                Check(storage.Furniture.Count(t=>t.Def.defName=="ShelfSmall")==2,"Unfinished storage upgrade duplicated shelves.");
+                var blockedShelf=storage.Furniture.First(t=>t.Def.defName=="ShelfSmall");blockedShelf.Position=spot.InteractionCell;
+                var cancelledShelf=new ConstructionTask{Def=blockedShelf.Def,Position=spot.InteractionCell,CancelledByPlayer=true};storage.Furniture.Add(cancelledShelf);
+                StoragePolicy.ManageFoodStorage(map,state,projects);
+                Check(blockedShelf.Position!=spot.InteractionCell && cancelledShelf.Position==spot.InteractionCell && cancelledShelf.CancelledByPlayer,
+                    "Unfinished room did not repair old unissued shelf plan or moved a player-cancelled plan.");
+                storage.Furniture.Remove(cancelledShelf);
                 storage.Completed=true;AgriculturePlanner.Add(map,projects);
                 Check(new[]{"Plant_Rice","Plant_Cotton","Plant_Healroot"}.All(name=>projects.Any(p=>p.Crop?.defName==name)),"Food/cotton/medicine crop plan missing.");
                 Check(projects.Where(p=>p.Crop!=null).SelectMany(p=>p.StorageCells).Distinct().Count()==projects.Where(p=>p.Crop!=null).Sum(p=>p.StorageCells.Count),"Agriculture plots overlap.");

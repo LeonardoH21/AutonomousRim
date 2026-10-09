@@ -84,7 +84,7 @@ namespace AutonomousRim.Execution
         private static void QueueShelves(Map map, RoomProject freezer, int desired, IReadOnlyList<RoomProject> projects)
         {
             // Upgrade completed rooms only; preserve player cancellations and room access.
-            if (freezer == null || !freezer.Completed || freezer.State == ConstructionState.Paused) return;
+            if (freezer == null || freezer.State == ConstructionState.Paused) return;
             ThingDef shelf = DefDatabase<ThingDef>.GetNamedSilentFail("ShelfSmall");
             if (shelf == null) return; // Planned prerequisites feed the normal research planner.
             int existing = freezer.Furniture.Count(t => t.Def?.defName == shelf.defName);
@@ -93,13 +93,35 @@ namespace AutonomousRim.Execution
             occupied.UnionWith(projects.Where(p => p != freezer).SelectMany(p => p.Furniture)
                 .Where(t => t.Def is ThingDef && !t.Def.defName.Contains("Conduit"))
                 .SelectMany(t => GenAdj.OccupiedRect(t.Position, t.Rotation, t.Def.Size)));
+            var interactions=new HashSet<IntVec3>(projects.SelectMany(BaseConstructionManager.Tasks)
+                .Where(t=>t.Def is ThingDef d && d.hasInteractionCell)
+                .Select(t=>t.Position+((ThingDef)t.Def).interactionCellOffset.RotatedBy(t.Rotation)));
+            interactions.UnionWith(map.listerBuildings.allBuildingsColonist.Where(b=>b.def.hasInteractionCell).Select(b=>b.InteractionCell));
+            occupied.UnionWith(interactions);
+            occupied.UnionWith(map.listerBuildings.allBuildingsColonist.Where(b=>!b.def.defName.Contains("Conduit")).SelectMany(b=>b.OccupiedRect()));
+            IntVec3 freeCell()=>freezer.Interior.Cells.Where(c =>
+                c.x != freezer.Interior.CenterCell.x && c.z != freezer.Interior.CenterCell.z &&
+                !freezer.Shell.Any(t => t.Def is ThingDef door && door.IsDoor && (t.Position.x == c.x || t.Position.z == c.z)) &&
+                !occupied.Contains(c) && c.GetEdifice(map) == null &&
+                (c.GetZone(map) == null || c.GetZone(map) == freezer.Stockpile)).DefaultIfEmpty(IntVec3.Invalid).First();
+            // Migrate only unissued automatic shelf plans. A blocked plan can
+            // keep the room unfinished, so this repair must precede that gate.
+            foreach(var task in freezer.Furniture.Where(t=>t.Def==shelf && !t.Issued && t.Pending?.Spawned!=true && !t.WasCompleted && !t.CancelledByPlayer && interactions.Contains(t.Position)).ToList())
+            {
+                var cell=freeCell();
+                if(!cell.IsValid)
+                {
+                    // Capacity upgrades are optional. Do not keep an impossible
+                    // unstarted plan blocking completion of a usable room.
+                    freezer.Furniture.Remove(task);existing--;freezer.BlockReason=null;continue;
+                }
+                task.Position=cell;task.RetryAfter=0;task.FailedJobs=0;task.LastFailure=null;
+                occupied.Add(cell);freezer.BlockReason=null;
+            }
+            if(!freezer.Completed)return;
             while (existing < desired)
             {
-                IntVec3 cell = freezer.Interior.Cells.Where(c =>
-                    c.x != freezer.Interior.CenterCell.x && c.z != freezer.Interior.CenterCell.z &&
-                    !freezer.Shell.Any(t => t.Def is ThingDef door && door.IsDoor &&
-                        (t.Position.x == c.x || t.Position.z == c.z)) && !occupied.Contains(c) &&
-                    c.GetEdifice(map) == null && (c.GetZone(map) == null || c.GetZone(map) == freezer.Stockpile)).DefaultIfEmpty(IntVec3.Invalid).First();
+                IntVec3 cell = freeCell();
                 if (!cell.IsValid) break;
                 var task = new ConstructionTask
                 {

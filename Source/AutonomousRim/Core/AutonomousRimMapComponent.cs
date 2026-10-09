@@ -237,7 +237,12 @@ namespace AutonomousRim.Core
             baseAutomation = enabled;
             if (enabled)
             {
+                foreach(var project in baseProjects.Where(p=>p.State==ConstructionState.Paused &&
+                    !BaseConstructionManager.Tasks(p).Any(t=>t.CancelledByPlayer)))project.State=ConstructionState.Planned;
                 PreviewBase();
+                // Reconcile queued storage before issuing construction on load
+                // or toggle; the periodic food/storage scan may not be due yet.
+                StorageStatus=StoragePolicy.ManageFoodStorage(map,CurrentState??ColonyStateScanner.Scan(map),baseProjects);
                 if (lootAutomation && CurrentState != null)
                 {
                     LootStatus = LootAccessManager.Apply(map, CurrentState, true, baseProjects, managedApparel, EquipmentAllowedFor, releasedLoot, out int released, (foodAutomation ? ownedBills : new List<ManagedFoodBill>()).Concat(equipmentAutomation ? defenseBills : new List<ManagedFoodBill>()).ToList());
