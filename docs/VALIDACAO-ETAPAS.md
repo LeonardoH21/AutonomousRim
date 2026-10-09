@@ -4,7 +4,7 @@ Objetivo: testar todas as funcionalidades, corrigir falhas e permitir retomada s
 
 ## Estado de retomada
 
-Em andamento: etapa 6, repetição dos cinco combates mistos após correções. Etapas 0–3 aprovadas no escopo indicado; prisão nativa, comércio local, orbital e caravana passaram. Construção completa atual é etapa 7. Infraestrutura de retomada salva no Git em `0a3ab83`; revisão tática posterior ainda em validação.
+Em andamento: etapa 7, ensaio integrado iniciado em 09/10. Etapas 0–3 aprovadas no escopo indicado; prisão nativa, comércio local, orbital e caravana passaram. Etapa 6 tem limitações explícitas e cenários adicionais pendentes. Correções e regressões de combate/resgate salvas no Git até `027a6da`.
 
 | Etapa | Escopo | Estado / evidência |
 |---|---|---|
@@ -100,3 +100,13 @@ Revisão da busca de abrigo: `combat-refuge-controls-20261008-220030-564` passou
 Regressões posteriores: `medical-rescue-regression-20261008-220338-207` passou nos sete controles, com resgate/tratamento nativo no hospital, estabilização no chão antes do prazo e preservação manual. `emergency-regression-20261008-220433-252` passou em detecção, suspensão, evacuação, recuperação gradual, reentrada em perigo e restauração. Nenhum processo de teste permaneceu aberto após essas rodadas.
 
 Pendências de combate: cenário difícil ainda inconclusivo; recuperação integral depois de confrontos mistos; ensaios variados contra manhunters/mechs preparados com `autonomousrimvariedthreats`, ainda não executados. Próxima etapa: autonomia integrada por vinte dias, com checkpoints nativos.
+
+## Ensaio integrado e retomada
+
+Perfil atual: `.tools/validation/integrated-colony-20261009-093012-172/`. Partida quicktest nativa, cinco colonos com skills 20, sem materiais ou pesquisas concedidos pelo observador. Peaceful, velocidade 3×. Construção, alimentação, equipamento, trabalho, agenda, estratégia, prisão, comércio e emergência ligados. Caravanas permanecem opção separada; o teste nativo de viagem já tem evidência própria.
+
+Primeiros marcos: primeiro quarto pronto em 16680 ticks (6,67 horas); mais de cem paredes antes do primeiro dia. `CheckModularSave.py` passou na geometria planejada: cinco módulos conectados, paredes compartilhadas, sem sobreposição e pisos de madeira previstos. Essa verificação não afirma que todos os pisos já foram construídos.
+
+Retomar caso o executor termine antes da conclusão: usar `scripts/FunctionalStage.ps1 -Stage integrated-resume -Flag autonomousrimmodulartrial -ExtraFlags @('autonomousrimintegratedtest','autonomousrimprogressiontrial','autonomousrimpeacefultrial') -SuccessMarker '[AutonomousRim.ModularTrial] PASS:' -ResumeSave '<perfil>/Saves/ModularCheckpoint.rws' -TimeoutSeconds 3600`. O novo perfil preserva o checkpoint anterior e o observador mantém o início original da contagem dos vinte dias.
+
+Exportação preparada: `ExportModularSave.ps1 -ValidationProfile '<perfil>' -Integrated`, opcionalmente `-CopyToGameSaves`. Remove somente observadores/metadados de teste, preservando a colônia. Confirmada recusa de exportação antecipada sem save final/PASS; exportação e carregamento do resultado aprovado ainda pendentes. Vinte dias de jogo não comprovam automaticamente passagem por inverno: registrar a cobertura sazonal efetivamente observada.

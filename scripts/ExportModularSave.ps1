@@ -1,22 +1,26 @@
 ﻿param(
- [Parameter(Mandatory=$true)][ValidatePattern('^[a-zA-Z0-9-]+$')][string]$RunName,
+ [Parameter(Mandatory=$true,ParameterSetName='Legacy')][ValidatePattern('^[a-zA-Z0-9-]+$')][string]$RunName,
+ [Parameter(Mandatory=$true,ParameterSetName='Validation')][string]$ValidationProfile,
+ [Parameter(ParameterSetName='Validation')][switch]$Integrated,
  [switch]$Progression,
  [switch]$CopyToGameSaves
 )
 $ErrorActionPreference='Stop'
 $projectRoot=Split-Path $PSScriptRoot -Parent
-$profile=Join-Path $projectRoot ('.tools\modular-construction-'+$RunName)
-$source=Join-Path $profile $(if($Progression){'Saves\ModularSteelComplete.rws'}else{'Saves\ModularInitialComplete.rws'})
-$logs=@(Get-ChildItem -LiteralPath $profile -Filter 'Player-*.log')
+$profile=if($ValidationProfile){(Resolve-Path -LiteralPath $ValidationProfile).Path}else{Join-Path $projectRoot ('.tools\modular-construction-'+$RunName)}
+if($ValidationProfile){$RunName=Split-Path $profile -Leaf}
+$source=Join-Path $profile $(if($Integrated){'Saves\IntegratedTwentyDaysComplete.rws'}elseif($Progression){'Saves\ModularSteelComplete.rws'}else{'Saves\ModularInitialComplete.rws'})
+$logs=@(Get-ChildItem -LiteralPath $profile -Filter 'Player*.log')
 if(!(Test-Path -LiteralPath $source) -or !($logs|Where-Object {
  $text=Get-Content -LiteralPath $_.FullName -Raw
  $text.Contains('[AutonomousRim.ModularTrial] PASS:') -and $text.Contains('MILESTONE refrigeration:') -and
- (!$Progression -or $text.Contains('native research, organized workshop'))
+ (!$Progression -or $text.Contains('native research, organized workshop')) -and
+ (!$Integrated -or $text.Contains('[AutonomousRim.ModularTrial] PASS: integrated twenty days;'))
 })){throw 'Completed native trial with working refrigeration is required.'}
 $document=New-Object System.Xml.XmlDocument
 $document.PreserveWhitespace=$true
 $document.Load($source)
-if($Progression){
+if($Progression -or $Integrated){
  $craftProof=@($document.SelectNodes("//*[@Class='AutonomousRim.RuntimeChecks.ModularConstructionTrial']/nativeCraftProof/li") | ForEach-Object {$_.InnerText})
  foreach($required in @('Apparel_SimpleHelmet','Apparel_PlateArmor','MeleeWeapon_LongSword')){
   if($required -notin $craftProof){throw "Native crafting proof missing: $required"}
@@ -36,7 +40,7 @@ for($index=$ids.Count-1;$index -ge 0;$index--){
   $entries[$index].ParentNode.RemoveChild($entries[$index])|Out-Null
  }
 }
-$name='AutonomousRim-Modular-13x13-'+$RunName+'.rws'
+$name=$(if($Integrated){'AutonomousRim-Integrada-20dias-'}else{'AutonomousRim-Modular-13x13-'})+$RunName+'.rws'
 $destination=Join-Path $profile ('Saves\'+$name)
 if(Test-Path -LiteralPath $destination){throw 'Export already exists; preserve the existing copy.'}
 $document.Save($destination)
