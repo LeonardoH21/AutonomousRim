@@ -39,8 +39,10 @@ namespace AutonomousRim.RuntimeChecks
         public static void VerifyOriginalsPresent(Map map)
         {
             if (!Enabled) return;
+            var residents = map.mapPawns.FreeColonistsSpawned.Concat(
+                map.mapPawns.AllPawnsSpawned.Select(p => p.carryTracker?.CarriedThing).OfType<Pawn>()).ToList();
             if (originalIds == null || originalIds.Count != 6 || originalIds.Any(id =>
-                !map.mapPawns.FreeColonistsSpawned.Any(p => !p.Dead && p.GetUniqueLoadID() == id)))
+                !residents.Any(p => !p.Dead && p.MapHeld == map && p.Faction == Faction.OfPlayer && p.GetUniqueLoadID() == id)))
                 throw new InvalidOperationException("An original EliteSix colonist died, was replaced or did not return to the fixture map.");
         }
     }
