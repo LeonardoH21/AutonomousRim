@@ -22,6 +22,8 @@ namespace AutonomousRim.RuntimeChecks
         private bool Elite=>GenCommandLine.CommandLineArgPassed("autonomousrimelitesix");
         private List<Pawn> eliteRoster=new List<Pawn>();
         private int eliteSpawnIndex;
+        private float initialTends;
+        private float Tends()=>map.mapPawns.FreeColonistsSpawned.Sum(p=>p.records.GetValue(DefDatabase<RecordDef>.GetNamed("TimesTendedOther")));
         public MedicalRescueChecks(Map map):base(map){}
         private void Check(bool c,string m){if(!c)throw new InvalidOperationException(m);}
         private ThingWithComps Item(string name)
@@ -108,7 +110,7 @@ namespace AutonomousRim.RuntimeChecks
             Check(ai.CombatOrders.Count==(Elite?4:3) && !doctor.Drafted,"Rescue must retain the remaining defenders versus two enemies.");
             Check(doctor.CurJob?.def==(stage==1?JobDefOf.Rescue:JobDefOf.TendPatient),"Wrong rescue/stabilization native job.");
             Log.Message($"[MedicalRescueTests] PASS dispatch {stage}: {(Elite?6:5)} colonists; 6 enemies, 4 neutralized; {(Elite?4:3)} defenders vs 2; doctor20 detached; deathTicks={HealthUtility.TicksUntilDeathDueToBloodLoss(patient)}; job={doctor.CurJob.def.defName}");
-            started=true;careReported=false;start=Find.TickManager.TicksGame;
+            initialTends=Tends();started=true;careReported=false;start=Find.TickManager.TicksGame;
         }
         public override void MapComponentUpdate()
         {
@@ -125,7 +127,7 @@ namespace AutonomousRim.RuntimeChecks
                 if(!started){stage=GenCommandLine.CommandLineArgPassed("autonomousrimmedicalfieldtest")?2:1;Setup();return;}
                 EliteFixtureBaseline.VerifyOriginalsPresent(map);
                 Check(!patient.Dead,"Patient died of bleeding before native treatment.");
-                if(patient.health.hediffSet.BleedRateTotal>0)
+                if(patient.health.hediffSet.BleedRateTotal>0 || patient.health.HasHediffsNeedingTend() || Tends()<=initialTends)
                 {
                     Check(!doctor.Drafted,"Doctor was recruited again while rescuing/tending.");
                     if(Find.TickManager.TicksGame-start>5000)throw new InvalidOperationException("Rescue/tend timeout: "+doctor.CurJob?.def.defName);
@@ -161,7 +163,7 @@ namespace AutonomousRim.RuntimeChecks
                 Check(!MedicalRescueManager.Safe(map,unsafeEnemy.Position,liveThreat),"Rescue safety allowed an active enemy contact cell.");
                 unsafeEnemy.Destroy(DestroyMode.Vanish);
                 Log.Message("[MedicalRescueTests] PASS safety/manual: enemy contact rejected; player draft/order preserved.");
-                ai.DisableAll();Log.Message("[MedicalRescueTests] DONE");done=true;Find.TickManager.CurTimeSpeed=TimeSpeed.Paused;
+                ai.DisableAll();GameDataSaveLoader.SaveGame(stage==1?"MedicalRescueHospitalComplete":"MedicalRescueFieldComplete");Log.Message("[MedicalRescueTests] DONE");done=true;Find.TickManager.CurTimeSpeed=TimeSpeed.Paused;
             }
             catch(Exception ex){GameDataSaveLoader.SaveGame("MedicalRescueFailure");done=true;Log.Error("[MedicalRescueTests] FAIL: "+ex);Find.TickManager.CurTimeSpeed=TimeSpeed.Paused;}
         }

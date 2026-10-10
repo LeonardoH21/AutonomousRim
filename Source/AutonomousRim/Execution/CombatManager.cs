@@ -228,7 +228,7 @@ namespace AutonomousRim.Execution
                 var p=order.Pawn;
                 if(p==null || !p.Spawned || p.Dead || !PawnAnalyzer.IsCombatReady(p)) { Stop(new List<CombatOrder>{order}); orders.Remove(order); continue; }
                 if(!p.Drafted || p.CurJob?.playerForced==true && p.CurJob.GetUniqueLoadID()!=order.JobId)
-                { p.drafter.FireAtWill=order.OriginalFireAtWill; excluded.Add(p); orders.Remove(order); }
+                { excluded.Add(p); orders.Remove(order); } // A later manual order keeps its current fire setting.
             }
             foreach(var p in colonists.Where(Eligible).Where(p=>!p.Drafted && !excluded.Contains(p) &&
                 !orders.Any(o=>o.Pawn==p) && p.CurJob?.playerForced!=true && enemies.Any(e=>e.Position.DistanceTo(p.Position)<50)))
@@ -372,7 +372,8 @@ namespace AutonomousRim.Execution
             {
                 var p=order.Pawn;
                 if(p?.drafter==null) continue;
-                p.drafter.FireAtWill=order.OriginalFireAtWill;
+                bool manualOrder=p.CurJob?.playerForced==true && p.CurJob.GetUniqueLoadID()!=order.JobId;
+                if(!manualOrder)p.drafter.FireAtWill=order.OriginalFireAtWill;
                 if(p.CurJob?.GetUniqueLoadID()==order.JobId) p.jobs.EndCurrentJob(JobCondition.InterruptForced);
                 if(p.CurJob?.playerForced!=true) p.drafter.Drafted=false;
             }
