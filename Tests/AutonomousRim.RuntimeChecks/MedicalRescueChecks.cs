@@ -157,12 +157,20 @@ namespace AutonomousRim.RuntimeChecks
                 var ai=map.GetComponent<AutonomousRimMapComponent>();ai.SetEmergencyAutomation(false);
                 doctor.drafter.Drafted=true;doctor.drafter.FireAtWill=false;var manual=JobMaker.MakeJob(JobDefOf.Wait_Combat);doctor.jobs.TryTakeOrderedJob(manual,JobTag.Misc,false);
                 ai.SetEmergencyAutomation(true);
-                Check(doctor.Drafted && !doctor.drafter.FireAtWill && doctor.CurJob.GetUniqueLoadID()==manual.GetUniqueLoadID(),"Manual order or fire setting was overwritten.");
+                Check(doctor.Drafted && !doctor.drafter.FireAtWill && doctor.jobs.AllJobs().Any(j=>j.GetUniqueLoadID()==manual.GetUniqueLoadID()),"Manual current/queued order or fire setting was overwritten.");
                 var unsafeEnemy=Spawn(false,center+new IntVec3(30,0,10),"Gun_Revolver",1);
                 var liveThreat=AutonomousRim.Perception.ThreatScanner.Scan(map,ColonyStateScanner.Scan(map));
                 Check(!MedicalRescueManager.Safe(map,unsafeEnemy.Position,liveThreat),"Rescue safety allowed an active enemy contact cell.");
+                ai.SetCombatAutomation(true);
+                var controlled=ai.CombatOrders.FirstOrDefault(o=>o.Pawn!=doctor && CombatManager.Ranged(o.Pawn));
+                Check(controlled!=null,"No owned ranged combatant available for immediate manual-disable regression.");
+                var manualFighter=controlled.Pawn;manualFighter.drafter.FireAtWill=false;
+                var manualWait=JobMaker.MakeJob(JobDefOf.Wait_Combat);manualFighter.jobs.TryTakeOrderedJob(manualWait,JobTag.Misc,false);
+                ai.SetCombatAutomation(false);
+                Check(manualFighter.Drafted && !manualFighter.drafter.FireAtWill && manualFighter.jobs.AllJobs().Any(j=>j.GetUniqueLoadID()==manualWait.GetUniqueLoadID()),
+                    "Immediate combat disable overwrote later manual order/fire setting.");
                 unsafeEnemy.Destroy(DestroyMode.Vanish);
-                Log.Message("[MedicalRescueTests] PASS safety/manual: enemy contact rejected; player draft/order preserved.");
+                Log.Message("[MedicalRescueTests] PASS safety/manual: enemy contact rejected; player draft/order/fire preserved across handoff and immediate disable.");
                 ai.DisableAll();GameDataSaveLoader.SaveGame(stage==1?"MedicalRescueHospitalComplete":"MedicalRescueFieldComplete");Log.Message("[MedicalRescueTests] DONE");done=true;Find.TickManager.CurTimeSpeed=TimeSpeed.Paused;
             }
             catch(Exception ex){GameDataSaveLoader.SaveGame("MedicalRescueFailure");done=true;Log.Error("[MedicalRescueTests] FAIL: "+ex);Find.TickManager.CurTimeSpeed=TimeSpeed.Paused;}

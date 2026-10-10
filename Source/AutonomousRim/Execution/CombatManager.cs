@@ -217,6 +217,12 @@ namespace AutonomousRim.Execution
             try { return ApplyCore(map,orders,excluded,globalRetreat); }
             finally { AnalysisCalls++; AnalysisMilliseconds+=timer.Elapsed.TotalMilliseconds; }
         }
+        private static bool ManualOrder(Pawn pawn,CombatOrder order)
+        {
+            bool ownQueued=pawn.jobs.jobQueue.Any(q=>q.job.GetUniqueLoadID()==order.JobId);
+            return pawn.jobs.jobQueue.Any(q=>q.job.playerForced && q.job.GetUniqueLoadID()!=order.JobId) ||
+                pawn.CurJob?.playerForced==true && pawn.CurJob.GetUniqueLoadID()!=order.JobId && !ownQueued;
+        }
         private static string ApplyCore(Map map,List<CombatOrder> orders,List<Pawn> excluded,bool globalRetreat)
         {
             shotChances.Clear(); // Native geometry/stat reports remain on the game thread and expire every decision.
@@ -227,7 +233,7 @@ namespace AutonomousRim.Execution
             {
                 var p=order.Pawn;
                 if(p==null || !p.Spawned || p.Dead || !PawnAnalyzer.IsCombatReady(p)) { Stop(new List<CombatOrder>{order}); orders.Remove(order); continue; }
-                if(!p.Drafted || p.CurJob?.playerForced==true && p.CurJob.GetUniqueLoadID()!=order.JobId)
+                if(!p.Drafted || ManualOrder(p,order))
                 { excluded.Add(p); orders.Remove(order); } // A later manual order keeps its current fire setting.
             }
             foreach(var p in colonists.Where(Eligible).Where(p=>!p.Drafted && !excluded.Contains(p) &&
@@ -372,7 +378,7 @@ namespace AutonomousRim.Execution
             {
                 var p=order.Pawn;
                 if(p?.drafter==null) continue;
-                bool manualOrder=p.CurJob?.playerForced==true && p.CurJob.GetUniqueLoadID()!=order.JobId;
+                bool manualOrder=ManualOrder(p,order);
                 if(!manualOrder)p.drafter.FireAtWill=order.OriginalFireAtWill;
                 if(p.CurJob?.GetUniqueLoadID()==order.JobId) p.jobs.EndCurrentJob(JobCondition.InterruptForced);
                 if(p.CurJob?.playerForced!=true) p.drafter.Drafted=false;
