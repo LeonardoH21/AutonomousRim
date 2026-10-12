@@ -245,17 +245,23 @@ namespace AutonomousRim.Execution
             }
             var allies=orders.Select(o=>o.Pawn).Where(PawnAnalyzer.IsCombatReady).ToList();
             var assessments=CombatTacticalPlanner.Analyze(map,allies,enemies);
-            var assignments=new Dictionary<int,int>();
+            // Keep pair intent across scans, including the partner processed later.
+            // Never count a retreating pawn as promised support.
+            var assignments=orders.Where(o=>!Ranged(o.Pawn) && !o.Retreated && !Wounded(o.Pawn) &&
+                o.MeleeTarget!=null && enemies.Contains(o.MeleeTarget))
+                .ToDictionary(o=>o.Pawn.thingIDNumber,o=>o.MeleeTarget.thingIDNumber);
             var occupied=new HashSet<IntVec3>();
             foreach(var order in orders.OrderByDescending(o=>Ranged(o.Pawn)))
             {
                 var p=order.Pawn;
                 if(!PawnAnalyzer.IsCombatReady(p)) continue;
                 var target=Target(p,colonists,enemies);
+                var meleeCandidates=new List<Pawn>();
                 if(!Ranged(p))
                 {
                     var ranked=assessments.Where(a=>a.PawnId==p.thingIDNumber).OrderByDescending(a=>a.Score+
-                        (assignments.Count(pair=>pair.Value==a.TargetId)==1?8:assignments.Count(pair=>pair.Value==a.TargetId)>1?-10:0)).ToList();
+                        (assignments.Count(pair=>pair.Key!=p.thingIDNumber && pair.Value==a.TargetId)==1?14:
+                         assignments.Count(pair=>pair.Key!=p.thingIDNumber && pair.Value==a.TargetId)>1?-10:0)).ToList();
                     var existing=p.CurJob?.targetA.Thing as Pawn;
                     if(p.CurJob?.def==JobDefOf.AttackMelee && existing!=null && enemies.Contains(existing) &&
                         p.CanReach(existing,PathEndMode.Touch,Danger.Deadly))target=existing;
@@ -265,7 +271,8 @@ namespace AutonomousRim.Execution
                         p.CanReach(order.MeleeTarget,PathEndMode.Touch,Danger.Deadly))target=order.MeleeTarget;
                     else target=ranked.Select(a=>enemies.FirstOrDefault(e=>e.thingIDNumber==a.TargetId &&
                         p.CanReach(e,PathEndMode.Touch,Danger.Deadly))).FirstOrDefault(e=>e!=null)??target;
-                    assignments[p.thingIDNumber]=target.thingIDNumber;
+                    meleeCandidates.Add(target);
+                    meleeCandidates.AddRange(ranked.Select(a=>enemies.FirstOrDefault(e=>e.thingIDNumber==a.TargetId)).Where(e=>e!=null));
                 }
                 bool danger=globalRetreat||Wounded(p)||Overwhelmed(p,orders,enemies);
                 if(!Ranged(p) && colonists.Any(a=>a!=p && a.equipment?.Primary!=null && !Ranged(a) &&
@@ -290,20 +297,23 @@ namespace AutonomousRim.Execution
                 }
                 if(!order.Retreated && !Ranged(p))
                 {
-                    var support=orders.Where(o=>!o.Retreated && !Wounded(o.Pawn) && PawnAnalyzer.IsCombatReady(o.Pawn) &&
-                        CanSupport(map,o.Pawn,p,target,colonists))
-                        .Select(o=>o.Pawn).ToList();
-                    var localEnemies=enemies.Where(e=>e.Position.DistanceTo(target.Position)<14).ToList();
-                    var liveAssessment=TacticalPolicy.Assess(support.Select(CombatEquipmentScanner.Copy).ToArray(),localEnemies.Select(CombatEquipmentScanner.Copy).ToArray());
-                    float advantage=liveAssessment.FirstOrDefault(a=>a.PawnId==p.thingIDNumber && a.TargetId==target.thingIDNumber)?.Advantage??0;
-                    if(p.CurJob?.def==JobDefOf.Goto && p.CurJob.GetUniqueLoadID()==order.JobId &&
-                        order.Role?.StartsWith("Melee:")==true && Find.TickManager.TicksGame-order.LastOrderTick<150 &&
-                        p.CurJob.targetA.Cell.DistanceTo(target.Position)<5 && advantage>=0.85f &&
-                        !occupied.Contains(p.CurJob.targetA.Cell) && !p.CurJob.targetA.Cell.GetThingList(map).Any(t=>t is Fire))
-                    { occupied.Add(p.CurJob.targetA.Cell); continue; }
-                    var meleePlan=MeleeTactics.PlanAttack(map,p,target,support,enemies,order.Anchor,occupied,assignments,advantage);
+                    MeleeTactics.Plan meleePlan=null;
+                    // An unreachable/exposed preferred target must not hide a safe
+                    // interception of another enemy. Bound native path work per scan.
+                    foreach(var candidate in meleeCandidates.Distinct().Take(4))
+                    {
+                        var support=orders.Where(o=>!o.Retreated && !Wounded(o.Pawn) && PawnAnalyzer.IsCombatReady(o.Pawn) &&
+                            CanSupport(map,o.Pawn,p,candidate,colonists)).Select(o=>o.Pawn).ToList();
+                        var localEnemies=enemies.Where(e=>e.Position.DistanceTo(candidate.Position)<14).ToList();
+                        var liveAssessment=TacticalPolicy.Assess(support.Select(CombatEquipmentScanner.Copy).ToArray(),localEnemies.Select(CombatEquipmentScanner.Copy).ToArray());
+                        float advantage=liveAssessment.FirstOrDefault(a=>a.PawnId==p.thingIDNumber && a.TargetId==candidate.thingIDNumber)?.Advantage??0;
+                        meleePlan=MeleeTactics.PlanAttack(map,p,candidate,support,enemies,order.Anchor,occupied,assignments,advantage,out var blocked);
+                        order.MeleeBlockReason=meleePlan==null?blocked:null;
+                        if(meleePlan!=null){target=candidate;break;}
+                    }
                     if(meleePlan!=null)
                     {
+                        assignments[p.thingIDNumber]=target.thingIDNumber;
                         if(order.MeleeTarget!=target){order.MeleeTarget=target;order.MeleeTargetTick=Find.TickManager.TicksGame;}
                         // Keep native warmups and attacks intact. Reissue only on a changed target/approach.
                         if(p.CurJob?.def==JobDefOf.AttackMelee && p.CurJob.targetA.Thing==target &&
@@ -311,12 +321,20 @@ namespace AutonomousRim.Execution
                             order.Role=meleePlan.Role;
                         else if(meleePlan.Strike)
                             Issue(order,JobMaker.MakeJob(JobDefOf.AttackMelee,target),meleePlan.Role);
+                        else if(p.CurJob?.def==JobDefOf.Goto && p.CurJob.GetUniqueLoadID()==order.JobId &&
+                            Find.TickManager.TicksGame-order.LastOrderTick<90 &&
+                            p.CurJob.targetA.Cell==meleePlan.Approach &&
+                            !occupied.Contains(p.CurJob.targetA.Cell) && p.Position!=p.CurJob.targetA.Cell &&
+                            !p.CurJob.targetA.Cell.GetThingList(map).Any(t=>t is Fire))
+                        { occupied.Add(p.CurJob.targetA.Cell);order.Role=meleePlan.Role;continue; }
                         else Issue(order,JobMaker.MakeJob(JobDefOf.Goto,meleePlan.Approach),meleePlan.Role);
                         occupied.Add(meleePlan.Approach); continue;
                     }
+                    assignments.Remove(p.thingIDNumber);
+                    order.MeleeTarget=null;
                     if(order.Role?.StartsWith("Melee:")==true && p.CurJob?.GetUniqueLoadID()==order.JobId &&
                         (p.CurJob.def==JobDefOf.Goto || p.CurJob.def==JobDefOf.AttackMelee && p.Position.DistanceTo(target.Position)>=3.5f))
-                        Issue(order,JobMaker.MakeJob(JobDefOf.Wait_Combat),"Melee: avanço suspenso por falta de apoio");
+                        Issue(order,JobMaker.MakeJob(JobDefOf.Wait_Combat),"Melee: "+order.MeleeBlockReason);
                 }
                 // Recovery requires a cooldown, spacing and a favorable force ratio.
                 bool retreat=order.Retreated;

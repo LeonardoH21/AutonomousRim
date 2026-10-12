@@ -478,3 +478,13 @@ Auditoria dos dez pontos, limitações e preparações que falharam estão no [r
 - Após compactar apenas a apresentação da HUD, 27 verificações de percepção repetidas com PASS na DLL final instalada `C163F87E046C87E3B2B530A693D39F1BA15C4B67EE59BCBC30306CE69A2C185F`.
 
 Proveniência por etapa, hashes anteriores, preparações e limites constam no [relatório 11–20](C:/Users/Administrador/Desktop/ModRimWorld/docs/ENTREGA-PERCEPCAO-MEMORIA-2026-10-12.md). Sem campanha de aprendizado autônomo, rollback automático de todas as estratégias ou QA visual da HUD. V3/V4 intactos; addon removido; sem novo commit/push.
+
+## 12/10/2026 — Inatividade e cooperação melee
+
+- Três verificações nativas da dupla aprovadas: contato além do ponto inicial, alternativa segura ao alvo inadequado e dano dos dois melee no mesmo inimigo.
+- Seis arenas concluídas com os seis EliteSix originais: arqueiros, combate misto aberto, portas/cobertura, dois flancos em desvantagem, manhunters e mechanoids.
+- Seis vitórias, zero mortos ao término dos combates; um derrubado contra mechanoids. Ambos os melee causaram dano em todas as arenas; contato conjunto observado em duas delas. Recuperação hospitalar posterior não validada nesta rodada.
+- Produção instalada/testada `B9A13FE6BDA85F8B4D93B162C04FEBF9265174C5BE5C83317D90210BFCA39187`; runtime `FF652AA54B2A6836458849050AEC6AA35596DE31208E5B54BF6B99046D5FE597`.
+- V3/V4 pessoais intactos, processos de teste encerrados e addon temporário removido. Comparações intermediárias e interrupções para atualização não contam como aprovação final.
+
+Resultados, limitações e perfis no [relatório melee](C:/Users/Administrador/Desktop/ModRimWorld/docs/REVISAO-MELEE-2026-10-12.md); proveniência estruturada em `outputs/CombatMelee/2026-10-12/results.json`. Reprodução em `scripts/MeleeValidation.ps1`, com retomada por etapa.

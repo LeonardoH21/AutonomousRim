@@ -21,17 +21,33 @@ namespace AutonomousRim.Planning
         }
         public static Plan PlanAttack(Map map,Pawn pawn,Pawn target,List<Pawn> allies,List<Pawn> enemies,
             IntVec3 anchor,HashSet<IntVec3> occupied,Dictionary<int,int> assignments,float advantage)
+            =>PlanAttack(map,pawn,target,allies,enemies,anchor,occupied,assignments,advantage,out _);
+        public static Plan PlanAttack(Map map,Pawn pawn,Pawn target,List<Pawn> allies,List<Pawn> enemies,
+            IntVec3 anchor,HashSet<IntVec3> occupied,Dictionary<int,int> assignments,float advantage,out string blocked)
         {
+            blocked=null;
             float distance=pawn.Position.DistanceTo(target.Position);
             bool adjacent=distance<1.6f && GenSight.LineOfSight(pawn.Position,target.Position,map,true);
             var friends=allies.Where(a=>!a.Downed && a.Position.DistanceTo(target.Position)<26).ToList();
             var nearby=enemies.Where(e=>e.Position.DistanceTo(target.Position)<14).ToList();
+            bool help=allies.Any(a=>a!=pawn && (target.CurJob?.targetA.Thing==a || !CombatManager.Ranged(target) && target.Position.DistanceTo(a.Position)<4));
+            // Contact defense is already committed: an old anchor or approach
+            // limit must not leave a pawn waiting beside its opponent.
+            if(adjacent && pawn.CanReach(target,PathEndMode.Touch,Danger.Deadly))return new Plan{Target=target,Approach=pawn.Position,Strike=true,Role=help?"Melee: proteger aliado":"Melee: manter pressão"};
             // Let larger melee groups enter our defended line. Charging out would
             // surrender nearby-friendly shooting protection and expose both sides.
             if(!CombatManager.Ranged(target) && distance>3.5f && nearby.All(e=>!CombatManager.Ranged(e)) &&
-                nearby.Count>friends.Count(a=>!CombatManager.Ranged(a)) && advantage<2.4f)return null;
-            if(!pawn.CanReach(target,PathEndMode.Touch,Danger.Deadly) || target.Position.DistanceTo(anchor)>32)return null;
+                nearby.Count>friends.Count(a=>!CombatManager.Ranged(a)) && advantage<2.4f)
+                return Refuse(out blocked,"aguardar grupo melee na linha defensiva");
+            if(!pawn.CanReach(target,PathEndMode.Touch,Danger.Deadly))return Refuse(out blocked,"alvo sem acesso");
+            if(target.Position.DistanceTo(anchor)>32)return Refuse(out blocked,"alvo fora do perímetro de apoio");
             var own=CombatEquipmentScanner.Copy(pawn);
+            // A real engaged partner can anchor a slightly longer support route.
+            // Health, fire exposure and local force checks still apply to it.
+            bool joinContact=own.Health>=0.8f && advantage>=1.2f && allies.Any(a=>a!=pawn && !CombatManager.Ranged(a) &&
+                a.health.summaryHealth.SummaryHealthPercent>=0.72f && a.CurJob?.def==JobDefOf.AttackMelee &&
+                a.CurJob.targetA.Thing==target && a.Position.DistanceTo(target.Position)<1.6f);
+            float maximumDistance=joinContact?32:24;
             // Arrival time matters: armor reduces expected exposure, never removes it.
             float exposure=0;
             foreach(var enemy in enemies.Where(CombatManager.Ranged))
@@ -41,14 +57,13 @@ namespace AutonomousRim.Planning
                     exposure+=CombatManager.ExpectedRangedDps(enemy,pawn.Position,weapon.Dps)*TacticalPolicy.DamageFraction(weapon.BluntDamage?own.Blunt:own.Sharp,weapon.Penetration)*
                         Math.Min(10,distance/Math.Max(1,own.Speed));
             }
-            bool help=allies.Any(a=>a!=pawn && (target.CurJob?.targetA.Thing==a || !CombatManager.Ranged(target) && target.Position.DistanceTo(a.Position)<4));
-            if(!adjacent && !TacticalPolicy.CanPress(own.Health,advantage,friends.Count,nearby.Count,distance,exposure,nearby.Any(e=>CombatEquipmentScanner.Copy(e).Special)))return null;
+            if(!adjacent && !TacticalPolicy.CanPress(own.Health,advantage,friends.Count,nearby.Count,distance,exposure,nearby.Any(e=>CombatEquipmentScanner.Copy(e).Special),maximumDistance))
+                return Refuse(out blocked,$"aproximação insegura: saúde={own.Health:F2}, vantagem={advantage:F2}, distância={distance:F1}, exposição={exposure:F1}");
             var options=GenAdj.AdjacentCells.Select(d=>target.Position+d).Where(c=>c.InBounds(map) && c.Standable(map) &&
                 !occupied.Contains(c) && !c.GetThingList(map).OfType<Pawn>().Any(p=>p!=pawn && !p.Downed) &&
                 !c.GetThingList(map).Any(t=>t is Fire) && GenSight.LineOfSight(c,target.Position,map,true))
                 .Select(c=>new { Cell=c,Score=Score(map,pawn,target,c,allies,nearby,assignments) })
                 .OrderByDescending(c=>c.Score).ToList();
-            if(adjacent)return new Plan{Target=target,Approach=pawn.Position,Strike=true,Role=help?"Melee: proteger aliado":"Melee: manter pressão"};
             foreach(var option in options)
             {
                 if(!pawn.CanReach(option.Cell,PathEndMode.OnCell,Danger.Deadly))continue;
@@ -70,19 +85,24 @@ namespace AutonomousRim.Planning
                         // Arriving alive is insufficient if the attacker must then
                         // fight in the same crossfire. Keep a short, bounded combat
                         // window; wounded targets require less finishing time.
-                        float engagementSeconds=Math.Max(.5f,Math.Min(3f,target.health.summaryHealth.SummaryHealthPercent*3f));
+                        // The selected shooter is forced into close combat on
+                        // arrival. Other shooters still contribute full crossfire.
+                        float engagementSeconds=shooter==target?0:Math.Max(.5f,Math.Min(3f,target.health.summaryHealth.SummaryHealthPercent*3f));
                         routeExposure+=CombatManager.ExpectedRangedDps(shooter,option.Cell,weapon.Dps)*
                             TacticalPolicy.DamageFraction(weapon.BluntDamage?own.Blunt:own.Sharp,weapon.Penetration)*engagementSeconds;
                     }
-                    if(!TacticalPolicy.CanPress(own.Health,advantage,friends.Count,nearby.Count,distance,routeExposure,nearby.Any(e=>CombatEquipmentScanner.Copy(e).Special)))continue;
+                    if(!TacticalPolicy.CanPress(own.Health,advantage,friends.Count,nearby.Count,distance,routeExposure,nearby.Any(e=>CombatEquipmentScanner.Copy(e).Special),maximumDistance))
+                    {blocked=$"rota exposta: dano estimado={routeExposure:F1}, limite={own.Health*25:F1}";continue;}
                 }
                 bool flank=allies.Any(a=>a!=pawn && !CombatManager.Ranged(a) &&
                     (a.Position.DistanceTo(target.Position)<4 || assignments.TryGetValue(a.thingIDNumber,out int id) && id==target.thingIDNumber));
-                return new Plan{Target=target,Approach=option.Cell,Strike=distance<2.8f,
+                return new Plan{Target=target,Approach=option.Cell,Strike=false,
                     Role=help?"Melee: cooperar no resgate":flank?"Melee: flanco coordenado":"Melee: aproximar com vantagem"};
             }
+            if(blocked==null)blocked="sem célula de ataque com rota segura e espaço livre";
             return null;
         }
+        private static Plan Refuse(out string reason,string message){reason=message;return null;}
         private static float Score(Map map,Pawn pawn,Pawn target,IntVec3 c,List<Pawn> allies,List<Pawn> enemies,Dictionary<int,int> assignments)
         {
             float score=-pawn.Position.DistanceTo(c)*1.5f-c.GetTerrain(map).pathCost*0.08f;

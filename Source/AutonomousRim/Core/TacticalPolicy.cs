@@ -41,7 +41,9 @@ namespace AutonomousRim.Core
             })).ToArray();
         }
         public static bool CanPress(float health,float advantage,int friends,int enemies,float distance,float exposure,bool special)
-            => health>=0.72f && !special && distance<=24 && exposure<health*25 && advantage>=0.85f &&
+            => CanPress(health,advantage,friends,enemies,distance,exposure,special,24);
+        public static bool CanPress(float health,float advantage,int friends,int enemies,float distance,float exposure,bool special,float maximumDistance)
+            => health>=0.72f && !special && distance<=maximumDistance && exposure<health*25 && advantage>=0.85f &&
                 enemies<=Math.Max(1,friends)*1.7f;
     }
 }

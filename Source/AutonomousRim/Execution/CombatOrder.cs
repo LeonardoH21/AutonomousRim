@@ -7,6 +7,7 @@ namespace AutonomousRim.Execution
         public Pawn MeleeTarget;
         public int MeleeTargetTick;
         public string JobId, Role;
+        public string MeleeBlockReason;
         public IntVec3 Anchor;
         public int LastOrderTick;
         public int RetreatUntilTick;
@@ -19,6 +20,7 @@ namespace AutonomousRim.Execution
             Scribe_Values.Look(ref MeleeTargetTick, "meleeTargetTick");
             Scribe_Values.Look(ref JobId, "jobId");
             Scribe_Values.Look(ref Role, "role");
+            Scribe_Values.Look(ref MeleeBlockReason, "meleeBlockReason");
             Scribe_Values.Look(ref Anchor, "anchor");
             Scribe_Values.Look(ref LastOrderTick, "lastOrderTick");
             Scribe_Values.Look(ref RetreatUntilTick, "retreatUntilTick");

@@ -32,6 +32,9 @@ namespace AutonomousRim.RuntimeChecks
         private bool Revision=>GenCommandLine.CommandLineArgPassed("autonomousrimmeleerevision");
         private bool Varied=>GenCommandLine.CommandLineArgPassed("autonomousrimvariedthreats");
         private int flankSamples,approachSamples,idleSamples,firstMeleeTick=-1;
+        private int pairContactSamples,stalledApproachSamples,meleeActiveSamples,firstMeleeDamageTick=-1;
+        private readonly Dictionary<int,float> initialDamage=new Dictionary<int,float>();
+        private readonly Dictionary<int,IntVec3> previousMeleePositions=new Dictionary<int,IntVec3>();
         private bool careStarted, hospitalWitness;
         private int careStart;
         private float initialTends;
@@ -277,6 +280,7 @@ namespace AutonomousRim.RuntimeChecks
             Log.Message($"[FiveCombatTrials] START case={number}; seed={seed}; hard={hard}; {layout}; "+(Elite?"six original EliteSix; 2 melee+4 ranged; Cassandra/Medium; preserved traits, skills, implants and scenario factors; ":"2 melee+2 ranged; ")+"armor="+
                 (Elite?"2 steel plates, 4 flak vests, 6 helmets":Revision?"2 steel plates, 2 flak vests, 4 helmets":"4 flak vests, 4 helmets")+"; controlled initial combat facilities/equipment only; third speed selected; no scripted healing");
             Log.Message("[FiveCombatTrials] ALLIES "+weapons); Log.Message("[FiveCombatTrials] ENEMIES "+roster);
+            foreach(var pawn in allies)initialDamage[pawn.thingIDNumber]=Record(new[]{pawn},"DamageDealt");
             start=Find.TickManager.TicksGame; started=true; ai.SetEmergencyAutomation(true);
         }
         private float Record(IEnumerable<Pawn> pawns,string name)=>pawns.Sum(p=>p.records?.GetValue(DefDatabase<RecordDef>.GetNamed(name))??0);
@@ -287,6 +291,11 @@ namespace AutonomousRim.RuntimeChecks
             GameDataSaveLoader.SaveGame("AutonomousRim-Combate-Misto-"+number);
             string row=$"case={number}; seed={seed}; outcome={outcome}; ticks={ticks}; enemies={enemies.Count}; remaining={enemies.Count(p=>!p.Dead&&!p.Downed&&p.Spawned)}; deaths={allies.Count(p=>p.Dead)}; downed={allies.Count(p=>!p.Dead&&p.Downed)}; injured={allies.Count(p=>p.health.hediffSet.hediffs.Any(h=>h is Hediff_Injury && h.Severity>0))}; neutralized={neutralized}; sheltered={escaped}; alliedShots={Record(allies,"ShotsFired")}; enemyShots={Record(enemies,"ShotsFired")}; alliedDamage={Record(allies,"DamageDealt").ToString(CultureInfo.InvariantCulture)}; coverSamples={cover}; interceptSamples={melee}; retreatSamples={retreat}; flankSamples={flankSamples}; approachSamples={approachSamples}; idleMeleeSamples={idleSamples}; firstMeleeTick={firstMeleeTick}; meleeDamage={Record(allies.Where(p=>initialMelee.Contains(p.thingIDNumber)),"DamageDealt")}; workerJobs={AnalysisWorker.Completed}; workerMs={AnalysisWorker.Milliseconds:F2}; combatCalls={CombatManager.AnalysisCalls}; combatMs={CombatManager.AnalysisMilliseconds:F2}";
             Log.Message("[FiveCombatTrials] RESULT "+row);
+            string metrics=$"pairContactSamples={pairContactSamples}; stalledApproachSamples={stalledApproachSamples}; meleeActiveSamples={meleeActiveSamples}; firstMeleeDamageTick={firstMeleeDamageTick}; damageByMelee="+
+                string.Join(" | ",allies.Where(p=>initialMelee.Contains(p.thingIDNumber)).Select(p=>p.LabelShort+":"+
+                    (Record(new[]{p},"DamageDealt")-(initialDamage.TryGetValue(p.thingIDNumber,out float baseline)?baseline:0)).ToString(CultureInfo.InvariantCulture)));
+            Log.Message("[FiveCombatTrials] MELEE METRICS "+metrics);
+            File.WriteAllText(Path.Combine(GenFilePaths.SaveDataFolderPath,"melee-metrics.txt"),metrics);
             combatResult=row;
             File.WriteAllText(Path.Combine(GenFilePaths.SaveDataFolderPath,"result.txt"),row+Environment.NewLine+layout+Environment.NewLine+"ALLIES "+weapons+Environment.NewLine+"ENEMIES "+roster);
             foreach(var pawn in allies)Log.Message($"[FiveCombatTrials] COLONIST {pawn.LabelShort}: dead={pawn.Dead}; downed={pawn.Downed}; health={pawn.health.summaryHealth.SummaryHealthPercent}; bleed={pawn.health.hediffSet.BleedRateTotal}; position={pawn.Position}");
@@ -347,6 +356,14 @@ namespace AutonomousRim.RuntimeChecks
                     Check(!CombatManager.Enemies(map).Except(enemies).Any(),"Unrelated hostile pawn appeared during the fixture.");
                     foreach(var order in ai.CombatOrders)
                     {
+                        if(initialMelee.Contains(order.Pawn.thingIDNumber) && !order.Retreated && !order.Pawn.Downed)
+                        {
+                            meleeActiveSamples++;
+                            if(order.Pawn.CurJob?.def==JobDefOf.Goto && !order.Pawn.stances.FullBodyBusy &&
+                                previousMeleePositions.TryGetValue(order.Pawn.thingIDNumber,out var prior) && prior==order.Pawn.Position)
+                                stalledApproachSamples++;
+                            previousMeleePositions[order.Pawn.thingIDNumber]=order.Pawn.Position;
+                        }
                         if(CombatManager.Ranged(order.Pawn) && order.Pawn.CurJob?.def==JobDefOf.Wait_Combat &&
                             order.Pawn.CurJob.GetUniqueLoadID()==order.JobId)
                             Check(order.Pawn.drafter.FireAtWill,"Owned defensive waiting disabled native ranged fire: "+order.Pawn.LabelShort);
@@ -358,7 +375,18 @@ namespace AutonomousRim.RuntimeChecks
                         if(!CombatManager.Ranged(order.Pawn) && order.Pawn.CurJob?.def==JobDefOf.AttackMelee && firstMeleeTick<0)firstMeleeTick=ticks;
                         if(CombatManager.Ranged(order.Pawn) && enemies.Any(e=>e.Spawned && !e.Dead && CoverUtility.CalculateOverallBlockChance(order.Pawn.Position,e.Position,map)>0.1f))cover++;
                     }
-                    if(ticks%600==0)Log.Message($"[FiveCombatTrials] PROGRESS case={number}; ticks={ticks}; deaths={allies.Count(p=>p.Dead)}; downed={allies.Count(p=>p.Downed)}; threats={enemies.Count(p=>!p.Dead&&!p.Downed)}; shots={Record(allies,"ShotsFired")}/{Record(enemies,"ShotsFired")}; emergency={ai.Emergency.Phase}; jobs="+string.Join(" | ",allies.Select(p=>p.LabelShort+":"+p.Position+"/"+p.CurJob?.def.defName)));
+                    var inContact=allies.Where(p=>initialMelee.Contains(p.thingIDNumber) && p.Spawned && !p.Downed && !p.Dead &&
+                        p.CurJob?.def==JobDefOf.AttackMelee && p.CurJob.targetA.Thing is Pawn opponent && !opponent.Downed && !opponent.Dead &&
+                        p.Position.DistanceTo(opponent.Position)<1.6f).ToList();
+                    if(inContact.GroupBy(p=>p.CurJob.targetA.Thing).Any(g=>g.Count()>=2))pairContactSamples++;
+                    if(firstMeleeDamageTick<0 && allies.Where(p=>initialMelee.Contains(p.thingIDNumber)).Any(p=>
+                        Record(new[]{p},"DamageDealt")>initialDamage[p.thingIDNumber]))firstMeleeDamageTick=ticks;
+                    if(ticks%600==0)
+                    {
+                        Log.Message($"[FiveCombatTrials] PROGRESS case={number}; ticks={ticks}; deaths={allies.Count(p=>p.Dead)}; downed={allies.Count(p=>p.Downed)}; threats={enemies.Count(p=>!p.Dead&&!p.Downed)}; shots={Record(allies,"ShotsFired")}/{Record(enemies,"ShotsFired")}; emergency={ai.Emergency.Phase}; jobs="+string.Join(" | ",allies.Select(p=>p.LabelShort+":"+p.Position+"/"+p.CurJob?.def.defName)));
+                        foreach(var order in ai.CombatOrders.Where(o=>!CombatManager.Ranged(o.Pawn) && !o.Retreated && o.MeleeBlockReason!=null))
+                            Log.Message("[FiveCombatTrials] MELEE BLOCK "+order.Pawn.LabelShort+": "+order.MeleeBlockReason);
+                    }
                 }
                 bool neutralized=enemies.All(p=>p.Dead || p.Downed || !p.Spawned);
                 bool escaped=allies.All(p=>p.Spawned && !p.Dead && !p.Downed && p.Position.GetRoom(map)==(center+new IntVec3(-25,0,0)).GetRoom(map)) && !door.Destroyed && !door.Open;
