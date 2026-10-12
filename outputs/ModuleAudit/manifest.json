@@ -1,0 +1,15 @@
+{
+  "stage": "all-modules-power-fixed",
+  "flag": "autonomousrimallmodulestest",
+  "extraFlags": [
+    "autonomousrimfixturebaseline"
+  ],
+  "resumeSaveHash": "94B605291A81B328FC8C518B3962167222071638F5A9D090060B5473522062AF",
+  "sourceCommit": "fb5d23350324cb7a0ea95878635a1920b11310a3",
+  "dllHash": "1E361FC7E3B621AF26A010D7A5D50E72F2E0F0DD8E329BD13D9E6D9576FA09C1",
+  "runtimeHash": "08A64F20501E8FCE01977234D18E136CED1BB38EEDDDFF322FAC43ED61C89245",
+  "result": "PASS",
+  "profile": "C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\all-modules-power-fixed-20261011-165719-557",
+  "sourceDirty": true,
+  "yieldCapsHash": "BEA9183CC1B7AC86C424AB7225F5AAFF6FC8792CBC9FDA2F6FFB3B4170DF0751"
+}

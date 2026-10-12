@@ -1,0 +1,2 @@
+# RimWorld saves are opaque test artifacts; preserve their exact bytes.
+*.rws binary

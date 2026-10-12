@@ -155,9 +155,13 @@ namespace AutonomousRim.RuntimeChecks
                 Log.Message($"[MedicalRescueTests] PASS release {stage}: helper released automatically after native care.");
                 if(stage==1 && !Elite){stage=2;started=false;Setup();return;}
                 var ai=map.GetComponent<AutonomousRimMapComponent>();ai.SetEmergencyAutomation(false);
-                doctor.drafter.Drafted=true;doctor.drafter.FireAtWill=false;var manual=JobMaker.MakeJob(JobDefOf.Wait_Combat);doctor.jobs.TryTakeOrderedJob(manual,JobTag.Misc,false);
+                doctor.drafter.Drafted=true;doctor.drafter.FireAtWill=false;var manual=JobMaker.MakeJob(JobDefOf.Wait_Combat);
+                string manualId=manual.GetUniqueLoadID();
+                bool manualAccepted=doctor.jobs.TryTakeOrderedJob(manual,JobTag.Misc,false);
+                Log.Message($"[MedicalRescueTests] MANUAL before enable: accepted={manualAccepted}; requested={manualId}; actual={doctor.CurJob?.GetUniqueLoadID()}; all={string.Join(",",doctor.jobs.AllJobs().Select(j=>j.GetUniqueLoadID()))}; draft={doctor.Drafted}; fire={doctor.drafter.FireAtWill}");
                 ai.SetEmergencyAutomation(true);
-                Check(doctor.Drafted && !doctor.drafter.FireAtWill && doctor.jobs.AllJobs().Any(j=>j.GetUniqueLoadID()==manual.GetUniqueLoadID()),"Manual current/queued order or fire setting was overwritten.");
+                Check(manualAccepted && doctor.Drafted && !doctor.drafter.FireAtWill && doctor.jobs.AllJobs().Any(j=>j.GetUniqueLoadID()==manualId),
+                    $"Manual current/queued order or fire setting was overwritten: requested={manualId}; actual={doctor.CurJob?.GetUniqueLoadID()}; all={string.Join(",",doctor.jobs.AllJobs().Select(j=>j.GetUniqueLoadID()))}; draft={doctor.Drafted}; fire={doctor.drafter.FireAtWill}");
                 var unsafeEnemy=Spawn(false,center+new IntVec3(30,0,10),"Gun_Revolver",1);
                 var liveThreat=AutonomousRim.Perception.ThreatScanner.Scan(map,ColonyStateScanner.Scan(map));
                 Check(!MedicalRescueManager.Safe(map,unsafeEnemy.Position,liveThreat),"Rescue safety allowed an active enemy contact cell.");
@@ -165,9 +169,10 @@ namespace AutonomousRim.RuntimeChecks
                 var controlled=ai.CombatOrders.FirstOrDefault(o=>o.Pawn!=doctor && CombatManager.Ranged(o.Pawn));
                 Check(controlled!=null,"No owned ranged combatant available for immediate manual-disable regression.");
                 var manualFighter=controlled.Pawn;manualFighter.drafter.FireAtWill=false;
-                var manualWait=JobMaker.MakeJob(JobDefOf.Wait_Combat);manualFighter.jobs.TryTakeOrderedJob(manualWait,JobTag.Misc,false);
+                var manualWait=JobMaker.MakeJob(JobDefOf.Wait_Combat);string manualWaitId=manualWait.GetUniqueLoadID();
+                Check(manualFighter.jobs.TryTakeOrderedJob(manualWait,JobTag.Misc,false),"Manual fighter order rejected before disable.");
                 ai.SetCombatAutomation(false);
-                Check(manualFighter.Drafted && !manualFighter.drafter.FireAtWill && manualFighter.jobs.AllJobs().Any(j=>j.GetUniqueLoadID()==manualWait.GetUniqueLoadID()),
+                Check(manualFighter.Drafted && !manualFighter.drafter.FireAtWill && manualFighter.jobs.AllJobs().Any(j=>j.GetUniqueLoadID()==manualWaitId),
                     "Immediate combat disable overwrote later manual order/fire setting.");
                 unsafeEnemy.Destroy(DestroyMode.Vanish);
                 Log.Message("[MedicalRescueTests] PASS safety/manual: enemy contact rejected; player draft/order/fire preserved across handoff and immediate disable.");

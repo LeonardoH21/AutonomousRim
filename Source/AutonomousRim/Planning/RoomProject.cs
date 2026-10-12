@@ -12,6 +12,8 @@ namespace AutonomousRim.Planning
         public TerrainDef OriginalTerrain;
         public ThingDef Stuff;
         public ThingDef UpgradeMaterial;
+        public ThingDef UpgradeTo;
+        public bool OwnsUpgradeDesignation;
         public Thing UpgradeFrom;
         public bool UpgradeDeclined;
         public IntVec3 Position;
@@ -27,6 +29,10 @@ namespace AutonomousRim.Planning
         public bool PrisonerBed;
         public string StorageKind;
         public bool SettingsConfigured;
+        public List<ThingDef> SupplyInputs = new List<ThingDef>();
+        public Building_WorkTable SupplyBench;
+        public string SupplySignature;
+        public bool SupplyManual;
         public int RetryAfter;
         public int FailedJobs;
         public string LastFailure;
@@ -38,6 +44,8 @@ namespace AutonomousRim.Planning
             Def = (BuildableDef)thingDef ?? floorDef;
             Scribe_Defs.Look(ref Stuff, "stuff");
             Scribe_Defs.Look(ref UpgradeMaterial,"upgradeMaterial");
+            Scribe_Defs.Look(ref UpgradeTo,"upgradeTo");
+            Scribe_Values.Look(ref OwnsUpgradeDesignation,"ownsUpgradeDesignation");
             Scribe_References.Look(ref UpgradeFrom,"upgradeFrom");
             Scribe_Values.Look(ref UpgradeDeclined,"upgradeDeclined");
             Scribe_Defs.Look(ref OriginalTerrain, "originalTerrain");
@@ -52,6 +60,11 @@ namespace AutonomousRim.Planning
             Scribe_Values.Look(ref PrisonerBed,"prisonerBed");
             Scribe_Values.Look(ref StorageKind, "storageKind");
             Scribe_Values.Look(ref SettingsConfigured, "settingsConfigured");
+            Scribe_Collections.Look(ref SupplyInputs, "supplyInputs", LookMode.Def);
+            Scribe_References.Look(ref SupplyBench, "supplyBench");
+            Scribe_Values.Look(ref SupplySignature, "supplySignature");
+            Scribe_Values.Look(ref SupplyManual, "supplyManual");
+            if (Scribe.mode == LoadSaveMode.PostLoadInit) SupplyInputs = SupplyInputs ?? new List<ThingDef>();
             Scribe_Values.Look(ref RetryAfter, "retryAfter");
             Scribe_Values.Look(ref FailedJobs, "failedJobs");
             Scribe_Values.Look(ref LastFailure, "lastFailure");
@@ -76,6 +89,7 @@ namespace AutonomousRim.Planning
         public Zone_Stockpile Stockpile;
         public List<IntVec3> StorageCells = new List<IntVec3>();
         public string LayoutSlot;
+        public string ReferenceLayout;
         public IntVec3 LayoutAnchor;
         public List<IntVec3> RoofCells = new List<IntVec3>();
         public IEnumerable<IntVec3> RoofArea => RoofCells.Count > 0 ? RoofCells : Interior.Cells;
@@ -116,6 +130,7 @@ namespace AutonomousRim.Planning
             Scribe_References.Look(ref Stockpile, "stockpile");
             Scribe_Collections.Look(ref StorageCells, "storageCells", LookMode.Value);
             Scribe_Values.Look(ref LayoutSlot, "layoutSlot");
+            Scribe_Values.Look(ref ReferenceLayout, "referenceLayout");
             Scribe_Values.Look(ref LayoutAnchor, "layoutAnchor");
             Scribe_Collections.Look(ref RoofCells, "roofCells", LookMode.Value);
             Scribe_Collections.Look(ref MineCells, "mineCells", LookMode.Value);

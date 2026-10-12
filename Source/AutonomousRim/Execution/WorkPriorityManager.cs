@@ -34,6 +34,12 @@ namespace AutonomousRim.Execution
             var pawns = map.mapPawns.FreeColonistsSpawned.Where(CanWork).ToList();
             foreach (var pawn in pawns) pawn.workSettings.EnableAndInitializeIfNotAlreadyInitialized();
             var types = DefDatabase<WorkTypeDef>.AllDefsListForReading;
+            EnsureRoutine(map,changes);
+            bool manualChanged = false;
+            foreach (var change in changes.Where(c => c.Pawn?.workSettings != null && c.Work != null && !c.UserOverride))
+                if (RawPriority(change.Pawn, change.Work) != change.Applied) { change.UserOverride = true; manualChanged = true; }
+            var coordination = map.GetComponent<AutonomousRimMapComponent>().Coordination;
+            coordination.Refresh(map, changes, manualChanged);
             bool foodUrgent = state.DailyFoodNutrition > 0 && state.EstimatedFoodDays < 1;
             bool foodLow = state.DailyFoodNutrition > 0 && state.EstimatedFoodDays < state.TargetFoodDays;
             var available = pawns.Where(p => !WorkReadiness.NeedsRecovery(p) || WorkReadiness.CanBuildRecoveryFurniture(p) || foodUrgent && WorkReadiness.CanProduceEmergencyFood(p)).ToList();
@@ -41,7 +47,8 @@ namespace AutonomousRim.Execution
             int patients = Math.Max(state.DownedColonists, map.mapPawns.FreeColonistsSpawned.Count(p => p.Downed || HealthAIUtility.ShouldSeekMedicalRest(p)));
             var prisoners=map.mapPawns.AllPawnsSpawned.Where(p=>p.IsPrisonerOfColony).ToList();
             patients+=prisoners.Count(p=>p.health.HasHediffsNeedingTend());
-            bool fire = EmergencyManager.LocalFire(map);
+            bool fire = EmergencyManager.CriticalFire(map);
+            bool firefighting = EmergencyManager.LocalFire(map);
             int builds = map.listerThings.AllThings.Count(t => t is Frame || t is Blueprint_Build);
             int mines = map.designationManager.SpawnedDesignationsOfDef(DesignationDefOf.Mine).Count();
             int cuts = map.designationManager.SpawnedDesignationsOfDef(DesignationDefOf.CutPlant).Count() +
@@ -53,22 +60,16 @@ namespace AutonomousRim.Execution
             gathering |= clearanceNeeded;
             bool reserveMiner = clearanceNeeded && !foodUrgent && !fire && available.Count >= 4;
             int crops = map.zoneManager.AllZones.OfType<Zone_Growing>().Sum(z => z.Cells.Count(c =>
-                c.GetPlant(map)?.HarvestableNow == true || z.allowSow && c.GetPlant(map) == null &&
+                c.GetPlant(map)?.HarvestableNow == true || z.allowSow && c.GetPlant(map)?.def != z.GetPlantDefToGrow() &&
                 c.GetTerrain(map).fertility >= z.GetPlantDefToGrow().plant.fertilityMin &&
                 PlantUtility.GrowthSeasonNow(c, map, z.GetPlantDefToGrow())));
             int bills = map.listerThings.AllThings.OfType<Building_WorkTable>().Where(t => t.Faction == Faction.OfPlayer)
                 .SelectMany(t => t.BillStack.Bills).Count(b => b.recipe.workSkill == SkillDefOf.Cooking && b.ShouldDoNow());
             bool mealsLow = bills > 0 && state.StoredMealCount < Math.Max(4, state.ColonistCount * 2);
             var tables = map.listerThings.AllThings.OfType<Building_WorkTable>().Where(t => t.Faction == Faction.OfPlayer).ToList();
-            var equipmentTables = tables.Where(t => t.BillStack.Bills.Any(b => b.ShouldDoNow() &&
-                b.recipe.products?.Any(p => p.thingDef.IsWeapon || p.thingDef.IsApparel) == true)).Select(t => t.def).ToHashSet();
-            var productionWorks = types.Where(w => DefDatabase<WorkGiverDef>.AllDefsListForReading.Any(g => g.workType == w &&
-                g.fixedBillGiverDefs?.Any(equipmentTables.Contains) == true)).ToHashSet();
-            bool reserveProduction = !foodUrgent && !fire && available.Count >= 4 && productionWorks.Count > 0;
+            var productionWorks = coordination.ReadyWorks;
+            bool reserveProduction = !foodUrgent && !fire && available.Count >= 3 && productionWorks.Count > 0;
             var currentResearch=Find.ResearchManager.GetProject();
-            bool researchNeeded=strategicResearch && !foodUrgent && !fire && currentResearch!=null &&
-                map.GetComponent<AutonomousRimMapComponent>().BaseProjects.Where(p=>!p.Completed)
-                .SelectMany(BaseConstructionManager.Tasks).Any(t=>t.Def is ThingDef d && d.researchPrerequisites?.Contains(currentResearch)==true && !d.IsResearchFinished);
             bool reserveResearcher=strategicResearch && currentResearch != null && state.EstimatedFoodDays>=1f && !fire;
             var protectedBuilders = new HashSet<Pawn>();
             if (construction)
@@ -114,8 +115,8 @@ namespace AutonomousRim.Execution
             Pawn primaryBuilder = construction && !foodUrgent && !fire && available.Count >= 3
                 ? available.Where(p => !p.WorkTypeIsDisabled(WorkTypeDefOf.Construction) &&
                     !changes.Any(c => c.Pawn == p && c.Work == WorkTypeDefOf.Construction && c.UserOverride))
-                    .OrderByDescending(p => Score(p, WorkTypeDefOf.Construction, 0) +
-                        (changes.Any(c => c.Pawn == p && c.Work == WorkTypeDefOf.Construction && c.Applied == 1) ? 3f : 0f)).FirstOrDefault()
+                    .OrderByDescending(p => Score(p, WorkTypeDefOf.Construction, 0) + coordination.StabilityBonus(p,WorkTypeDefOf.Construction) +
+                        (changes.Any(c => c.Pawn == p && c.Work == WorkTypeDefOf.Construction && (c.Applied == 1 || c.Routine == 2)) ? 3f : 0f)).FirstOrDefault()
                 : null;
             if (primaryBuilder != null) protectedBuilders.Add(primaryBuilder);
             Pawn farmer=map.zoneManager.AllZones.OfType<Zone_Growing>().Any() && !fire && !foodUrgent ?
@@ -123,13 +124,26 @@ namespace AutonomousRim.Execution
                     !changes.Any(c=>c.Pawn==p && c.Work==WorkTypeDefOf.Growing && c.UserOverride))
                 .OrderByDescending(p=>!p.WorkTypeIsDisabled(WorkTypeDefOf.Hauling))
                 .ThenByDescending(p=>Score(p,WorkTypeDefOf.Growing,0)).FirstOrDefault():null;
+            // Reserve a real equipment maker before optional research/hauling roles.
+            // Manual competing priorities cannot be demoted, so pick another colonist.
+            Pawn equipmentCrafter=reserveProduction ? available.Where(p=>p!=primaryBuilder && p!=farmer &&
+                productionWorks.All(w=>coordination.CanProduce(p,w) && !p.WorkTypeIsDisabled(w) &&
+                    !changes.Any(c=>c.Pawn==p && c.Work==w && c.UserOverride && RawPriority(p,w)!=1)) &&
+                !changes.Any(c=>c.Pawn==p && c.UserOverride && !productionWorks.Contains(c.Work) &&
+                    !WorkReadiness.SelfCare(c.Work) && c.Work!=WorkTypeDefOf.Doctor && c.Work.defName!="Firefighter" &&
+                    RawPriority(p,c.Work)==1))
+                .OrderByDescending(p=>productionWorks.Average(w=>Score(p,w,0)+coordination.StabilityBonus(p,w))+
+                    (changes.Any(c=>c.Pawn==p && productionWorks.Contains(c.Work) && c.Applied==1 && !c.UserOverride)?3f:0f))
+                .ThenBy(p=>p.thingIDNumber).FirstOrDefault():null;
+            if(equipmentCrafter!=null)crafters.Add(equipmentCrafter);
             foreach (var work in types.Where(w => demand[w] > 0)
                 .OrderBy(w => w == WorkTypeDefOf.Doctor && patients > 0 ? 0 :
                     foodUrgent && (w.defName == "Cooking" || w == WorkTypeDefOf.Growing) ? 1 :
-                    reserveMiner && w == WorkTypeDefOf.Mining ? 2 : reserveResearcher && w==WorkTypeDefOf.Research ? 3 : reserveProduction && productionWorks.Contains(w) ? 4 : urgent.Contains(w) ? 5 : 6)
+                    reserveMiner && w == WorkTypeDefOf.Mining ? 2 : reserveProduction && productionWorks.Contains(w) ? 3 : reserveResearcher && w==WorkTypeDefOf.Research ? 4 : urgent.Contains(w) ? 5 : 6)
                 .ThenByDescending(w => demand[w]).ThenByDescending(w => w.naturalPriority))
             {
                 var candidates = available.Where(p => !p.WorkTypeIsDisabled(work) &&
+                    !changes.Any(c=>c.Pawn==p && c.Work==work && c.UserOverride && RawPriority(p,work)==0) &&
                     (work != WorkTypeDefOf.Hunting || CanHunt(p)) &&
                     (!WorkReadiness.NeedsRecovery(p) || WorkReadiness.CanBuildRecoveryFurniture(p) || foodUrgent && (work.defName == "Cooking" || work == WorkTypeDefOf.Growing || work == WorkTypeDefOf.Hunting) && WorkReadiness.CanProduceEmergencyFood(p))).ToList();
                 if (primaryBuilder != null && work != WorkTypeDefOf.Construction && work != WorkTypeDefOf.Doctor)
@@ -153,8 +167,22 @@ namespace AutonomousRim.Execution
                     var helpers = candidates.Where(p => !crafters.Contains(p)).ToList();
                     if (helpers.Count > 0) candidates = helpers;
                 }
-                if(work==WorkTypeDefOf.Research && researchNeeded)
+                if(work==WorkTypeDefOf.Research && reserveResearcher)
+                    candidates.RemoveAll(p => crafters.Contains(p));
+                if (reserveProduction && productionWorks.Contains(work)) candidates.RemoveAll(p => !coordination.CanProduce(p, work));
+                if(work==WorkTypeDefOf.Research && reserveResearcher)
                 {
+                    // A manually prioritized competing job cannot be demoted. Prefer
+                    // another researcher rather than reporting a specialist who never researches.
+                    var compatible=candidates.Where(p=>
+                    {
+                        var entry=changes.First(c=>c.Pawn==p && c.Work==WorkTypeDefOf.Research);
+                        int focus=entry.UserOverride?RawPriority(p,work):1;
+                        return !changes.Any(c=>c.Pawn==p && c.UserOverride && c.Work!=work &&
+                            !WorkReadiness.SelfCare(c.Work) && c.Work!=WorkTypeDefOf.Doctor && c.Work.defName!="Firefighter" &&
+                            RawPriority(p,c.Work)>0 && RawPriority(p,c.Work)<=focus);
+                    }).ToList();
+                    if(compatible.Count>0)candidates=compatible;
                     var helpers=candidates.Where(p=>!roles.Any(r=>(r.Key==WorkTypeDefOf.Doctor && patients>0 ||
                         r.Key.defName=="Cooking" && (foodLow || mealsLow) || r.Key==WorkTypeDefOf.Growing && foodLow) && r.Value.Contains(p))).ToList();
                     if(helpers.Count>0)candidates=helpers;
@@ -175,8 +203,8 @@ namespace AutonomousRim.Execution
                 if (work == WorkTypeDefOf.Construction && primaryBuilder != null) { selected.Add(primaryBuilder); load[primaryBuilder]++; }
                 while (selected.Count < desired)
                 {
-                    var next = candidates.Where(p => !selected.Contains(p)).OrderByDescending(p => Score(p, work, load[p]) +
-                        (changes.Any(c => c.Pawn == p && c.Work == work && c.Applied <= 2 && c.Applied > 0 && !c.UserOverride) ? 1f : 0f)).First();
+                    var next = candidates.Where(p => !selected.Contains(p)).OrderByDescending(p => Score(p, work, load[p]) + coordination.StabilityBonus(p,work) +
+                        (changes.Any(c => c.Pawn == p && c.Work == work && c.Routine == 2 && !c.UserOverride) ? 3f : 0f)).First();
                     selected.Add(next); load[next]++;
                 }
                 roles[work] = selected;
@@ -188,11 +216,12 @@ namespace AutonomousRim.Execution
             {
                 bool recovering = WorkReadiness.NeedsRecovery(pawn);
                 bool assigned = roles.TryGetValue(work, out var owners) && owners.Contains(pawn);
-                int priority = WorkReadiness.SelfCare(work) ? 1 : work == WorkTypeDefOf.Hunting ? 0 : 3;
-                if (assigned) priority = urgent.Contains(work) ? 1 : 2;
+                int priority = changes.First(c=>c.Pawn==pawn && c.Work==work).Routine;
+                if (assigned && urgent.Contains(work)) priority = 1;
+                else if(assigned && demand[work]>0 && work.relevantSkills?.Contains(SkillDefOf.Crafting)==true) priority=Math.Min(priority,2);
                 if ((work.defName == "Patient" || work.defName == "PatientBedRest") &&
                     roles.TryGetValue(WorkTypeDefOf.Doctor, out var doctors) && doctors.Contains(pawn) && !WorkReadiness.SeriousMedicalNeed(pawn)) priority = 2;
-                if (work.defName == "Firefighter") priority = fire ? 1 : 2;
+                if (work.defName == "Firefighter") priority = firefighting ? 1 : 2;
                 if (work == WorkTypeDefOf.Hunting && assigned) priority = foodUrgent ? 1 : 2;
                 // A primary food/medical role must beat construction's native tie order.
                 bool survivalRole = roles.Any(r => (r.Key == WorkTypeDefOf.Doctor && patients > 0 ||
@@ -201,14 +230,18 @@ namespace AutonomousRim.Execution
                     work.defName != "Cooking" && work != WorkTypeDefOf.Growing && work != WorkTypeDefOf.Hunting && work.defName != "Firefighter")
                     priority = Math.Max(priority, 2);
                 if (construction && builds > 0 && work == WorkTypeDefOf.Hauling && !survivalRole) priority = 2;
-                if(researchNeeded && roles.TryGetValue(WorkTypeDefOf.Research,out var researchers) && researchers.Contains(pawn) &&
+                if(reserveResearcher && roles.TryGetValue(WorkTypeDefOf.Research,out var researchers) && researchers.Contains(pawn) &&
                     !survivalRole && !WorkReadiness.SelfCare(work) && work!=WorkTypeDefOf.Research && work!=WorkTypeDefOf.Doctor && work.defName!="Firefighter")
-                    priority=Math.Max(priority,2);
-                if (pawn == primaryBuilder && !WorkReadiness.SelfCare(work) && work != WorkTypeDefOf.Doctor && work.defName != "Firefighter")
+                {
+                    var researchChange=changes.First(c=>c.Pawn==pawn && c.Work==WorkTypeDefOf.Research);
+                    int focus=researchChange.UserOverride?RawPriority(pawn,WorkTypeDefOf.Research):1;
+                    priority=Math.Max(priority,Math.Min(4,focus+1));
+                }
+                if (pawn == primaryBuilder && !survivalRole && !WorkReadiness.SelfCare(work) && work != WorkTypeDefOf.Doctor && work.defName != "Firefighter")
                     priority = work == WorkTypeDefOf.Construction ? 1 : Math.Max(2, priority);
-                if (crafters.Contains(pawn) && !WorkReadiness.SelfCare(work) && work != WorkTypeDefOf.Doctor && work.defName != "Firefighter")
+                if (crafters.Contains(pawn) && !survivalRole && !WorkReadiness.SelfCare(work) && work != WorkTypeDefOf.Doctor && work.defName != "Firefighter")
                     priority = productionWorks.Contains(work) && assigned ? 1 : Math.Max(2, priority);
-                if (clearanceMiners.Contains(pawn) && !WorkReadiness.SelfCare(work) && work != WorkTypeDefOf.Doctor && work.defName != "Firefighter")
+                if (clearanceMiners.Contains(pawn) && !survivalRole && !WorkReadiness.SelfCare(work) && work != WorkTypeDefOf.Doctor && work.defName != "Firefighter")
                     priority = work == WorkTypeDefOf.Mining ? 1 : Math.Max(2, priority);
                 if(pawn==farmer && !WorkReadiness.SelfCare(work) && work!=WorkTypeDefOf.Doctor && work.defName!="Firefighter" &&
                     !roles.Any(r=>(r.Key==WorkTypeDefOf.Doctor && patients>0 || r.Key.defName=="Cooking" && (foodLow || mealsLow)) && r.Value.Contains(pawn)))
@@ -218,6 +251,39 @@ namespace AutonomousRim.Execution
                 SetManagedPriority(pawn, work, priority, changes);
             }
             changes.RemoveAll(c => c.Pawn == null || c.Pawn.Dead);
+            coordination.ReportRoles(roles);
+        }
+
+        private static void EnsureRoutine(Map map,List<WorkPriorityChange> changes)
+        {
+            var roster=map.mapPawns.FreeColonistsSpawned.Where(p=>!p.Dead && p.workSettings!=null).OrderBy(p=>p.thingIDNumber).ToList();
+            var types=DefDatabase<WorkTypeDef>.AllDefsListForReading;
+            foreach(var pawn in roster)
+            {
+                pawn.workSettings.EnableAndInitializeIfNotAlreadyInitialized();
+                foreach(var work in types.Where(w=>!pawn.WorkTypeIsDisabled(w)))
+                {
+                    var entry=changes.FirstOrDefault(c=>c.Pawn==pawn && c.Work==work);
+                    if(entry==null){int raw=RawPriority(pawn,work);entry=new WorkPriorityChange{Pawn=pawn,Work=work,Original=raw,Applied=raw};changes.Add(entry);}
+                }
+            }
+            if(!changes.Any(c=>c.Pawn!=null && roster.Contains(c.Pawn) && c.Routine<0))return;
+            var load=roster.ToDictionary(p=>p,p=>0);
+            // Stable skill/passions specializations, independent of momentary mood and rest.
+            var groups=new[]{new[]{"Construction"},new[]{"Cooking","Warden"},new[]{"Growing","PlantCutting"},
+                new[]{"Smithing","Tailoring","Crafting"},new[]{"Research"},new[]{"Mining","Hauling","Cleaning"},new[]{"Doctor"}};
+            var owners=new Dictionary<WorkTypeDef,Pawn>();
+            foreach(var group in groups)
+            {
+                var primary=DefDatabase<WorkTypeDef>.GetNamedSilentFail(group[0]);if(primary==null)continue;
+                var selected=roster.Where(p=>!p.WorkTypeIsDisabled(primary)).OrderByDescending(p=>
+                    (primary.relevantSkills?.Count>0?primary.relevantSkills.Average(skill=>{var s=p.skills.GetSkill(skill);return ColonyPolicy.WorkScore(s.Level,(int)s.passion,0);}):0)-load[p]*6f).ThenBy(p=>p.thingIDNumber).FirstOrDefault();
+                if(selected==null)continue;load[selected]++;
+                foreach(var name in group){var def=DefDatabase<WorkTypeDef>.GetNamedSilentFail(name);if(def!=null && !selected.WorkTypeIsDisabled(def))owners[def]=selected;}
+            }
+            foreach(var change in changes.Where(c=>roster.Contains(c.Pawn) && c.Routine<0))
+                change.Routine=WorkReadiness.SelfCare(change.Work)?1:change.Work==WorkTypeDefOf.Hunting?0:
+                    owners.TryGetValue(change.Work,out var owner) && owner==change.Pawn?2:3;
         }
 
         internal static float Score(Pawn pawn, WorkTypeDef work, int load)

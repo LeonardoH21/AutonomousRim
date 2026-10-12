@@ -9,12 +9,19 @@ using Verse;
 
 namespace AutonomousRim.Planning
 {
+    public sealed class LoadoutItem
+    {
+        public Pawn Pawn;
+        public string Target, State;
+        public Thing Existing;
+    }
     public sealed class LoadoutCheckpoint
     {
         public int Stage, Fighters, Melee, Ranged, Ready, PendingEquip;
         public Dictionary<string,int> Craft = new Dictionary<string,int>();
         public Dictionary<string,int> BillTargets = new Dictionary<string,int>();
         public Dictionary<string,int> Materials = new Dictionary<string,int>();
+        public List<LoadoutItem> Items = new List<LoadoutItem>();
         public List<string> Blockers = new List<string>();
         public bool Complete => Fighters > 0 && Ready == Fighters;
         public string Status => $"Etapa {Stage+1}: {Ready}/{Fighters} conjuntos vestidos; melee {Melee}, ranged {Ranged}; {PendingEquip} peças melhores disponíveis; fabricar {Craft.Values.Sum()} peças. " + string.Join("; ",Blockers.Distinct());
@@ -96,18 +103,20 @@ namespace AutonomousRim.Planning
                 if(Equipped(p,stage))result.Ready++;
                 foreach(var name in Set(p,stage))
                 {
-                    if(Meets(p,p.equipment?.Primary,name) || p.apparel.WornApparel.Any(a=>Meets(p,a,name)))continue;
+                    var worn=Meets(p,p.equipment?.Primary,name)?p.equipment.Primary:p.apparel.WornApparel.FirstOrDefault(a=>Meets(p,a,name));
+                    var row=new LoadoutItem{Pawn=p,Target=name,Existing=worn,State=worn!=null?"Equipado":"Fabricar"};result.Items.Add(row);
+                    if(worn!=null)continue;
                     var reference=Reference(name);
                     if(reference is Apparel proposed && (p.outfits?.CurrentApparelPolicy?.filter.Allows(proposed)==false ||
                         !ApparelUtility.HasPartsToWear(p,proposed.def) || EquipmentPlanner.Conflicts(p,proposed).Any(a=>
                             p.apparel.IsLocked(a) || p.outfits?.forcedHandler.IsForced(a)==true && !managed.Any(m=>m.Pawn==p && m.Apparel==a))))
-                    {result.Blockers.Add(p.LabelShort+": "+name+" bloqueado por corpo, política ou roupa manual; fabricação adiada");continue;}
+                    {row.State="Bloqueado por corpo/política/roupa manual";result.Blockers.Add(p.LabelShort+": "+name+" bloqueado por corpo, política ou roupa manual; fabricação adiada");continue;}
                     if(reference?.def.IsWeapon==true && EquipmentAnalyzer.Analyze(p.equipment?.Primary)?.SpecialAttack==true)
-                    {result.Blockers.Add(p.LabelShort+": arma especial preservada");continue;}
+                    {row.State="Arma especial preservada";result.Blockers.Add(p.LabelShort+": arma especial preservada");continue;}
                     var existing=ground.FirstOrDefault(t=>!allocated.Contains(t) && Meets(p,t,name) &&
                         p.CanReach(t,Verse.AI.PathEndMode.Touch,Danger.None) &&
                         (t is Apparel a ? EquipmentPlanner.AllowedApparel(p,a,managed) : EquipmentPlanner.AllowedWeapon(p,t)));
-                    if(existing!=null){allocated.Add(existing);result.PendingEquip++;continue;}
+                    if(existing!=null){row.Existing=existing;row.State="Disponível para equipar";allocated.Add(existing);result.PendingEquip++;continue;}
                     result.Craft[name]=result.Craft.TryGetValue(name,out int count)?count+1:1;
                 }
             }

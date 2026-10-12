@@ -20,7 +20,7 @@ namespace AutonomousRim.Planning
         }
         public static void Plan(Map map, List<RoomProject> projects)
         {
-            foreach (var room in projects.Where(p => ModularBasePlanner.IsModular(p) && p.Crop == null && p.Completed).ToList())
+            foreach (var room in projects.Where(p => ModularBasePlanner.IsModular(p) && p.Crop == null && p.Completed && p.ReferenceLayout==null).ToList())
             {
                 string slot = "interior:" + room.LayoutSlot;
                 if (projects.Any(p => p.LayoutSlot == slot) || room.State == ConstructionState.Paused) continue;
@@ -41,14 +41,15 @@ namespace AutonomousRim.Planning
                     if (free.IsValid) { task.Position = free; finish.Furniture.Add(task); }
                 }
                 // North-facing wall lamps occupy the cell immediately south of their supporting wall.
-                add("WallLamp", room.InteriorSize - 1, room.Height);
+                if(!projects.SelectMany(p=>p.Furniture).Any(t=>t.Def.defName=="WallLamp" && room.Interior.Contains(t.Position)))
+                    add("WallLamp", room.InteriorSize - 1, room.Height);
                 if (room.Kind == "Quarto")
                 {
                     add("EndTable", 2, 5); // Adjacent to the existing single bed head.
                     add("Dresser", 4, 3);
                     add("PlantPot", 1, 1);
                 }
-                if (room.Kind == "Refeitório e recreação")
+                if (room.Kind == "Refeitório e recreação" && !room.Furniture.Any(t=>t.Def.defName=="Table3x3c"))
                 {
                     add("Table3x3c", 6, 3);
                     for(int z=2;z<=4;z++){add("DiningChair",4,z,Rot4.East);add("DiningChair",8,z,Rot4.West);}
@@ -64,22 +65,16 @@ namespace AutonomousRim.Planning
                         Origin = room.Origin, InteriorSize = 1, RequiresRoof = false, Priority = ConstructionPriority.High,
                         StorageCells = new List<IntVec3> { room.Origin + new IntVec3(9, 0, 4), room.Origin + new IntVec3(10, 0, 4) } });
                 }
-                if (room.Kind == "Laboratório")
+                if (room.Kind == "Laboratório" && !room.Furniture.Any(t=>t.Def.defName=="HiTechResearchBench"))
                 {
                     add("HiTechResearchBench", 3, 8); add("HiTechResearchBench", 9, 8); add("MultiAnalyzer", 6, 6);
                 }
-                if (room.Kind == "Fabricação") add("FabricationBench", 3, 3);
-                if (room.Kind == "Oficina")
-                {
-                    add("HandTailoringBench", 2, 8); add("FueledSmithy", 6, 8);
-                    add("TableMachining", 10, 8); add("TableStonecutter", 2, 3);
-                    add("CraftingSpot", 6, 3);
-                }
+                // Workbenches are reconciled after every unlock by ModularFacilities.
                 projects.Add(finish);
             }
-            foreach (var room in projects.Where(p => ModularBasePlanner.IsModular(p) && p.Completed).ToList())
+            foreach (var room in projects.Where(p => ModularBasePlanner.IsModular(p) && p.Completed && p.ReferenceLayout==null).ToList())
             {
-                string name = room.Kind == "Energia e climatização" ? "Battery" : null;
+                string name = room.Kind == "Energia e climatização" && !room.Furniture.Any(t=>t.Def.defName=="Battery") ? "Battery" : null;
                 if (name == null || !DefDatabase<ThingDef>.GetNamed(name).IsResearchFinished || projects.Any(p => p.LayoutSlot == "upgrade:" + room.LayoutSlot)) continue;
                 var upgrade = new RoomProject { Kind = "Infraestrutura", LayoutSlot = "upgrade:" + room.LayoutSlot,
                     Origin = room.Origin, InteriorSize = room.InteriorSize, InteriorHeight = room.Height, RequiresRoof = false, Priority = ConstructionPriority.High };
@@ -89,10 +84,10 @@ namespace AutonomousRim.Planning
                 projects.Add(upgrade);
             }
             // Only consider room heating after nine genuinely enclosed, roofed rooms exist.
-            var closed = projects.Where(p => ModularBasePlanner.IsModular(p) && p.Crop == null && p.RequiresRoof &&
+            var closed = projects.Where(p => ModularBasePlanner.IsModular(p) && p.Crop == null && p.ReferenceLayout==null && p.RequiresRoof &&
                 p.Shell.All(t => t.Complete(map)) && p.RoofArea.All(c => c.Roofed(map))).ToList();
             if (closed.Count >= 9 && map.mapTemperature.OutdoorTemp < 16)
-                foreach (var room in closed.Where(p => p.Kind != "Freezer" && p.Kind != "Energia e climatização"))
+                foreach (var room in closed.Where(p => p.Kind != "Freezer" && p.Kind != "Energia e climatização" && p.Kind != "Gerador auxiliar"))
                 {
                     string slot = "heat:" + room.LayoutSlot;
                     if (projects.Any(p => p.LayoutSlot == slot)) continue;
@@ -155,7 +150,7 @@ namespace AutonomousRim.Planning
             if (power == null) return;
             var generator = projects.SelectMany(p => p.Furniture).FirstOrDefault(t => t.Def.defName == "WoodFiredGenerator");
             if (generator == null) return;
-            var generators = projects.SelectMany(p => p.Furniture).Where(t => t.Def.defName == "WoodFiredGenerator")
+            var generators = projects.SelectMany(p => p.Furniture).Where(t => t.Def.defName == "WoodFiredGenerator" || t.Def.defName == "Battery")
                 .SelectMany(t => GenAdj.OccupiedRect(t.Position, t.Rotation, t.Def.Size)).ToHashSet();
             foreach (var old in power.Furniture.Where(t => generators.Contains(t.Position)).ToList())
             {

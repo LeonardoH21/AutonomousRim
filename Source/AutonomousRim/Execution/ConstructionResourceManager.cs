@@ -10,7 +10,7 @@ namespace AutonomousRim.Execution
 {
     public static class ConstructionResourceManager
     {
-        public static string Apply(Map map, IReadOnlyList<RoomProject> projects, List<Thing> owned, IReadOnlyList<ManagedFoodBill> production = null)
+        public static string Apply(Map map, IReadOnlyList<RoomProject> projects, List<Thing> owned, IReadOnlyList<ManagedFoodBill> production = null, IReadOnlyDictionary<ThingDef,int> industry = null)
         {
             if (map.mapPawns.AllPawnsSpawned.Any(p => !p.Dead && !p.Downed && p.HostileTo(Faction.OfPlayer))) return "Coleta suspensa: hostis.";
             // Migrate only our earlier marks. CutPlant removes vegetation; HarvestPlant
@@ -36,7 +36,9 @@ namespace AutonomousRim.Execution
                 if (forecast.Any(p => p.Priority > ConstructionPriority.High && p.Shell.All(t => t.Complete(map)) &&
                     BaseConstructionManager.CurrentStage(map, p).Any(t => !t.Complete(map) && CostListCalculator.CostListAdjusted(t.Def, t.Stuff).Any(c => c.thingDef == material))))
                     costs[material] += material == ThingDefOf.WoodLog ? 60 : material == ThingDefOf.Steel ? 50 : material == ThingDefOf.ComponentIndustrial ? 2 : 0;
-            foreach (var shortage in budget.Where(p => p.Value < 0)) { costs.TryGetValue(shortage.Key, out int required); costs[shortage.Key] = Math.Max(required, -shortage.Value); }
+            if(projects.Count>0)foreach (var shortage in budget.Where(p => p.Value < 0)) { costs.TryGetValue(shortage.Key, out int required); costs[shortage.Key] = Math.Max(required, -shortage.Value); }
+            foreach(var requirement in industry ?? new Dictionary<ThingDef,int>())
+                costs[requirement.Key]=Math.Max(costs.TryGetValue(requirement.Key,out int old)?old:0,requirement.Value);
             int fuel = projects.SelectMany(BaseConstructionManager.Tasks).Where(t => t.Def.defName == "WoodFiredGenerator" && t.Complete(map))
                 .Select(t => t.Position.GetThingList(map).OfType<ThingWithComps>().First(b => b.def == t.Def).TryGetComp<CompRefuelable>()).Where(c => c != null)
                 .Sum(c => c.GetFuelCountToFullyRefuel());
@@ -49,7 +51,7 @@ namespace AutonomousRim.Execution
                     foreach (var ingredient in managed.Bill.recipe.ingredients)
                     {
                         var mineral = DefDatabase<ThingDef>.AllDefsListForReading.Where(d => ingredient.filter.Allows(d) &&
-                            managed.Bill.ingredientFilter.Allows(d) && map.listerThings.AllThings.Any(t => t.def.building?.mineableThing == d))
+                            (ingredient.IsFixedIngredient || managed.Bill.ingredientFilter.Allows(d)) && map.listerThings.AllThings.Any(t => t.def.building?.mineableThing == d))
                             .OrderByDescending(d => d == ThingDefOf.Steel).ThenByDescending(d => budget.TryGetValue(d, out int count) ? count : 0).FirstOrDefault();
                         if (mineral != null)
                             costs[mineral] = Math.Max(costs.TryGetValue(mineral, out int current) ? current : 0,

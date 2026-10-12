@@ -103,6 +103,12 @@ namespace AutonomousRim.Planning
             target("HospitalBed",state.DownedColonists>0?95:65); target("SolarPanels",energy?55:85); target("GeothermalPower",energy?62:82);
             target("SolarPanels",74);target("Batteries",75);
             target("MicroelectronicsBasics",72); target("MultiAnalyzer",58);
+            // Furnishing/economic research is tied to a room and an explicit installation.
+            foreach(var room in rooms.Where(r=>r.Kind=="Refeitório e recreação" || r.Kind=="Oficina" || r.Kind=="Fabricação"))
+                foreach(var name in room.Kind=="Refeitório e recreação" ? new[]{"BilliardsTable","TubeTelevision"} :
+                    new[]{"TableStonecutter","HandTailoringBench","DrugLab"})
+                    foreach(var r in DefDatabase<ThingDef>.GetNamedSilentFail(name)?.researchPrerequisites??new List<ResearchProjectDef>())
+                        target(r.defName,room.Kind=="Refeitório e recreação"?60:meds<colonists.Count*2?92:74);
             if(state.EstimatedFoodDays>=3 && state.HostilePawnCount==0)
                 foreach(var research in CommercePlanner.Research(map))target(research.defName,86);
             target("Hydroponics",foodLow && map.mapTemperature.OutdoorTemp<0?87:35);
@@ -151,6 +157,12 @@ namespace AutonomousRim.Planning
             plan.CurrentFocus=pending.Count==0?"Todos os objetivos cadastrados estão atendidos.":FormatFocus(pending[0]);
             plan.NextFocus=pending.Count<2?"Nenhum próximo objetivo pendente.":FormatFocus(pending[1]);
             AuditUnlocks(plan,rooms,buildings);
+            foreach(var research in plan.Route.Take(8))
+            {
+                var installs=DefDatabase<ThingDef>.AllDefsListForReading.Where(d=>d.researchPrerequisites?.Contains(research)==true &&
+                    (ModularFacilities.WorkshopBenches.Contains(d.defName) || new[]{"WallLamp","ShelfSmall","Battery","Cooler","BilliardsTable","TubeTelevision","HiTechResearchBench","MultiAnalyzer"}.Contains(d.defName)));
+                if(installs.Any())plan.Unlocks.Add("Após "+research.LabelCap+": planejar e construir "+string.Join(", ",installs.Select(d=>d.LabelCap.ToString()))+"; produção aguarda bancada funcional e demanda.");
+            }
             if(tick-plan.LastTerrainEvaluation>=60000 || plan.TerrainStatus==null)
             {
                 var terrain=AssessTerrainDetails(map,plan.Landing);

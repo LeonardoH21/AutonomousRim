@@ -64,7 +64,7 @@ try {
   if(Test-Path -LiteralPath $log){
    $body=Get-Content -LiteralPath $log -Raw
    if($body.Contains('Reached max messages limit. Stopping logging to avoid spam.')){throw "Logging limit reached; native result cannot be verified: $profile"}
-   if($body -match '\] FAIL\b|Exception ticking|Error in MapComponent|Error in GenStep|Error while generating pawn|Exception from long event|XML error:|Config error:|Patching exception|Bed ForPrisoners=false'){throw "Stage failed: $log"}
+   if($body -match '\] FAIL\b|Exception ticking|Error in MapComponent|Error in GenStep|Error while generating pawn|Exception from long event|XML error:|Config error:|Patching exception|JobDriver threw exception|Bed ForPrisoners=false'){throw "Stage failed: $log"}
    if($body.Contains($SuccessMarker)){
     $manifest.result='PASS'
     if($Flag -eq 'autonomousrimcombatfive'){

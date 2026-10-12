@@ -9,6 +9,7 @@ namespace AutonomousRim.Execution
         public int Original;
         public int Applied;
         public bool UserOverride;
+        public int Routine = -1;
 
         public void ExposeData()
         {
@@ -17,6 +18,7 @@ namespace AutonomousRim.Execution
             Scribe_Values.Look(ref Original, "original");
             Scribe_Values.Look(ref Applied, "applied");
             Scribe_Values.Look(ref UserOverride, "userOverride");
+            Scribe_Values.Look(ref Routine,"routine",-1);
         }
     }
 }

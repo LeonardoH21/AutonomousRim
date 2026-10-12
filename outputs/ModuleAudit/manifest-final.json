@@ -1,0 +1,15 @@
+{
+  "stage": "all-modules-efficient-final",
+  "flag": "autonomousrimallmodulestest",
+  "extraFlags": [
+    "autonomousrimfixturebaseline"
+  ],
+  "resumeSaveHash": "94B605291A81B328FC8C518B3962167222071638F5A9D090060B5473522062AF",
+  "sourceCommit": "fb5d23350324cb7a0ea95878635a1920b11310a3",
+  "dllHash": "B55CE88D6DED1ED0710F0983259D663789C8864038A02109A6EA1089EA247B9A",
+  "runtimeHash": "36239B035911B43A8946110586092F7E131440B026CE23D429A4AE6F78147B1F",
+  "result": "PASS",
+  "profile": "C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\all-modules-efficient-final-20261011-170204-643",
+  "sourceDirty": true,
+  "yieldCapsHash": "BEA9183CC1B7AC86C424AB7225F5AAFF6FC8792CBC9FDA2F6FFB3B4170DF0751"
+}

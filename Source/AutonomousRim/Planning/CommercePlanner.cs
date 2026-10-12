@@ -54,6 +54,10 @@ namespace AutonomousRim.Planning
                 int extra=def!=null && construction.TryGetValue(def,out int c)?c:0;
                 need(def,pair.Value+extra,70,"Conjunto militar da etapa "+(checkpoint.Stage+1));
             }
+            var ai=map.GetComponent<AutonomousRimMapComponent>();
+            if(ai.EquipmentAutomation)
+                foreach(var request in ai.Industry.Requirements.Where(r=>r.Route=="commerce" && r.Missing>0))
+                    need(request.Def,request.Target,75,"Insumo industrial sem fonte local viável");
             if(colony.EstimatedFoodDays<2)
                 need(ThingDefOf.MealSimple,Math.Max(8,(colony.ColonistCount+colony.PrisonerCount)*6),100,"Reserva de alimentação urgente");
             int meds=map.listerThings.AllThings.Where(t=>t.Spawned && t.def.IsMedicine && !t.IsForbidden(Faction.OfPlayer) && !t.Position.Fogged(map)).Sum(t=>t.stackCount);

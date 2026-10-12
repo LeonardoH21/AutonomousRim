@@ -40,6 +40,19 @@ namespace AutonomousRim.Execution
                 p.needs.food?.CurCategory >= HungerCategory.Hungry || p.needs.rest?.CurLevel < 0.35f || p.needs.joy?.CurLevel < 0.25f && !WorkReadiness.CanBuildRecoveryFurniture(p) ||
                 p.timetable?.CurrentAssignment == TimeAssignmentDefOf.Sleep || p.timetable?.CurrentAssignment == TimeAssignmentDefOf.Joy) return false;
             Job current = p.CurJob;
+            // Do not seize the equipment maker in the gap between native bill jobs.
+            // If ingredients are unavailable, the native scheduler still permits fallback work.
+            if(p.Map.GetComponent<AutonomousRimMapComponent>().Coordination.ProtectFromConstruction(p,work))return false;
+            // An idle gap between native sowing jobs is not permission to steal
+            // the farmer for a lower-priority construction/haul job every 30 ticks.
+            if(!p.WorkTypeIsDisabled(WorkTypeDefOf.Growing) && p.workSettings.GetPriority(WorkTypeDefOf.Growing)>0 &&
+                p.workSettings.GetPriority(WorkTypeDefOf.Growing)<p.workSettings.GetPriority(work) &&
+                p.Map.zoneManager.AllZones.OfType<Zone_Growing>().Any(zone=>zone.allowSow &&
+                    p.skills.GetSkill(SkillDefOf.Plants).Level>=zone.GetPlantDefToGrow().plant.sowMinSkill &&
+                    zone.Cells.Any(c=>c.IsInAllowedArea(p) && !c.Roofed(p.Map) &&
+                        c.GetTerrain(p.Map).fertility>=zone.GetPlantDefToGrow().plant.fertilityMin && c.GetEdifice(p.Map)==null &&
+                        (c.GetPlant(p.Map)?.def!=zone.GetPlantDefToGrow() || c.GetPlant(p.Map).HarvestableNow) &&
+                        PlantUtility.GrowthSeasonNow(c,p.Map,zone.GetPlantDefToGrow()) && p.CanReach(c,PathEndMode.OnCell,Danger.None))))return false;
             if(current?.def==JobDefOf.Refuel || current?.def==JobDefOf.RefuelAtomic) return false;
             if (current?.def.joyKind != null || current?.def == JobDefOf.Meditate || current?.workGiverDef?.workType == WorkTypeDefOf.Construction ||
                 current?.targetA.Thing is Frame || current?.targetB.Thing is Frame || current?.targetA.Thing is Blueprint_Build || current?.targetB.Thing is Blueprint_Build) return false;
@@ -54,6 +67,37 @@ namespace AutonomousRim.Execution
                 if (p.workSettings.GetPriority(other) < p.workSettings.GetPriority(work)) return false;
             }
             return true;
+        }
+        public static Job ConstructionDebrisJob(Pawn pawn, IReadOnlyList<RoomProject> projects)
+        {
+            if(!CanDispatch(pawn,WorkTypeDefOf.Hauling))return null;
+            var map=pawn.Map;
+            var dump=projects.FirstOrDefault(p=>p.Kind=="Despejo" && p.Stockpile!=null);
+            if(dump==null)return null;
+            var chunks=DefDatabase<ThingCategoryDef>.GetNamed("StoneChunks");
+            var cells=projects.Where(p=>!p.Completed && p.State!=ConstructionState.Paused && p.Kind!="Preparação do terreno")
+                .OrderBy(p=>p.Priority).SelectMany(p=>BaseConstructionManager.Tasks(p))
+                .Where(t=>!t.CancelledByPlayer && !t.Complete(map) && !t.Def.defName.Contains("Conduit"))
+                .SelectMany(t=>(t.Def is TerrainDef?(IEnumerable<IntVec3>)new[]{t.Position}:GenAdj.OccupiedRect(t.Position,t.Rotation,t.Def.Size)).Concat(
+                    t.Def is ThingDef d && d.hasInteractionCell?ThingUtility.InteractionCellsWhenAt(d,t.Position,t.Rotation,map):Enumerable.Empty<IntVec3>()))
+                .Distinct().Where(c=>c.InBounds(map));
+            var protectedCells=projects.SelectMany(BaseConstructionManager.Tasks).SelectMany(t=>t.Def is TerrainDef?(IEnumerable<IntVec3>)new[]{t.Position}:GenAdj.OccupiedRect(t.Position,t.Rotation,t.Def.Size)).ToHashSet();
+            foreach(var c in cells)
+            foreach(var item in c.GetThingList(map).Where(t=>t.def.thingCategories?.Contains(chunks)==true).ToList())
+            {
+                if(!c.IsInAllowedArea(pawn) || !pawn.CanReserveAndReach(item,PathEndMode.Touch,Danger.None))continue;
+                var destination=dump.Stockpile.Cells.Where(v=>!protectedCells.Contains(v) && v.Standable(map) &&
+                    v.IsInAllowedArea(pawn) && !v.IsForbidden(pawn) && !v.ContainsStaticFire(map) &&
+                    dump.Stockpile.GetStoreSettings().AllowedToAccept(item) && GenPlace.HaulPlaceBlockerIn(item,v,map,true)==null &&
+                    pawn.CanReserveAndReach(v,PathEndMode.OnCell,Danger.None)).OrderBy(v=>v.DistanceToSquared(c))
+                    .DefaultIfEmpty(IntVec3.Invalid).First();
+                if(!destination.IsValid)continue;
+                if(item is ThingWithComps)item.SetForbidden(false); // Native stone chunks have no forbidden component.
+                var job=JobMaker.MakeJob(JobDefOf.HaulToCell,item,destination);
+                job.count=item.stackCount;job.haulMode=HaulMode.ToCellStorage;
+                return job;
+            }
+            return null;
         }
         private static Job InteractionClearance(Pawn pawn, IReadOnlyList<RoomProject> projects)
         {
@@ -93,7 +137,7 @@ namespace AutonomousRim.Execution
             foreach (Pawn pawn in workers)
             {
                 if (issued >= 9 || orders.Any(o => o.Pending && o.Pawn == pawn) || orders.Any(o => o.Pawn == pawn && Find.TickManager.TicksGame - o.IssuedTick < 30)) continue;
-                var clearance=InteractionClearance(pawn,projects);
+                var clearance=ConstructionDebrisJob(pawn,projects)??InteractionClearance(pawn,projects);
                 if(clearance!=null && Start(pawn,clearance,DefDatabase<WorkGiverDef>.GetNamed("HaulGeneral"),clearance.targetA.Thing,orders)){issued++;continue;}
                 bool assigned = false;
                 foreach (string name in new[] { "ConstructFinishFrames", "DeliverResourcesToFrames", "DeliverResourcesToBlueprints", "ConstructDeliverResourcesToFrames", "ConstructDeliverResourcesToBlueprints" })

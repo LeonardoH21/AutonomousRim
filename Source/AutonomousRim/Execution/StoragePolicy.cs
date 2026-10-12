@@ -31,7 +31,7 @@ namespace AutonomousRim.Execution
                     kind == "Armas" ? def.IsWeapon :
                     kind == "Roupas" ? def.IsApparel :
                     kind == "Despejo" ? animalCorpse || def.thingCategories?.Contains(DefDatabase<ThingCategoryDef>.GetNamed("StoneChunks")) == true :
-                    !IsFood(def) && !def.IsCorpse && def.defName != "Chemfuel" &&
+                    !IsFood(def) && !def.IsCorpse && def.thingCategories?.Contains(DefDatabase<ThingCategoryDef>.GetNamed("StoneChunks")) != true && def.defName != "Chemfuel" &&
                         def.thingCategories?.Contains(DefDatabase<ThingCategoryDef>.GetNamed("MortarShells")) != true;
                 if (allow) filter.SetAllow(def, true);
             }
@@ -41,15 +41,16 @@ namespace AutonomousRim.Execution
         {
             if (map == null || state == null) return "Armazenamento de comida aguardando mapa.";
             var freezer = projects?.FirstOrDefault(p => p.Kind == "Freezer");
-            var general = projects?.FirstOrDefault(p => p.Kind == "Estoque");
+            var generals = projects?.Where(p => p.Kind == "Estoque").ToList() ?? new List<RoomProject>();
+            var general = generals.FirstOrDefault();
             if (freezer?.Stockpile != null)
             {
                 var settings = freezer.Stockpile.GetStoreSettings();
                 settings.Priority = state.FreezerNearFull ? StoragePriority.Critical : StoragePriority.Important;
             }
-            if (general?.Stockpile != null)
+            foreach(var room in generals.Where(p=>p.Stockpile!=null))
             {
-                var settings = general.Stockpile.GetStoreSettings();
+                var settings = room.Stockpile.GetStoreSettings();
                 settings.Priority = StoragePriority.Normal;
             }
             int generalStacks = map.listerThings.AllThings.Count(t => t.Spawned && t.def.EverStorable(false) &&
@@ -67,10 +68,11 @@ namespace AutonomousRim.Execution
                 return Math.Min(current+2,Math.Min(36,desired));
             }
             int foodStacks=map.listerThings.AllThings.Count(t=>t.Spawned && IsFood(t.def) && !t.Position.Fogged(map) && !t.IsForbidden(Faction.OfPlayer));
-            QueueShelves(map,general,shelfTarget(general,generalStacks),projects);
+            foreach(var room in generals)QueueShelves(map,room,shelfTarget(room,(generalStacks+generals.Count-1)/generals.Count),projects);
             QueueShelves(map,freezer,shelfTarget(freezer,foodStacks),projects);
-            int builtShelves=general?.Furniture.Count(t=>t.Def?.defName=="ShelfSmall" && t.Complete(map))??0;
-            int capacity=(general?.StorageCells.Count??0)+builtShelves*2;
+            var storageBuildings=map.listerBuildings.allBuildingsColonist.OfType<Building_Storage>().Where(b=>generals.Any(p=>p.Interior.Contains(b.Position))).ToList();
+            int builtShelves=storageBuildings.Count(b=>b.def.defName=="Shelf" || b.def.defName=="ShelfSmall");
+            int capacity=generals.SelectMany(p=>p.Stockpile?.Cells ?? new List<IntVec3>()).Distinct().Count()+storageBuildings.Sum(b=>b.OccupiedRect().Area*b.def.building.maxItemsInCell);
             string depot=$" Depósito: {generalStacks} pilhas conhecidas, {capacity} posições estimadas; {builtShelves} prateleiras prontas.";
             if(generalStacks>capacity && capacity>0)depot+=" Capacidade insuficiente: mobiliário interno prioritário; preservar corredores.";
 
@@ -84,7 +86,7 @@ namespace AutonomousRim.Execution
         private static void QueueShelves(Map map, RoomProject freezer, int desired, IReadOnlyList<RoomProject> projects)
         {
             // Upgrade completed rooms only; preserve player cancellations and room access.
-            if (freezer == null || freezer.State == ConstructionState.Paused) return;
+            if (freezer == null || freezer.ReferenceLayout!=null || freezer.State == ConstructionState.Paused) return;
             ThingDef shelf = DefDatabase<ThingDef>.GetNamedSilentFail("ShelfSmall");
             if (shelf == null) return; // Planned prerequisites feed the normal research planner.
             int existing = freezer.Furniture.Count(t => t.Def?.defName == shelf.defName);

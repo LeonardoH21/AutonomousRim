@@ -16,6 +16,7 @@ namespace AutonomousRim.Perception
             var eaters = map.mapPawns.FreeColonistsSpawned.Concat(map.mapPawns.AllPawnsSpawned.Where(p=>p.IsPrisonerOfColony)).Where(p => p.needs?.food != null).Distinct().ToList();
             var personalSupplies = eaters.ToDictionary(p => p, p => 0f);
             state.TargetFoodDays = FoodReservePolicy.TargetDays(map, eaters.Count);
+            state.TargetFoodDays += map.GetComponent<AutonomousRimMapComponent>()?.Observations.ExtraFoodDays??0;
             state.StrategicReserveDays = Math.Max(1.5f, state.TargetFoodDays * 0.5f);
             foreach (Pawn pawn in eaters)
                 state.DailyFoodNutrition += pawn.needs.food.FoodFallPerTickAssumingCategory(HungerCategory.Fed, true) * 60000f;

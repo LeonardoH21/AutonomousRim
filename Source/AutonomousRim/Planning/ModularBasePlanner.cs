@@ -72,7 +72,7 @@ namespace AutonomousRim.Planning
 
         private static void AddCirculation(Map map, List<RoomProject> projects, IntVec3 root)
         {
-            var modules = projects.Where(IsModular).Select(p => p.LayoutSlot.Split(':')).Select(p => new IntVec3(int.Parse(p[1]), 0, int.Parse(p[2]))).Distinct().ToList();
+            var modules = projects.Where(p=>IsModular(p) && p.Crop==null).Select(p => p.LayoutSlot.Split(':')).Select(p => new IntVec3(int.Parse(p[1]), 0, int.Parse(p[2]))).Distinct().ToList();
             var reserved = projects.SelectMany(p => p.Furniture).Where(t => t.Def is TerrainDef).Select(t => t.Position).ToHashSet();
             foreach (var grid in modules)
             {
@@ -81,11 +81,11 @@ namespace AutonomousRim.Planning
                 var origin = root + new IntVec3(grid.x * Stride, 0, grid.z * Stride);
                 var rect = new CellRect(origin.x, origin.z, Size, Size);
                 var path = new RoomProject { Kind = "Corredor", LayoutSlot = slot, LayoutAnchor = root, Origin = origin,
-                    InteriorSize = 11, RequiresRoof = false, Priority = ConstructionPriority.Low };
+                    InteriorSize = 11, RequiresRoof = false, Priority = ConstructionPriority.High };
                 foreach (var c in rect.ExpandedBy(3).Where(c => !rect.Contains(c)))
                 {
-                    if (!c.InBounds(map) || !c.GetTerrain(map).affordances.Contains(DefDatabase<TerrainDef>.GetNamed("Concrete").terrainAffordanceNeeded) || c.GetEdifice(map)?.Faction != null || !reserved.Add(c)) continue;
-                    path.Furniture.Add(new ConstructionTask { Def = DefDatabase<TerrainDef>.GetNamed("Concrete"), Position = c, OriginalTerrain = c.GetTerrain(map) });
+                    if (!c.InBounds(map) || !c.GetTerrain(map).affordances.Contains(DefDatabase<TerrainDef>.GetNamed("PavedTile").terrainAffordanceNeeded) || c.GetEdifice(map)?.Faction != null || !reserved.Add(c)) continue;
+                    path.Furniture.Add(new ConstructionTask { Def = DefDatabase<TerrainDef>.GetNamed("PavedTile"), Position = c, OriginalTerrain = c.GetTerrain(map) });
                 }
                 var prep = new RoomProject { Kind = "Preparação do terreno", LayoutSlot = "prep:" + slot,
                     Origin = origin, InteriorSize = 11, RequiresRoof = false, Priority = ConstructionPriority.Critical };
@@ -99,25 +99,12 @@ namespace AutonomousRim.Planning
 
         private static void AddFoodGrowing(Map map, List<RoomProject> projects, IntVec3 root)
         {
-            if (projects.Any(p => p.Crop != null) || projects.Any(p => p.Kind == "Quarto" && !p.Completed)) return;
-            var rice = DefDatabase<ThingDef>.GetNamed("Plant_Rice");
-            foreach (var grid in Grid())
-            {
-                string prefix = $"mod:{grid.x}:{grid.z}:";
-                if (projects.Any(p => p.LayoutSlot?.StartsWith(prefix) == true)) continue;
-                if (!projects.Where(IsModular).Any(p => Math.Abs(int.Parse(p.LayoutSlot.Split(':')[1]) - grid.x) + Math.Abs(int.Parse(p.LayoutSlot.Split(':')[2]) - grid.z) == 1)) continue;
-                var origin = root + new IntVec3(grid.x * Stride, 0, grid.z * Stride);
-                var rect = new CellRect(origin.x, origin.z, Size, Size);
-                if (projects.Any(p=>p.LayoutSlot=="prison:reserve" && p.Footprint.ExpandedBy(2).Overlaps(rect)) || !Site(map, rect) || rect.Any(c => c.GetEdifice(map) != null || c.Roofed(map) || c.GetTerrain(map).fertility < rice.plant.fertilityMin)) continue;
-                projects.Add(new RoomProject { Kind = "Plantação inicial", LayoutSlot = prefix + "15", LayoutAnchor = root, Origin = origin,
-                    InteriorSize = 11, Crop = rice, RequiresRoof = false, StorageCells = rect.Cells.ToList(), NoRoofCells = rect.Cells.ToList(), Priority = ConstructionPriority.High });
-                break;
-            }
+            AgriculturePlanner.AddModular(map, projects);
         }
 
-        private static bool AddRoom(Map map, List<RoomProject> projects, IntVec3 anchor, string kind, int parts)
+        internal static bool AddRoom(Map map, List<RoomProject> projects, IntVec3 anchor, string kind, int parts, IntVec3? beside = null)
         {
-            foreach (var grid in Grid())
+            foreach (var grid in Grid().OrderBy(g => beside.HasValue ? Math.Abs(anchor.x + g.x * Stride - beside.Value.x) + Math.Abs(anchor.z + g.z * Stride - beside.Value.z) : 0).ThenBy(g => beside.HasValue ? Math.Abs(anchor.z + g.z * Stride - beside.Value.z) : 0))
             {
                 string prefix = $"mod:{grid.x}:{grid.z}:";
                 var existing = projects.Where(p => p.LayoutSlot?.StartsWith(prefix) == true).ToList();
@@ -221,34 +208,54 @@ namespace AutonomousRim.Planning
                 }
             }
             foreach (var path in projects.Where(p => p.Kind == "Corredor"))
+            {
+                path.Priority=ConstructionPriority.High;
+                foreach(var task in path.Furniture.Where(t=>t.Def.defName=="Concrete" && !t.Issued && !t.WasCompleted && !t.CancelledByPlayer))
+                {task.Def=DefDatabase<TerrainDef>.GetNamed("PavedTile");path.Completed=false;}
                 path.Furniture.RemoveAll(t => t.Def is TerrainDef floor && !t.Issued && !t.WasCompleted &&
                     !t.Position.GetTerrain(map).affordances.Contains(floor.terrainAffordanceNeeded));
+            }
             while (projects.Count(p => p.Kind == "Quarto") < PrisonManager.HousingTarget(map))
                 if (!AddRoom(map, projects, root, "Quarto", 1)) return "Sem módulo acessível disponível para novos quartos.";
-            foreach (var kind in new[] { "Cozinha", "Abate", "Estoque", "Freezer", "Energia e climatização" })
-                if (!projects.Any(p => p.Kind == kind)) AddRoom(map, projects, root, kind, kind == "Estoque" ? 4 : kind == "Freezer" ? 2 : 1);
+            ReferenceModulePlanner.AddStores(map,projects,root);
+            if (!projects.Any(p => p.Kind == "Cozinha" || p.Kind == "Abate" || p.Kind == "Freezer")) ReferenceModulePlanner.AddFood(map,projects,root);
+            if (!projects.Any(p => p.Kind == "Energia e climatização")) ReferenceModulePlanner.AddEnergy(map,projects,root);
+            if (!projects.Any(p => p.Kind == "Pesquisa")) ReferenceModulePlanner.AddResearch(map,projects,root);
+            if (!projects.Any(p => p.Kind == "Refeitório e recreação")) ReferenceModulePlanner.AddDining(map,projects,root);
+            foreach (var kind in new[] { "Cozinha", "Abate", "Estoque", "Refeitório e recreação", "Freezer", "Energia e climatização" })
+                if (!projects.Any(p => p.Kind == kind)) AddRoom(map, projects, root, kind,
+                    kind == "Estoque" || kind == "Refeitório e recreação" ? 4 : kind == "Freezer" || kind == "Energia e climatização" ? 2 : 1);
             bool coreReady = CoreServicesReady(map,projects);
             // Production must not wait for optional dining, hospital or generator modules.
-            bool initialReady = InitialCoreReady(map,projects);
-            if (initialReady && projects.Any(p => p.Kind == "Pesquisa" && p.Completed) && !projects.Any(p => p.Kind == "Oficina"))
+            if (projects.Any(p => p.Kind == "Pesquisa") && !projects.Any(p => p.Kind == "Oficina"))
                 AddRoom(map, projects, root, "Oficina", 4);
-            if (coreReady)
-                foreach (var kind in new[] { "Refeitório e recreação", "Hospital" })
+            if (ShelterReady(map,projects))
+                foreach (var kind in new[] { "Hospital" })
                     if (!projects.Any(p => p.Kind == kind)) { AddRoom(map, projects, root, kind, 2); break; }
             if (DefDatabase<ResearchProjectDef>.GetNamed("Fabrication").IsFinished && projects.Any(p => p.Kind == "Oficina" && p.Completed) && !projects.Any(p => p.Kind == "Fabricação"))
                 AddRoom(map, projects, root, "Fabricação", 2);
-            if (DefDatabase<ResearchProjectDef>.GetNamed("MicroelectronicsBasics").IsFinished && !projects.Any(p => p.Kind == "Laboratório"))
+            if (DefDatabase<ResearchProjectDef>.GetNamed("MicroelectronicsBasics").IsFinished && !projects.Any(p => p.Kind == "Laboratório" || p.ReferenceLayout=="research_two_bedrooms"))
                 AddRoom(map, projects, root, "Laboratório", 4);
+            ReferenceModulePlanner.Reconcile(map,projects);
             ModularInteriorPlanner.Plan(map, projects);
             float demand = projects.SelectMany(BaseConstructionManager.Tasks).Where(t => t.Def is ThingDef)
                 .Sum(t => Math.Max(0, ((ThingDef)t.Def).GetCompProperties<CompProperties_Power>()?.PowerConsumption ?? 0));
             int generators = projects.SelectMany(p => p.Furniture).Count(t => t.Def.defName == "WoodFiredGenerator");
             bool runningGenerator = projects.SelectMany(p => p.Furniture).Any(t => t.Def.defName == "WoodFiredGenerator" && t.Complete(map));
-            if ((coreReady || runningGenerator) && demand + 200 > generators * 1000 && generators < 6)
-                AddRoom(map, projects, root, "Gerador auxiliar", 1);
+            // Six generators are not a capacity limit: advanced benches, hospital,
+            // prison and heating can exceed 6 kW and make native power shed loads.
+            // Budget rated consumption (all appliances on), with reserve for peaks.
+            float generatorCapacity = Math.Abs(DefDatabase<ThingDef>.GetNamed("WoodFiredGenerator")
+                .GetCompProperties<CompProperties_Power>()?.PowerConsumption ?? -1000);
+            float requiredPower = demand + Math.Max(200, demand * .15f);
+            if ((coreReady || runningGenerator) && generatorCapacity > 0 && requiredPower > generators * generatorCapacity)
+                {
+                if(!ReferenceModulePlanner.FillEnergy(map,projects)) ReferenceModulePlanner.AddEnergy(map,projects,root,true);
+            }
             // Research is part of the initial core, even without a blocked blueprint.
             if (!projects.Any(p => p.Kind == "Pesquisa"))
                 AddRoom(map, projects, root, "Pesquisa", 2);
+            ModularFacilities.Reconcile(map, projects);
             var generator = projects.SelectMany(p => p.Furniture).FirstOrDefault(t => t.Def.defName == "WoodFiredGenerator");
             var freezer = projects.FirstOrDefault(p => p.Kind == "Freezer");
             if (generator != null && freezer != null && !projects.Any(p => p.LayoutSlot == "modular-cables"))

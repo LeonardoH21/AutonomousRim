@@ -10,6 +10,13 @@ namespace AutonomousRim.Planning
         // Additive upgrades preserve working equipment and the approved sector boundaries.
         public static bool Add(Map map,System.Collections.Generic.List<RoomProject> rooms)
         {
+            if(rooms.Any(r=>r.Kind==ModularBasePlanner.ReservationKind))
+            {
+                int before=rooms.Sum(r=>r.Furniture.Count);
+                ModularFacilities.Reconcile(map,rooms);
+                ModularInteriorPlanner.UpdatePower(map,rooms);
+                return rooms.Sum(r=>r.Furniture.Count)!=before;
+            }
             if(!rooms.Any(r=>r.Kind==RingBasePlanner.ReservationKind))return false;
             bool changed=false;
             void add(string slot,string name,int preferredX,int preferredZ)

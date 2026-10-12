@@ -3,7 +3,7 @@
   <MainButtonDef>
     <defName>AutonomousRimInspector</defName>
     <label>Rim AI</label>
-    <description>Inspect the colony state observed by AutonomousRim.</description>
+    <description>Painel da IA: situação da colônia, pesquisa, construção, colonos e controles de automação.</description>
     <tabWindowClass>AutonomousRim.UI.MainTabWindow_Inspector</tabWindowClass>
     <order>95</order>
   </MainButtonDef>

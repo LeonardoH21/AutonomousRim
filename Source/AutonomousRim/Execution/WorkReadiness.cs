@@ -20,16 +20,12 @@ namespace AutonomousRim.Execution
             pawn.health.capacities.GetLevel(PawnCapacityDefOf.Consciousness) < .7f;
         public static bool NeedsRecovery(Pawn pawn) => pawn.Downed ||
             SeriousMedicalNeed(pawn) ||
-            (pawn.needs?.rest?.CurLevelPercentage ?? 1f) < .25f ||
-            (pawn.needs?.joy?.CurLevelPercentage ?? 1f) < .2f ||
-            (pawn.needs?.mood?.CurLevelPercentage ?? 1f) < .3f ||
-            (pawn.needs?.food?.CurLevelPercentage ?? 1f) < .15f;
+            (pawn.needs?.rest?.CurLevelPercentage ?? 1f) < .25f;
 
         public static bool Restored(Pawn pawn) => !pawn.Downed &&
             !HealthAIUtility.ShouldSeekMedicalRest(pawn) &&
             (pawn.needs?.rest?.CurLevelPercentage ?? 1f) >= .6f &&
             (pawn.needs?.joy?.CurLevelPercentage ?? 1f) >= .45f &&
-            (pawn.needs?.mood?.CurLevelPercentage ?? 1f) >= .4f &&
             (pawn.needs?.food?.CurLevelPercentage ?? 1f) >= .3f;
 
         public static bool SelfCare(WorkTypeDef work) => work.defName == "Patient" ||
@@ -37,8 +33,6 @@ namespace AutonomousRim.Execution
 
         public static bool CanProduceEmergencyFood(Pawn pawn) => !pawn.Downed &&
             !SeriousMedicalNeed(pawn) &&
-            (pawn.needs?.rest?.CurLevelPercentage ?? 1f) >= .25f &&
-            (pawn.needs?.joy?.CurLevelPercentage ?? 1f) >= .2f &&
-            (pawn.needs?.mood?.CurLevelPercentage ?? 1f) >= .3f;
+            (pawn.needs?.rest?.CurLevelPercentage ?? 1f) >= .25f;
     }
 }

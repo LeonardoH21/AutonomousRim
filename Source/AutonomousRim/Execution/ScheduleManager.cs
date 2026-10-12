@@ -14,7 +14,7 @@ namespace AutonomousRim.Execution
             var fire=DefDatabase<ThingDef>.GetNamedSilentFail("Fire");
             return fire!=null && map.listerThings.AllThings.Any(t=>t.def==fire && t.Spawned);
         }
-        public static bool Emergency(Map map,ColonyState state)=>map.GetComponent<AutonomousRimMapComponent>().SecondarySuspended || state.HostilePawnCount>0 || EmergencyManager.LocalFire(map);
+        public static bool Emergency(Map map,ColonyState state)=>map.GetComponent<AutonomousRimMapComponent>().SecondarySuspended || state.HostilePawnCount>0 || EmergencyManager.CriticalFire(map);
         private static bool CanMeditate(Pawn pawn) => ModsConfig.RoyaltyActive && pawn.GetPsylinkLevel() > 0 &&
             !HealthAIUtility.ShouldSeekMedicalRest(pawn);
         private static TimeAssignmentDef Normal(Pawn pawn, int hour)
@@ -37,10 +37,10 @@ namespace AutonomousRim.Execution
                 if ((pawn.needs?.food?.CurLevelPercentage ?? 1f) < .15f) return TimeAssignmentDefOf.Anything;
                 if ((pawn.needs?.rest?.CurLevelPercentage ?? 1f) < (recovery ? .6f : .25f)) return TimeAssignmentDefOf.Sleep;
                 if ((pawn.needs?.joy?.CurLevelPercentage ?? 1f) < (recovery ? .45f : .2f) ||
-                    (pawn.needs?.mood?.CurLevelPercentage ?? 1f) < .3f) return TimeAssignmentDefOf.Joy;
+                    ((pawn.needs?.mood?.CurLevelPercentage ?? 1f) < .3f && (pawn.needs?.joy?.CurLevelPercentage ?? 1f) < .45f)) return TimeAssignmentDefOf.Joy;
             }
             var normal = Normal(pawn, hour);
-            if (recovery) return normal == TimeAssignmentDefOf.Work ? TimeAssignmentDefOf.Anything : normal;
+            // Recovery changes only the current two hours; keep tomorrow's work blocks.
             if (emergency) return TimeAssignmentDefOf.Work;
             return normal;
         }
@@ -59,8 +59,7 @@ namespace AutonomousRim.Execution
             foreach(var pawn in colonists)
             {
                 var change=changes.FirstOrDefault(c=>c.Pawn==pawn); if(change==null){change=new ScheduleChange();changes.Add(change);} Ensure(change,pawn);
-                if (WorkReadiness.NeedsRecovery(pawn)) change.PersonalRecovery = true;
-                else if (WorkReadiness.Restored(pawn)) change.PersonalRecovery = false;
+                change.PersonalRecovery = WorkReadiness.NeedsRecovery(pawn);
                 if(emergency){change.Recovery=false;change.RecoveryUntil=0;change.LastReason=HasFire(map)?"incêndio":state.HostilePawnCount>0?"hostis":"colono ferido";}
                 else if(change.LastReason!=null && !change.Recovery){change.Recovery=true;change.RecoveryUntil=tick+6000;change.LastReason="recuperação após emergência";}
                 if(change.Recovery && tick>=change.RecoveryUntil && WorkReadiness.Restored(pawn)){change.Recovery=false;change.LastReason=null;}
@@ -77,7 +76,7 @@ namespace AutonomousRim.Execution
                 }
             }
             changes.RemoveAll(c=>c.Pawn==null || c.Pawn.Dead);
-            return emergency?$"Agenda de emergência: {changed} horários ajustados; descanso crítico preservado.":recovering>0?$"Recuperação: {recovering} colonos com sono/recreação prioritários.":$"Agenda dinâmica: {changed} horários ajustados por necessidades e descanso.";
+            return emergency?$"Agenda de emergência: {changed} horários ajustados; descanso crítico preservado.":recovering>0?$"Recuperação: {recovering} colonos com sono/recreação prioritários.":$"Rotina estável (8h sono, 9h trabalho, 2h lazer): {changed} horários ajustados por necessidades e descanso.";
         }
         public static void Restore(List<ScheduleChange> changes)
         {

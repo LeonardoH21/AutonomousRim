@@ -383,3 +383,98 @@ FAIL original enhanced-rescue-20261010-000018-545 preservado: dispatch nativo co
 FAIL enhanced-rescue-20261010-000302-558 preservado: resgate/tend nativos concluídos, sangramento cessou, helper liberado; nova assertiva flag manual revelou FireAtWill=false alterado paraOriginal=true no handoff. ProduçãoCombatManager restaurava setting antigo ao detectar ordem manual posterior. Correção: handoff mantém configuração atual; Stop restauraOriginal apenas se não existe ordem manual posterior. Novo witness médico exige também incremento de TimesTendedOther e ausência de ferimento sem tend, não apenas bleed0; grava save de conclusão. Reexecução pendente.
 
 FAIL enhanced-rescue-20261010-000506-213 mantém resgate/tend PASS, guard manual reprovou. Diagnóstico adicional do save: FireAtWill continuavaFalse; nova ordem Wait_Combat estava aceita na fila enquanto job atual terminava. Portanto a falha imediata desta execução era a exigência incorreta de CurJob.ID==pedido, não demonstração de alteração do flag. Ajustada assertiva para pedido atual OU enfileirado. Produção também reconhece manual na fila antes de emitir novas decisões/restaurar setting; own job enfileirado não é confundido com manual corrente anterior. Nenhuma morte observada nestas guardas. Exige nova execução completa.
+
+## 11/10/2026 — primeiro pacote da Entrega A
+
+DLL `B0B0825A07D5B3AEB6F172F3303854D83D84F01C37DC9AB4F18106947F2653CE`, runtime `3B2B9EFF5174118878803F8C58361B9E712890E060D34D46B0D0CF764CBC5E24`.
+
+- PASS `progress-release-diagnostics-20261011-215220-934`: 21 verificações; bloqueios de bancada/profissão/ingredientes/filtro/habilidade/turno, respeito à suspensão/meta, relógio de gargalo, avanço nativo antes do término da receita, produção efetiva e save/load do contador/histórico. Seis originais preservados.
+- PASS `progress-release-research-20261011-215313-573`: pesquisa nativa do V3, 0 → 25,03981 pontos em 6.104 ticks, diagnóstico acompanhando ganho real sem falso alerta.
+- PASS `progress-release-gear-20261011-215424-104`: três peças produzidas, ranged com colete 0 → 3 em 40.144 ticks; V4 pacífico isolado, sem recursos/research/jobs concedidos.
+
+V3/V4 pessoais intactos, addon temporário removido pelo executor. Escopo parcial dos itens 1/2/9/10/11/19; não aprova automaticamente os demais módulos/campanha. Relatório e continuação: [Entrega A](C:/Users/Administrador/Desktop/ModRimWorld/docs/ENTREGA-A-DIAGNOSTICO-PROGRESSO-2026-10-11.md).
+
+## 11/10/2026 — primeiro pacote da Entrega B
+
+DLL instalada `300F43F9B16E8664B1AFC3F9338A5C1707B6F2F6011168C11EBB8B08BB71F2AA`. Coordenação de receitas viáveis, fabricantes/pesquisador, orçamento de material para novas obras opcionais e precedência da sobrevivência/manual.
+
+- PASS `coordination-release-contracts-20261011-223133-384`: 11 contratos nativos; orçamento exato, obra essencial/opcional, divisão de responsáveis, ingredientes, suspensão e profissão manual desligada.
+- PASS `coordination-release-research-20261011-223218-488`: V3 0 → 25,37364 pontos em 3.968 ticks.
+- FAIL preservado `coordination-release-parallel-20261011-223321-209`: equipamento avançou/pesquisa +413,0275, zero novas estruturas em um dia. V4 inicial sem blueprints/frames; não comprovou construção simultânea.
+- PASS `coordination-parallel-order-20261011-223956-702`: um blueprint inicial explícito de banquinho, sem materiais/jobs/necessidades concedidos. Em 44.935 ticks: objeto concluído nativamente, pesquisa +218,9745, cinco peças fabricadas e coletes ranged 0 → 3. Comprova demanda concreta em paralelo, não base integral.
+- PASS `coordination-release-diagnostics-20261011-224347-110`: 21 verificações, incluindo produção nativa e persistência após save/load.
+
+Runtime inicial `036A9CC50F3D374AB84F27DB8B3971AC2EEACF669A4741C35107A1D056AC9BDB`; fixture com ordem e diagnóstico `2D51F873DE0D1E1644458D7940BBC6B4A74FE7C08747EDAE6A195DE99083AD6C`. DLL de produção igual em todas as etapas. V3/V4 pessoais intactos. Cobertura parcial de 3–8/20/30; grafo global/obtenção de recursos continuam pendentes. Relatório: [Entrega B](C:/Users/Administrador/Desktop/ModRimWorld/docs/ENTREGA-B-COORDENACAO-2026-10-11.md).
+
+## 11/10/2026 — Entrega B2: cadeia de equipamento e coleta independente
+
+DLL `48289195498BA9E38F002D7643E7C46A6E35F592F40D9CEE2B2ED4ACA743DFE9`, runtime `E98904657D70A69CC88C048F2CE5269140FDD2108AE0AE1670084593B6372767`.
+
+- PASS `equipment-chain-peaceful-20261011-230640-770`: 13 contratos; mineração nativa com base desligada, espada fabricada do aço minerado e equipada em Bravo, demanda persistida após save/load e limpeza somente de marcações próprias. Setup pacífico, bancada abastecida e seis minérios conhecidos; sem aço/jobs concedidos após início.
+- PASS `chain-coordination-contracts-20261011-230846-247`: 11 contratos do pacote anterior.
+- PASS `chain-research-regression-20261011-230922-578`: V3 0 → 25,63774 pontos em 2.952 ticks.
+- PASS `chain-parallel-regression-20261011-231012-924`: V4 cinco peças, coletes ranged 0 → 3, pesquisa +157,4076 e um banquinho construído; 41.987 ticks. Blueprint inicial explícito, sem materiais/jobs concedidos.
+- Ensaios sem aprovação preservados: `equipment-chain-20261011-225926-767` (Bill incorreta na fixture, corrigida para factory nativa); `equipment-chain-native-bill-20261011-230253-728` (raid antes da entrega; teste repetido em modo pacífico). Executor passou a reprovar exceções de JobDriver.
+
+V3/V4 pessoais intactos; DLL instalada igual à testada; addon temporário removido. Demandas por colono/checkpoint/peça persistem, porém prazos são apenas revisão e a cadeia universal de precursores/comércio permanece pendente. [Relatório B2](C:/Users/Administrador/Desktop/ModRimWorld/docs/ENTREGA-B2-CADEIA-EQUIPAMENTOS-2026-10-11.md).
+
+## 12/10/2026 — Entrega B3: insumos industriais
+
+DLL `FC43252A7CCEE06D28EDF2B9642FB1BB806E45F36ABE8E3E159064295F318086`, runtime final `758A102B6FA0A5DF6687C89287E469CD3779B315DFFFDC3BC943C1D14E8D645B`.
+
+- PASS `industry-final-contracts-20261012-000435-473`: 11 contratos de produção própria limitada, controle manual, expansão avançada e integração comercial.
+- PASS `industry-two-cycles-20261012-000512-151`: nove componentes, SMG fabricada e equipada em Delta, base desligada, ownership após save/load e preservação de edição manual. Prazo de dois dias.
+- PASS `industry-fuel-native-20261012-001103-865`: madeira por corte, abastecimento nativo, espada fabricada/equipada e save/load.
+- PASS `industry-mining-regression-20261012-001250-282`: 13 contratos de mineração → fabricação → equipamento e ownership.
+- PASS `industry-parallel-regression-20261012-001450-753`: quatro peças, três coletes ranged, pesquisa +223,8642, banquinho construído em 44.685 ticks.
+
+Falhas anteriores e limites preservados no [relatório B3](C:/Users/Administrador/Desktop/ModRimWorld/docs/ENTREGA-B3-INSUMOS-INDUSTRIAIS-2026-10-11.md). Ensaios B4 usam nova DLL e evidências próprias; não confundir hashes.
+
+## 12/10/2026 — Entrega B4: retomada e segurança industrial
+
+- PASS `industry-resume-powered-contracts-20261012-025554-813`: 20 contratos de retomada, propriedade, combustível, aquisição e bloqueios de sobrevivência.
+- PASS `industry-resume-native-20261012-025631-698`: pausa natural de SMG, retomada, fabricação e entrega equipada a Charlie; dez componentes produzidos, base desligada, ownership após save/load.
+- PASS `industry-resume-fuel-20261012-030229-684`: madeira coletada, bancada abastecida e espada fabricada/equipada nativamente.
+- PASS `industry-resume-parallel-20261012-030416-359`: três peças, coletes ranged 0 → 3, pesquisa +160,3164 e banquinho construído em 40.138 ticks.
+
+Esses ensaios usam DLL `557F225F7C8CC81DB8A6B19F546F402BFFFA997967A231D728A4716CA9942870`, runtime `BA215024890AAD1DEBA874F59337DC67F84FF5B9E07E51942D5E6EA2D742B9F6`.
+
+Último ajuste somente no diagnóstico: restringir candidatos ao criador vinculado e usar a mesma verificação de retomada da coordenação. DLL instalada `AF6AFC7B6E2730C327E1F10EDEAF22288BC08932F369D1C0C907062CDB18A06E`, runtime `9495CAEF3FEC47D10F1ED70DA589FC6C6D4C469DDADD4EBFC8C4E38AB49A7DF7`.
+
+- PASS final `industry-creator-shared-diagnostic-20261012-031312-356`: 21 contratos, incluindo criador fora dos três primeiros candidatos recebendo diagnóstico de retomada pronto sem ingrediente adicional.
+- PASS final `industry-progress-diagnostic-regression-20261012-031344-926`: 21 contratos, produção nativa de blocos de mármore e persistência após save/load.
+
+V3/V4 pessoais intactos, addon removido e DLL instalada igual à compilada. Falhas, hashes e limites estão no [relatório B4](C:/Users/Administrador/Desktop/ModRimWorld/docs/ENTREGA-B4-RETOMADA-INDUSTRIAL-2026-10-12.md).
+
+
+## 12/10/2026 — Entrega B5: infraestrutura industrial por demanda
+
+DLL `F6C42D666DCEF384C6C8F1B55AF1827D5DDDEF2AC9CA735EB532B3D7F4F8ECB9`, runtime `FE9F2C456828921F26987E7D11CB088CE9A2276F19700F58EA2DFC38245E1AB8`.
+
+- PASS `industry-infrastructure-final-20261012-033621-879`: 23 verificações; forja e prateleiras construídas nativamente, tecido transportado, calças fabricadas; filtros/prioridades manuais, terreno, zonas, cancelamento, toggles e save/load.
+- PASS `industry-infrastructure-resume-regression-20261012-033825-769`: 21 contratos de indústria e retomada.
+- PASS `industry-infrastructure-parallel-regression-20261012-033859-926`: 13 verificações de mineração → fabricação → equipamento/save-load. Nome da pasta difere da flag efetiva `autonomousrimequipmentchaintest`; não é o teste de pesquisa/construção simultâneas.
+- PASS `industry-infrastructure-coordination-20261012-034127-720`: quatro peças, coletes 0 → 3, pesquisa +388,4756 e banquinho concluído em 50.958 ticks. Limite original de um dia mantido.
+
+Limites e setups interrompidos preservados no [relatório B5](C:/Users/Administrador/Desktop/ModRimWorld/docs/ENTREGA-B5-INFRAESTRUTURA-INDUSTRIAL-2026-10-12.md). Instalação local; sem novo commit/push neste pacote.
+
+
+## 12/10/2026 — Prioridade 1–10: reforço contra travamentos
+
+DLL `5BC0F76B1229A323F16BF987C78AB720C112377088C5D254266F0C1E8438602D`, runtime `C61DB335A73C9897D169611AD4E124C3828FF08731A5255B96D735A2A21CFC90`.
+
+- PASS `antistall-diagnostics-complete-20261012-041250-029`: 34 verificações, diagnóstico de ingredientes/pesquisa, projetos separados, turnos, progresso nativo e save/load.
+- PASS `antistall-coordination-20261012-041332-551`: 15 verificações, estoque parcial, prioridade High opcional, Critical, estabilidade/suplentes e configurações manuais.
+- PASS `antistall-native-parallel-20261012-041402-525`: três peças, coletes 0 → 3, pesquisa +160,62 e banquinho concluído em 39.447 ticks. Critério de um dia mantido.
+- PASS `antistall-industrial-infrastructure-20261012-041732-171`: 23 verificações de construção/abastecimento B5 e persistência.
+
+Auditoria dos dez pontos, limitações e preparações que falharam estão no [relatório](C:/Users/Administrador/Desktop/ModRimWorld/docs/ENTREGA-ANTITRAVAMENTO-2026-10-12.md). V3/V4 pessoais intactos, addon removido e DLL instalada igual à compilada. Sem novo commit/push.
+
+## 12/10/2026 — Percepção, memória e explicações 11–20
+
+- PASS percepção/histórico: 27 verificações, incluindo catálogo de definições adicionais, portas compartilhadas, políticas e save/load.
+- PASS execução simultânea: quatro peças, coletes 0 → 3, pesquisa +353,16 e três construções em 42.653 ticks, dentro do prazo de 60.000.
+- PASS coordenação: 15 verificações; PASS regressão do diagnóstico: 34 verificações. Total: 76 verificações distintas.
+- Após compactar apenas a apresentação da HUD, 27 verificações de percepção repetidas com PASS na DLL final instalada `C163F87E046C87E3B2B530A693D39F1BA15C4B67EE59BCBC30306CE69A2C185F`.
+
+Proveniência por etapa, hashes anteriores, preparações e limites constam no [relatório 11–20](C:/Users/Administrador/Desktop/ModRimWorld/docs/ENTREGA-PERCEPCAO-MEMORIA-2026-10-12.md). Sem campanha de aprendizado autônomo, rollback automático de todas as estratégias ou QA visual da HUD. V3/V4 intactos; addon removido; sem novo commit/push.

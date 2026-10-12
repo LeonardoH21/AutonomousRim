@@ -17,6 +17,11 @@ namespace AutonomousRim.Execution
         public static bool LocalFire(Map map) => map.listerThings.AllThings.Any(t=>t is Fire &&
             (map.mapPawns.FreeColonistsSpawned.Any(p=>p.Position.DistanceTo(t.Position)<15) ||
              map.listerBuildings.allBuildingsColonist.Any(b=>b.Position.DistanceTo(t.Position)<12)));
+        // Nearby outdoor fires deserve firefighting, but not a shutdown of every worker.
+        // Escalate when flames can directly reach the base or an uninvolved colonist.
+        public static bool CriticalFire(Map map) => map.listerThings.AllThings.Any(t=>t is Fire &&
+            (map.listerBuildings.allBuildingsColonist.Any(b=>b.OccupiedRect().ClosestCellTo(t.Position).DistanceTo(t.Position)<=3) ||
+             map.mapPawns.FreeColonistsSpawned.Any(p=>p.CurJob?.def!=JobDefOf.BeatFire && p.Position.DistanceTo(t.Position)<=2)));
         // The colony-wide recovery gate protects patients. Individual
         // fatigue and mood remain handled by WorkReadiness and
         // ScheduleManager; they must not disable healthy workers indefinitely.
@@ -96,7 +101,8 @@ namespace AutonomousRim.Execution
             MedicalRescueManager.Apply(map,state,threat);
             state.Decision=threat.Immediate?(Retreat(threat)?"Recuar / abrigar; resgatar somente por rota segura":"Defender em cobertura / reorganizar"):
                 state.Phase==EmergencyPhase.Danger?"Incêndio próximo: proteger colonos e combater o fogo":state.Phase==EmergencyPhase.Securing?"Confirmar segurança; atender feridos":state.Phase==EmergencyPhase.Recovery?"Recuperar saúde, descanso e alimentação":"Rotina normal";
-            if(!state.BlockSecondary && state.Phase!=EmergencyPhase.Recovery) { RestoreWork(state);CombatManager.Stop(state.Evacuations);state.Excluded.Clear();return; }
+            if(!state.BlockSecondary && (state.Phase!=EmergencyPhase.Recovery || map.GetComponent<AutonomousRimMapComponent>().WorkAutomation))
+            { RestoreWork(state);CombatManager.Stop(state.Evacuations);state.Excluded.Clear();return; }
             bool recovery=state.Phase==EmergencyPhase.Recovery;
             bool criticalFood=colony.StoredMealCount==0 && colony.EstimatedFoodDays<0.5f;
             bool foodLow=colony.EstimatedFoodDays<colony.TargetFoodDays;

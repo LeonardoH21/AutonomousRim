@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using AutonomousRim.Core;
 using AutonomousRim.Execution;
+using AutonomousRim.Planning;
 using RimWorld;
 using Verse;
 using Verse.AI;
@@ -109,9 +110,9 @@ namespace AutonomousRim.RuntimeChecks
                 Pass("food shortage promotes cooking using passion and skill, with bounded specialists");
                 pawns[2].needs.food.CurLevel = .05f;
                 WorkPriorityManager.Apply(map, state, work);
-                Check(WorkPriorityManager.RawPriority(pawns[2], WorkTypeDefOf.Growing) == 1 && WorkPriorityManager.RawPriority(pawns[2], WorkTypeDefOf.Mining) == 0, "Hunger prevented emergency food production or allowed unrelated work.");
+                Check(WorkPriorityManager.RawPriority(pawns[2], WorkTypeDefOf.Growing) == 1 && WorkPriorityManager.RawPriority(pawns[2], WorkTypeDefOf.Mining) > 0, "Hunger prevented emergency food production or disabled fallback work.");
                 Healthy(pawns[2]);
-                Pass("hungry but otherwise fit farmer can produce emergency food while unrelated work stays suspended");
+                Pass("hungry but otherwise fit farmer can produce emergency food while fallback work stays enabled");
                 state.EstimatedFoodDays = 5;
                 WorkPriorityManager.Apply(map, state, work);
                 Check(WorkPriorityManager.RawPriority(pawns[1], DefDatabase<WorkTypeDef>.GetNamed("Cooking")) > 1, "Food urgency remained fixed.");
@@ -142,6 +143,18 @@ namespace AutonomousRim.RuntimeChecks
                 Check(pawns.Any(p => !p.WorkTypeIsDisabled(WorkTypeDefOf.Firefighter) && WorkPriorityManager.RawPriority(p, WorkTypeDefOf.Firefighter) == 1), "Local fire not promoted.");
                 fire.Destroy(DestroyMode.Vanish);
                 Pass("essential blueprint, designated tree cutting and local fire change priorities");
+                var wallCell=map.Center+new IntVec3(-14,0,-14);
+                var fireWall=ThingMaker.MakeThing(ThingDefOf.Wall,ThingDefOf.WoodLog);
+                fireWall.SetFaction(Faction.OfPlayer);GenSpawn.Spawn(fireWall,wallCell,map);
+                var distantFire=GenSpawn.Spawn(ThingMaker.MakeThing(DefDatabase<ThingDef>.GetNamed("Fire")),wallCell+new IntVec3(0,0,8),map);
+                Check(EmergencyManager.LocalFire(map) && !EmergencyManager.CriticalFire(map),"Outdoor fire unnecessarily shuts down colony.");
+                WorkPriorityManager.Apply(map,state,work);
+                Check(pawns.Any(p=>WorkPriorityManager.RawPriority(p,WorkTypeDefOf.Firefighter)==1),"Noncritical fire lost firefighting priority.");
+                distantFire.Destroy(DestroyMode.Vanish);
+                var threateningFire=GenSpawn.Spawn(ThingMaker.MakeThing(DefDatabase<ThingDef>.GetNamed("Fire")),wallCell+new IntVec3(0,0,2),map);
+                Check(EmergencyManager.CriticalFire(map),"Fire reaching base not escalated.");
+                threateningFire.Destroy(DestroyMode.Vanish);fireWall.Destroy(DestroyMode.Vanish);
+                Pass("outdoor fire keeps firefighting without global shutdown; fire reaching base escalates");
                 var tailoringCell = map.Center + new IntVec3(-12, 0, 4);
                 foreach (var c in new CellRect(tailoringCell.x - 2, tailoringCell.z - 2, 6, 6).Cells)
                 {
@@ -150,12 +163,28 @@ namespace AutonomousRim.RuntimeChecks
                 }
                 var tailoring = (Building_WorkTable)ThingMaker.MakeThing(DefDatabase<ThingDef>.GetNamed("HandTailoringBench"), ThingDefOf.WoodLog);
                 tailoring.SetFaction(Faction.OfPlayer); GenSpawn.Spawn(tailoring, tailoringCell, map);
-                tailoring.BillStack.AddBill(tailoring.def.AllRecipes.First(r => r.workSkill == SkillDefOf.Crafting).MakeNewBill());
+                tailoring.BillStack.AddBill(tailoring.def.AllRecipes.First(r => r.workSkill == SkillDefOf.Crafting && r.products?.Any(p=>p.thingDef.IsApparel)==true).MakeNewBill());
                 pawns[1].skills.GetSkill(SkillDefOf.Crafting).Level = 18;
                 WorkPriorityManager.Apply(map, state, work);
                 var tailorWork = DefDatabase<WorkTypeDef>.GetNamed("Tailoring");
-                Check(WorkPriorityManager.RawPriority(pawns[1], tailorWork) == 2, "Active tailoring bill did not select skilled crafter.");
+                Log.Message("[AutonomousRim.WorkScheduleTests] CRAFTER DIAGNOSTIC: "+string.Join(";",pawns.Select((p,i)=>i+":tailor="+WorkPriorityManager.RawPriority(p,tailorWork)+",build="+WorkPriorityManager.RawPriority(p,WorkTypeDefOf.Construction)+",craftSkill="+p.skills.GetSkill(SkillDefOf.Crafting).Level+",tailorDisabled="+p.WorkTypeIsDisabled(tailorWork)))+" recipe="+tailoring.BillStack.Bills.First().recipe.defName+" pending="+tailoring.BillStack.Bills.First().ShouldDoNow());
+                Check(WorkPriorityManager.RawPriority(pawns[1], tailorWork) == 1 && WorkPriorityManager.RawPriority(pawns[1],WorkTypeDefOf.Construction)>1, "Active equipment bill did not dedicate skilled crafter ahead of construction.");
+                Check(!ConstructionWorkManager.CanDispatch(pawns[1],WorkTypeDefOf.Construction),"Construction dispatcher steals equipment maker between bill jobs.");
                 Pass("pending tailoring bill selects a skilled production specialist");
+                var oreCell=map.Center+new IntVec3(14,0,-14);
+                var ore=GenSpawn.Spawn(ThingMaker.MakeThing(DefDatabase<ThingDef>.GetNamed("MineablePlasteel")),oreCell,map);
+                var helmetBill=(Bill_Production)DefDatabase<RecipeDef>.GetNamed("Make_Apparel_AdvancedHelmet").MakeNewBill();
+                helmetBill.ingredientFilter.SetDisallowAll();helmetBill.ingredientFilter.SetAllow(ThingDefOf.Steel,true);
+                var machining=(Building_WorkTable)ThingMaker.MakeThing(DefDatabase<ThingDef>.GetNamed("TableMachining"));
+                machining.SetFaction(Faction.OfPlayer);GenSpawn.Spawn(machining,map.Center+new IntVec3(-14,0,8),map);
+                machining.BillStack.AddBill(helmetBill);
+                var gathering=new List<Thing>();
+                ConstructionResourceManager.Apply(map,new List<RoomProject>(),gathering,new List<ManagedFoodBill>{new ManagedFoodBill{Bill=helmetBill,Signature=ManagedFoodBill.Describe(helmetBill)}});
+                Check(map.designationManager.SpawnedDesignationsOfDef(DesignationDefOf.Mine).Any(d=>d.target.Cell.GetEdifice(map)?.def.building?.mineableThing==ThingDefOf.Plasteel),"Fixed plasteel ingredient ignored by equipment resource planning.");
+                foreach(var mineral in gathering)map.designationManager.TryRemoveDesignationOn(mineral,DesignationDefOf.Mine);
+                map.designationManager.TryRemoveDesignationOn(ore,DesignationDefOf.Mine);
+                ore.Destroy(DestroyMode.Vanish);machining.BillStack.Delete(helmetBill);machining.Destroy(DestroyMode.Vanish);
+                Pass("equipment fixed ingredients request native plasteel mining despite steel-only stuff filter");
                 var stoveCell = map.Center + new IntVec3(-12, 0, -5);
                 var stove = (Building_WorkTable)ThingMaker.MakeThing(DefDatabase<ThingDef>.GetNamed("FueledStove"));
                 stove.SetFaction(Faction.OfPlayer); GenSpawn.Spawn(stove, stoveCell, map);
@@ -203,14 +232,19 @@ namespace AutonomousRim.RuntimeChecks
                 pawns[2].needs.mood.CurLevel = .1f;
                 WorkPriorityManager.Apply(map, state, work);
                 ScheduleManager.Apply(map, state, schedules, true);
-                Check(WorkPriorityManager.RawPriority(pawns[2], WorkTypeDefOf.Mining) == 0 && pawns[2].timetable.CurrentAssignment == TimeAssignmentDefOf.Joy, "Low mood ignored by work/schedule.");
+                Check(WorkPriorityManager.RawPriority(pawns[2], WorkTypeDefOf.Mining) > 0 && !schedules.First(s=>s.Pawn==pawns[2]).PersonalRecovery, "Low mood with full recreation disabled work or retained recovery.");
+                pawns[2].needs.joy.CurLevel=.1f;
+                WorkPriorityManager.Apply(map,state,work);
+                ScheduleManager.Apply(map,state,schedules,true);
+                Check(WorkPriorityManager.RawPriority(pawns[2],WorkTypeDefOf.Construction)>0 && Enumerable.Range(0,24).Count(h=>pawns[2].timetable.GetAssignment(h)==TimeAssignmentDefOf.Work)>=7,"Low joy/mood deadlocked work or removed the daytime work block.");
+                Pass("low mood/joy keeps work enabled while current-hour recreation is scheduled");
                 Healthy(pawns[2]);
                 if (ModsConfig.RoyaltyActive)
                 {
                     pawns[2].ChangePsylinkLevel(1, false); ScheduleManager.Apply(map, state, schedules, true);
                     Check(pawns[2].timetable.GetAssignment(12) == TimeAssignmentDefOf.Meditate, "Psylink colonist not assigned meditation.");
                     Healthy(pawns[2]);
-                    Pass("low mood removes productive work; Royalty psylink enables meditation");
+                    Pass("low mood alone preserves productive work; Royalty psylink enables meditation");
                 }
                 state.HostilePawnCount = 1;
                 ScheduleManager.Apply(map, state, schedules, true);

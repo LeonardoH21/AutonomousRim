@@ -9,8 +9,46 @@ namespace AutonomousRim.Planning
 {
     public static class AgriculturePlanner
     {
+        public static void AddModular(Map map,List<RoomProject> projects)
+        {
+            int population=map.mapPawns.FreeColonistsSpawnedCount;
+            foreach(var name in new[]{"Plant_Rice","Plant_Potato","Plant_Cotton","Plant_Healroot","Plant_Smokeleaf"})
+            {
+                var crop=DefDatabase<ThingDef>.GetNamedSilentFail(name);
+                if(crop?.plant==null)continue;
+                // Vanilla grows cotton and smokeleaf; do not invent unavailable flax/hemp defs.
+                int desired=name=="Plant_Rice" ? Math.Max(169,population*24) : 169;
+                AddModularCrop(map,projects,crop,desired);
+            }
+        }
+
+        public static void AddModularCrop(Map map,List<RoomProject> projects,ThingDef crop,int desired)
+        {
+            var root=projects.FirstOrDefault(p=>p.Kind==ModularBasePlanner.ReservationKind);
+            if(root==null || crop?.plant==null)return;
+            int existing=projects.Where(p=>p.Crop==crop && ModularBasePlanner.IsModular(p) && p.StorageCells.Count==169).Sum(p=>p.StorageCells.Count);
+            if(existing>=desired)return;
+            // Reserve whole grid cells. Adjacent farms must not consume the corridors or the future prison.
+            foreach(var grid in ModularBasePlanner.Grid())
+            {
+                string prefix=$"mod:{grid.x}:{grid.z}:";
+                if(projects.Any(p=>p.LayoutSlot?.StartsWith(prefix)==true))continue;
+                var origin=root.LayoutAnchor+new IntVec3(grid.x*16,0,grid.z*16);
+                var rect=new CellRect(origin.x,origin.z,13,13);
+                if(!rect.ExpandedBy(3).InBounds(map) || projects.Any(p=>p.Crop==null && p.Kind!=ModularBasePlanner.ReservationKind && p.Footprint.Overlaps(rect)))continue;
+                if(rect.Any(c=>c.Fogged(map) || c.GetZone(map)!=null || c.Roofed(map) ||
+                    c.GetTerrain(map).fertility<crop.plant.fertilityMin || c.GetEdifice(map)!=null ||
+                    c.GetThingList(map).Any(t=>t is Blueprint || t is Frame)))continue;
+                if(!map.mapPawns.FreeColonistsSpawned.Any(p=>p.CanReach(rect.CenterCell,Verse.AI.PathEndMode.OnCell,Danger.None)))continue;
+                projects.Add(new RoomProject{Kind="Plantação de "+crop.label,LayoutSlot=prefix+"15",LayoutAnchor=root.LayoutAnchor,
+                    Origin=origin,InteriorSize=11,Crop=crop,RequiresRoof=false,StorageCells=rect.Cells.ToList(),
+                    NoRoofCells=rect.Cells.ToList(),Priority=ConstructionPriority.High});
+                return; // One full field per crop/review; no partial circular patches.
+            }
+        }
         public static void AddCommercial(Map map,List<RoomProject> projects,ThingDef crop,int desired)
         {
+            if(projects.Any(p=>p.Kind==ModularBasePlanner.ReservationKind)) { AddModularCrop(map,projects,crop,desired); return; }
             var stock=projects.FirstOrDefault(p=>p.Kind=="Estoque" && (p.Completed || p.FunctionalStorage));
             if(stock==null)return;
             int existing=map.zoneManager.AllZones.OfType<Zone_Growing>().Where(z=>z.GetPlantDefToGrow()==crop).Sum(z=>z.Cells.Count)+
@@ -49,6 +87,7 @@ namespace AutonomousRim.Planning
         }
         public static void Add(Map map,List<RoomProject> projects)
         {
+            if(projects.Any(p=>p.Kind==ModularBasePlanner.ReservationKind)) { AddModular(map,projects); return; }
             if(!projects.Any(p=>p.Kind=="Estoque" && (p.Completed || p.FunctionalStorage)))return;
             var center=projects.First(p=>p.Kind=="Estoque").Interior.CenterCell;
             var occupied=projects.Where(p=>p.Crop==null && p.Kind!=ModularBasePlanner.ReservationKind && p.Kind!=RingBasePlanner.ReservationKind)

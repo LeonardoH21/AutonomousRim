@@ -96,7 +96,7 @@ namespace AutonomousRim.Execution
             return all.Any(p=>p.Kind==CourtyardBasePlanner.ReservationKind || p.Kind==ModularBasePlanner.ReservationKind)
                 ?bedrooms.OrderByDescending(p=>p.Completed).Take(map.mapPawns.FreeColonistsSpawnedCount):bedrooms;
         }
-        private static bool EssentialFoodRoom(RoomProject p) => p.Kind=="Cozinha" || p.Kind=="Abate" || p.Kind=="Estoque";
+        private static bool EssentialFoodRoom(RoomProject p) => p.Kind=="Cozinha" || p.Kind=="Abate" || p.Kind=="Estoque" || p.Kind=="Refeitório e recreação" || p.Crop!=null;
         private static void CompleteDoorFloorPlan(Map map, List<RoomProject> projects)
         {
             if (!projects.Any(p => p.Kind == CourtyardBasePlanner.ReservationKind)) return;
@@ -122,9 +122,15 @@ namespace AutonomousRim.Execution
             {
                 // Feed/store while providing shelter. A spare room for future
                 // recruits must not stop the colony's current production chain.
-                if (p.Kind != "Recreação inicial" && p.Kind != "Preparação do terreno" && p.Kind != ModularBasePlanner.ReservationKind && p.Kind != "Quarto" &&
+                if (p.Kind != "Recreação inicial" && p.Kind != "Preparação do terreno" && p.Kind != "Corredor" && p.Kind != "Despejo" && p.Kind != ModularBasePlanner.ReservationKind && p.Kind != "Quarto" &&
                     !EssentialFoodRoom(p) && NeededBedrooms(map,all).Any(r => !r.Completed && r.State != ConstructionState.Paused)) return true;
-                if (p.Kind == "Corredor" && all.Any(r => ModularBasePlanner.IsModular(r) && r.Crop == null && !r.Completed)) return true;
+                if (p.Kind == "Corredor")
+                {
+                    var parts=p.LayoutSlot?.Split(':');
+                    var prefix=parts?.Length==3 ? $"mod:{parts[1]}:{parts[2]}:" : null;
+                    return prefix!=null && all.Where(r=>r.LayoutSlot?.StartsWith(prefix)==true && r.Crop==null)
+                        .Any(r=>r.Shell.Any(t=>!t.Complete(map)));
+                }
                 // Validate obstacles per task below. A rock under one wall or
                 // workbench must not hold every other funded wall in its room.
                 // Service rooms share a ranked queue, so a blocked butcher
@@ -150,19 +156,68 @@ namespace AutonomousRim.Execution
                 return NeededBedrooms(map,all).Concat(all.Where(r => r.Kind == "Cozinha" || r.Kind == "Estoque" || r.Kind == "Freezer")).Any(r => !r.Completed);
             return p.Kind == "Pisos e acabamento" && all.Where(r => r.RequiresRoof).Any(r => !r.Completed);
         }
-        private static void Storage(Map map, RoomProject p)
+        private static void Storage(Map map, RoomProject p, IReadOnlyList<RoomProject> projects)
         {
             if (p.Kind != "Estoque" && p.Kind != "Freezer" && p.Kind != "Despejo" && p.Kind != "Medicamentos" && p.Kind != "Armas" && p.Kind != "Roupas") return;
-            if (p.Stockpile != null) { p.FunctionalStorage = true; return; }
+            // A shelf replaces the native floor stockpile cells. After load an empty
+            // zone is discarded; the physical medicinal storage remains functional.
+            if(p.Kind=="Medicamentos" && p.StorageCells.Count>0 && p.StorageCells.All(c=>
+                c.GetThingList(map).OfType<Building_Storage>().Any(b=>b.GetStoreSettings().Priority==StoragePriority.Critical &&
+                    b.GetStoreSettings().filter.Allows(ThingDefOf.MedicineHerbal))))
+            {p.FunctionalStorage=true;return;}
+            if (p.Stockpile != null) { NameStorage(p); p.FunctionalStorage = true; return; }
             // Storage works immediately. The shell/roof is still required for weather protection.
             var cells = p.StorageCells.Count > 0 ? p.StorageCells : p.Interior.ToList();
             if (cells.Any(c => c.GetZone(map) != null)) { p.BlockReason = "Zona do jogador ocupa a área de armazenamento."; return; }
             p.Stockpile = new Zone_Stockpile(StorageSettingsPreset.DefaultStockpile, map.zoneManager);
             map.zoneManager.RegisterZone(p.Stockpile);
+            NameStorage(p);
             var doors = p.Shell.Where(t => t.Def == ThingDefOf.Door).Select(t => t.Position).ToList();
-            foreach (IntVec3 c in cells.Where(c => !doors.Any(d => c.AdjacentToCardinal(d)))) p.Stockpile.AddCell(c);
+            var reserved = new HashSet<IntVec3>(projects.SelectMany(Tasks).Where(t=>t.Def is ThingDef d && !d.CanOverlapZones)
+                .SelectMany(t=>GenAdj.OccupiedRect(t.Position,t.Rotation,t.Def.Size)));
+            foreach (IntVec3 c in cells.Where(c => !reserved.Contains(c) && !doors.Any(d => c.AdjacentToCardinal(d)) &&
+                !c.GetThingList(map).Any(t=>!t.def.CanOverlapZones) && !c.GetThingList(map).OfType<Building_Storage>().Any())) p.Stockpile.AddCell(c);
             StoragePolicy.Configure(p.Stockpile.GetStoreSettings(), p.Kind);
             p.FunctionalStorage = true;
+        }
+        private static void NameStorage(RoomProject p)
+        {
+            // Rename only our generic zones; retain a label chosen by the player.
+            if(p.Stockpile.label==null || p.Stockpile.label.StartsWith("Stockpile") || p.Stockpile.label.StartsWith("Zona de estoque"))
+                p.Stockpile.label=p.Kind=="Despejo"?"Despejo — pedras e corpos de animais":p.ReferenceLayout=="workshop_storage_a"?"Estoque A — equipamentos e componentes":p.ReferenceLayout=="workshop_storage_b"?"Estoque B — materiais e processamento":p.Kind+" — AutonomousRim";
+        }
+        private static bool PrepareUpgrade(Map map,ConstructionTask task)
+        {
+            if(task.UpgradeTo==null)return false;
+            if(!task.Owned || !task.UpgradeTo.IsResearchFinished)return true;
+            if(task.Pending?.Spawned==true)
+            {
+                if(task.Pending is Blueprint_Build && Matches(task,task.Pending))task.Pending.Destroy(DestroyMode.Cancel);
+                else return true; // A funded frame is completed before replacing it.
+            }
+            var old=task.Position.GetThingList(map).FirstOrDefault(t=>t.def==task.Def && t.Position==task.Position && t.Faction==Faction.OfPlayer);
+            if(old!=null)
+            {
+                var designation=map.designationManager.DesignationOn(old,DesignationDefOf.Deconstruct);
+                if(task.OwnsUpgradeDesignation && designation==null)
+                {task.UpgradeTo=null;task.UpgradeDeclined=true;task.WasCompleted=true;task.OwnsUpgradeDesignation=false;return false;}
+                var budget=Available(map);
+                var stuff=task.UpgradeTo.MadeFromStuff?ThingDefOf.WoodLog:null;
+                if(CostListCalculator.CostListAdjusted(task.UpgradeTo,stuff).GroupBy(c=>c.thingDef)
+                    .Any(g=>!budget.TryGetValue(g.Key,out int held) || held<g.Sum(c=>c.count)))return true;
+                if(designation==null)
+                {
+                    map.designationManager.AddDesignation(new Designation(old,DesignationDefOf.Deconstruct));
+                    task.OwnsUpgradeDesignation=true;
+                }
+                task.WasCompleted=false;
+                return true;
+            }
+            task.Def=task.UpgradeTo;task.UpgradeTo=null;task.Stuff=((ThingDef)task.Def).MadeFromStuff?ThingDefOf.WoodLog:null;
+            task.Pending=null;task.Issued=false;task.WasCompleted=false;task.CancelledByPlayer=false;
+            task.SettingsConfigured=false;task.TemperatureConfigured=false;
+            task.OwnsUpgradeDesignation=false;
+            return false;
         }
         private static float Progress(Map map, RoomProject p)
         {
@@ -208,11 +263,14 @@ namespace AutonomousRim.Execution
             foreach (var p in projects)
             {
                 p.BlockReason = null;
+                if(p.Stockpile!=null && (p.Stockpile.Cells.Count==0 || !map.zoneManager.AllZones.Contains(p.Stockpile)))p.Stockpile=null;
                 if(!danger)foreach(var c in p.NoRoofCells)map.areaManager.NoRoof[c]=true;
                 if (p.Kind == "Energia e climatização") p.Priority = (map.mapTemperature.OutdoorTemp < 0 || map.mapTemperature.OutdoorTemp > 35) &&
                     projects.Any(r => r.RequiresRoof && r.Shell.All(t => t.Complete(map))) ? ConstructionPriority.Critical : ConstructionPriority.High;
                 foreach (var t in Tasks(p))
                 {
+                    if(danger && t.UpgradeTo!=null)continue;
+                    if(PrepareUpgrade(map,t))continue;
                     // Pending coolers in older plans follow the new default too;
                     // already configured/player-adjusted thermostats remain intact.
                     if (p.Kind == "Freezer" && t.Def.defName == "Cooler" && !t.TemperatureConfigured) t.TargetTemperature = -2f;
@@ -227,7 +285,17 @@ namespace AutonomousRim.Execution
                             if(!PrisonManager.ConfigureBed(prisonerBed))continue;
                         }
                         if (t.MedicalBed && building is Building_Bed bed) bed.Medical = true;
-                        if (t.StorageKind != null && building is Building_Storage storage) StoragePolicy.Configure(storage.GetStoreSettings(), t.StorageKind, shelf: true);
+                        if (t.StorageKind != null && building is Building_Storage storage)
+                        {
+                            if (t.StorageKind == IndustryInfrastructure.BufferKind)
+                            {
+                                // Only shelves actually issued by this plan may be adopted.
+                                if (!t.Owned) { t.SupplyManual=true; t.SettingsConfigured=true; continue; }
+                                IndustryInfrastructure.Configure(storage.GetStoreSettings(),t.SupplyInputs,true);
+                                t.SupplySignature=IndustryInfrastructure.Describe(storage.GetStoreSettings());
+                            }
+                            else StoragePolicy.Configure(storage.GetStoreSettings(), t.StorageKind, shelf: true);
+                        }
                         t.SettingsConfigured = true;
                     }
                     if (!t.TemperatureConfigured && t.TargetTemperature > -999 && t.Complete(map))
@@ -240,10 +308,11 @@ namespace AutonomousRim.Execution
                 float progress = Progress(map, p);
                 if (Math.Abs(progress - p.LastProgress) > 0.01f || p.LastProgressTick == 0) { p.LastProgress = progress; p.LastProgressTick = ticks; }
                 p.Stalled = p.Started && ticks - p.LastProgressTick >= StallTicks;
-                if (Tasks(p).Any(t => t.WasCompleted && !t.Complete(map)))
+                if (Tasks(p).Any(t => t.UpgradeTo==null && t.WasCompleted && !t.Complete(map)))
                 { p.Completed = false; p.State = ConstructionState.Blocked; p.BlockReason = "Estrutura concluída removida ou destruída; revisão necessária. Outras obras continuam."; continue; }
                 if (Tasks(p).Any(t => t.CancelledByPlayer)) { p.State = ConstructionState.Paused; p.BlockReason = "Obra removida ou alterada (possível cancelamento); outras obras continuam."; continue; }
-                if (p.Completed) { p.State = ConstructionState.Completed; continue; }
+                if(p.Stockpile!=null)NameStorage(p);
+                if (p.Completed && p.Crop == null) { p.State = ConstructionState.Completed; continue; }
                 if (danger) { p.State = ConstructionState.Paused; p.BlockReason = "Hostis no mapa."; continue; }
                 if (p.Kind == "Preparação do terreno")
                 {
@@ -318,17 +387,24 @@ namespace AutonomousRim.Execution
                     {
                         if (p.StorageCells.Any(c => c.GetZone(map) != null)) { p.State = ConstructionState.Blocked; p.BlockReason = "Zona do jogador ocupa a plantação."; continue; }
                         var cells = p.StorageCells.Where(c => c.GetTerrain(map).fertility >= p.Crop.plant.fertilityMin && c.GetEdifice(map) == null && !c.Roofed(map)).ToList();
-                        if (cells.Count == 0) { p.State = ConstructionState.Blocked; p.BlockReason = "Sem solo fértil descoberto para " + p.Crop.label; continue; }
+                        if (cells.Count == 0 || ModularBasePlanner.IsModular(p) && cells.Count != 169)
+                        { p.Completed=false; p.State = ConstructionState.Blocked; p.BlockReason = "Plantação aguarda todas as 169 células férteis e descobertas: " + p.Crop.label; continue; }
                         p.GrowingZone = new Zone_Growing(map.zoneManager); map.zoneManager.RegisterZone(p.GrowingZone);
                         foreach (var c in cells) { p.GrowingZone.AddCell(c); map.areaManager.NoRoof[c] = true; }
                         p.GrowingZone.SetPlantDefToGrow(p.Crop);
                     }
-                    p.Completed = true; p.State = ConstructionState.Completed; continue;
+                    bool grower=map.mapPawns.FreeColonistsSpawned.Any(pawn=>WorkPriorityManager.CanWork(pawn) &&
+                        !pawn.WorkTypeIsDisabled(WorkTypeDefOf.Growing) && pawn.workSettings?.GetPriority(WorkTypeDefOf.Growing)>0 &&
+                        pawn.skills.GetSkill(SkillDefOf.Plants).Level>=p.Crop.plant.sowMinSkill &&
+                        pawn.CanReach(p.StorageCells[0],PathEndMode.OnCell,Danger.None));
+                    p.Completed=p.GrowingZone.Cells.Count==p.StorageCells.Count && p.GrowingZone.GetPlantDefToGrow()==p.Crop && grower;
+                    p.State=p.Completed?ConstructionState.Completed:ConstructionState.Blocked;
+                    p.BlockReason=p.Completed?null:"Zona criada; verificar área, cultura, acesso e agricultor habilitado."; continue;
                 }
                 if (builders.Count == 0) { p.State = ConstructionState.Blocked; p.BlockReason = "Nenhum construtor com Construction habilitado."; continue; }
                 if (projects.Any(r => r.Kind == ModularBasePlanner.ReservationKind) && DependsOn(map, p, projects))
                 { p.State = ConstructionState.Blocked; p.BlockReason = "Aguardando quartos habitáveis, alimentação ou limpeza local."; continue; }
-                Storage(map, p);
+                Storage(map, p, projects);
                 if (p.BlockReason != null) { p.State = ConstructionState.Blocked; continue; }
                 bool shell = p.Shell.All(t => t.Complete(map));
                 if (shell && p.RequiresRoof)
@@ -338,7 +414,7 @@ namespace AutonomousRim.Execution
                         if (!c.Roofed(map) && !map.areaManager.BuildRoof[c]) { map.areaManager.BuildRoof[c] = true; p.RoofOrders.Add(c); }
                     }
                 if (p.BlockReason != null) { p.State = ConstructionState.Blocked; continue; }
-                if (shell && FurnitureStage(map,p).All(t => t.Complete(map)) && (!p.RequiresRoof || p.RoofArea.All(c => c.Roofed(map)))) { p.Completed = true; p.State = ConstructionState.Completed; continue; }
+                if (shell && !Tasks(p).Any(t=>t.UpgradeTo!=null) && FurnitureStage(map,p).All(t => t.Complete(map)) && (!p.RequiresRoof || p.RoofArea.All(c => c.Roofed(map)))) { p.Completed = true; p.State = ConstructionState.Completed; continue; }
                 if (DependsOn(map, p, projects)) { p.State = ConstructionState.Blocked; p.BlockReason = "Aguardando estrutura de outros módulos."; continue; }
                 p.State = Tasks(p).Any(t => t.Pending?.Spawned == true) || shell && p.RequiresRoof && p.RoofArea.Any(c => !c.Roofed(map)) ? ConstructionState.Active : ConstructionState.Planned;
                 if (p.Stalled)
@@ -364,6 +440,8 @@ namespace AutonomousRim.Execution
             if (danger) return "Construção suspensa: hostis no mapa.";
             if (builders.Count == 0) return "Construção bloqueada: nenhum construtor habilitado/disponível.";
             var budget = Available(map);
+            var ai = map.GetComponent<Core.AutonomousRimMapComponent>();
+            ai.Coordination.Refresh(map, ai.WorkChanges);
             var neededMaterials = new HashSet<ThingDef>(projects.Where(p => !p.Completed).SelectMany(Tasks).Where(t => !t.Complete(map))
                 .SelectMany(t => CostListCalculator.CostListAdjusted(t.Def, t.Stuff)).Select(c => c.thingDef));
             // Only construction materials require path checks here. Hundreds of stone
@@ -382,6 +460,7 @@ namespace AutonomousRim.Execution
                 int roomPending = Tasks(p).Where(t => t.Pending?.Spawned == true).Select(t => t.Pending).Distinct().Count();
                 foreach (var t in CurrentStage(map, p).Where(t => !t.Complete(map) && t.Pending?.Spawned != true))
                 {
+                    if(t.UpgradeTo!=null)continue;
                     if (t.RetryAfter > ticks) { missing = t.LastFailure ?? "Cooldown após falha."; continue; }
                     if (!t.Def.IsResearchFinished) { missing = "Pesquisa necessária: " + t.Def.label; continue; }
                     if (!builders.Any(b => b.skills.GetSkill(SkillDefOf.Construction).Level >= t.Def.constructionSkillPrerequisite && t.Position.IsInAllowedArea(b) && b.CanReach(t.Position, PathEndMode.Touch, Danger.None))) { missing = "Sem acesso ou habilidade: " + t.Def.label; continue; }
@@ -393,6 +472,7 @@ namespace AutonomousRim.Execution
                     var costs = CostListCalculator.CostListAdjusted(t.Def, t.Stuff)
                         .GroupBy(c => c.thingDef).Select(g => new ThingDefCountClass(g.Key, g.Sum(c => c.count))).ToList();
                     var deficit = costs.FirstOrDefault(c => !budget.TryGetValue(c.thingDef, out int held) || held - SafetyReserve(map, p, c.thingDef) -
+                        ai.Coordination.Reserve(map, p, c.thingDef) -
                         (priorityHold.TryGetValue(c.thingDef, out int reserved) ? reserved : 0) < c.count);
                     if (deficit != null)
                     {
@@ -420,6 +500,12 @@ namespace AutonomousRim.Execution
         public static void Stop(Map map, List<RoomProject> projects)
         {
             var tasks = projects.SelectMany(Tasks).ToList();
+            foreach(var t in tasks.Where(t=>t.OwnsUpgradeDesignation && t.UpgradeTo!=null))
+            {
+                var old=t.Position.GetThingList(map).FirstOrDefault(b=>b.def==t.Def && b.Position==t.Position);
+                if(old!=null)map.designationManager.DesignationOn(old,DesignationDefOf.Deconstruct)?.Delete();
+                t.OwnsUpgradeDesignation=false;
+            }
             foreach (var t in tasks) Track(map, t);
             var cancelled = new HashSet<Thing>(tasks.Where(t => t.Owned && t.Pending is Blueprint_Build bp && bp.Spawned && Matches(t, bp) && !t.CancelledByPlayer).Select(t => t.Pending));
             foreach (var bp in cancelled) bp.Destroy(DestroyMode.Cancel);

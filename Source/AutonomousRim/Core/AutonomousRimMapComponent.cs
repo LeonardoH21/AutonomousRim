@@ -11,7 +11,7 @@ namespace AutonomousRim.Core
     public sealed class AutonomousRimMapComponent : MapComponent
     {
         private const int ScanIntervalTicks = 360;
-        private const int LootIntervalTicks = 120;
+        private const int LootIntervalTicks = 60;
         private const int ThreatIntervalTicks = 15;
         private bool emergencyAutomation = true;
         private EmergencyState emergency = new EmergencyState();
@@ -23,6 +23,35 @@ namespace AutonomousRim.Core
         public string EmergencyStatus => $"Emergência: {emergency.Phase}; {emergency.Decision}. Vulneráveis: {CurrentState?.Threat?.Vulnerable.Count ?? 0}; resgates sem rota/cama segura: {emergency.DeferredRescues}; sem abrigo acessível: {emergency.MissingShelters}.";
 
         public ColonyState CurrentState { get; private set; }
+        private ProgressState progress = new ProgressState();
+        public ProgressState Progress => progress;
+        private ObservationMemory observations=new ObservationMemory();
+        public ObservationMemory Observations => observations;
+        public List<RoomObservation> ObservedRooms { get; private set; } = new List<RoomObservation>();
+        public void ObserveNow(bool rooms=true)
+        {
+            string transition=CurrentState?.Threat?.LastTransition;
+            CurrentState=ColonyStateScanner.Scan(map);
+            if(transition!=null)CurrentState.Threat.LastTransition=transition;
+            var frame=ObservationReader.Capture(map,CurrentState,this);
+            observations.Add(frame,rooms);
+            progress.Bind(map.uniqueID,frame.Tick,frame.Context+" • "+frame.Summary,frame.Policy);
+            if(rooms)ObservedRooms=RoomObserver.Read(map);
+        }
+        public void SetObservationPolicy(string policy)
+        {
+            if(!observations.ChangePolicy(policy))return;
+            ObserveNow();progress.Record(Find.TickManager.TicksGame,"Política alimentar: "+policy+"; anterior "+observations.PreviousPolicy,"Estratégia","food-policy");
+        }
+        public string ArchiveObservation()
+        {
+            var evidence=StrategyEvidenceBuilder.From(observations,observations.ColonyId);
+            if(evidence==null)return "Exportação indisponível: requer um dia observado, sem ameaça, caídos, fome ou mudança de população nesta sessão.";
+            var mod=AutonomousRimMod.Instance;
+            if(mod?.Evidence==null)return "Arquivo de evidências indisponível.";
+            if(!mod.Evidence.Add(evidence))return "Janela já registrada.";
+            mod.WriteSettings();return "Janela registrada entre colônias; nenhuma política foi aplicada automaticamente.";
+        }
         private bool foodAutomation;
         private bool workAutomation;
         private bool scheduleAutomation = true;
@@ -117,9 +146,17 @@ namespace AutonomousRim.Core
         public string EquipmentStatus { get; private set; } = "Autoequipamento desativado.";
         private List<Pawn> ownedHunts = new List<Pawn>();
         private List<ManagedFoodBill> defenseBills = new List<ManagedFoodBill>();
+        public IReadOnlyList<ManagedFoodBill> DefenseBills => defenseBills;
+        private List<ManagedFoodBill> industryBills = new List<ManagedFoodBill>();
+        public IReadOnlyList<ManagedFoodBill> IndustryBills => industryBills;
+        public IndustrySupplyPlan Industry { get; } = new IndustrySupplyPlan();
+        public WorkCoordination Coordination { get; } = new WorkCoordination();
+        private EquipmentDemandState equipmentDemands = new EquipmentDemandState();
+        public EquipmentDemandState EquipmentDemands => equipmentDemands;
         private List<ManagedFoodBill> infrastructureBills = new List<ManagedFoodBill>();
         private List<ManagedFoodBill> ownedBills = new List<ManagedFoodBill>();
         private List<WorkPriorityChange> workChanges = new List<WorkPriorityChange>();
+        public IReadOnlyList<WorkPriorityChange> WorkChanges => workChanges;
         private List<ScheduleChange> scheduleChanges = new List<ScheduleChange>();
         public bool FoodAutomation => foodAutomation;
         public bool WorkAutomation => workAutomation;
@@ -171,12 +208,19 @@ namespace AutonomousRim.Core
             Scribe_Collections.Look(ref equipmentExcluded, "equipmentExcluded", LookMode.Reference);
             Scribe_Collections.Look(ref ownedHunts, "ownedHunts", LookMode.Reference);
             Scribe_Collections.Look(ref defenseBills, "defenseBills", LookMode.Deep);
+            Scribe_Collections.Look(ref industryBills, "industryBills", LookMode.Deep);
             Scribe_Collections.Look(ref infrastructureBills,"infrastructureBills",LookMode.Deep);
             Scribe_Collections.Look(ref ownedBills, "ownedBills", LookMode.Deep);
             Scribe_Collections.Look(ref workChanges, "workChanges", LookMode.Deep);
             Scribe_Collections.Look(ref scheduleChanges, "scheduleChanges", LookMode.Deep);
+            Scribe_Deep.Look(ref progress, "progressDiagnostics");
+            Scribe_Deep.Look(ref observations,"observations");
+            Scribe_Deep.Look(ref equipmentDemands, "equipmentDemands");
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
             {
+                progress = progress ?? new ProgressState();
+                observations=observations??new ObservationMemory();
+                equipmentDemands = equipmentDemands ?? new EquipmentDemandState();
                 strategicPlan = strategicPlan ?? new StrategicPlan();
                 emergency = emergency ?? new EmergencyState();
                 commerce=commerce??new CommerceState();
@@ -188,6 +232,7 @@ namespace AutonomousRim.Core
                 failureMemory = failureMemory ?? new FailureMemory();
                 ownedHunts = ownedHunts ?? new List<Pawn>();
                 defenseBills = defenseBills ?? new List<ManagedFoodBill>();
+                industryBills = industryBills ?? new List<ManagedFoodBill>();
                 infrastructureBills=infrastructureBills??new List<ManagedFoodBill>();
                 ownedBills = ownedBills ?? new List<ManagedFoodBill>();
                 workChanges = workChanges ?? new List<WorkPriorityChange>();
@@ -225,6 +270,7 @@ namespace AutonomousRim.Core
                 ConstructionWorkManager.Stop(constructionOrders);
                 ConstructionResourceManager.Stop(map, constructionGathering);
                 BaseConstructionManager.Stop(map, baseProjects);
+                IndustryInfrastructure.Suspend(map,baseProjects);
                 FoodManager.RemoveOwnedBills(infrastructureBills);
                 foreach(var task in baseProjects.SelectMany(p=>p.Shell).Where(t=>t.UpgradeFrom?.Spawned==true && t.UpgradeMaterial!=null))
                 {
@@ -265,6 +311,22 @@ namespace AutonomousRim.Core
             SetEquipmentAutomation(false);
             SetAutomation(false, false);
             SetScheduleAutomation(false);
+        }
+
+        public bool AllAutomationEnabled => BaseAutomation && EquipmentAutomation && FoodAutomation && WorkAutomation &&
+            LootAutomation && StrategyAutomation && ScheduleAutomation && CombatAutomation && EmergencyAutomation && CommerceAutomation && PrisonAutomation;
+        public void EnableAll()
+        {
+            SetAutomation(true,true);
+            SetScheduleAutomation(true);
+            SetBaseAutomation(true);
+            SetLootAutomation(true);
+            SetEquipmentAutomation(true);
+            SetStrategyAutomation(true);
+            SetCombatAutomation(true);
+            SetEmergencyAutomation(true);
+            SetCommerceAutomation(true);
+            SetPrisonAutomation(true);
         }
 
         public void SetCombatAutomation(bool enabled)
@@ -309,8 +371,12 @@ namespace AutonomousRim.Core
 
         public void EvaluateStrategy()
         {
-            CurrentState = ColonyStateScanner.Scan(map);
+            var before=Find.ResearchManager.GetProject();
+            ObserveNow(false);
             StrategicPlanner.Evaluate(map, CurrentState, baseProjects, strategicPlan, strategyAutomation);
+            var after=Find.ResearchManager.GetProject();
+            if(before!=after)progress.Record(Find.TickManager.TicksGame,"Pesquisa selecionada: "+(after?.LabelCap.ToString()??"nenhuma")+
+                ". "+strategicPlan.ResearchStatus+" Foco: "+strategicPlan.CurrentFocus,"Estratégia","research:"+after?.defName);
             if (strategyAutomation && baseAutomation && !ExpansionSuspended && StrategicInfrastructure.Add(map, baseProjects)) PreviewBase();
         }
 
@@ -329,7 +395,9 @@ namespace AutonomousRim.Core
 
         public void SetEquipmentAutomation(bool enabled)
         {
-            if (!enabled) { EquipmentManager.Stop(equipmentOrders, managedApparel); FoodManager.RemoveOwnedBills(defenseBills); }
+            if (!enabled) { IndustryInfrastructure.Suspend(map,baseProjects); EquipmentManager.Stop(equipmentOrders, managedApparel); FoodManager.RemoveOwnedBills(defenseBills);
+                FoodManager.RemoveOwnedBills(industryBills); Industry.Clear();
+                if (!baseAutomation) ConstructionResourceManager.Stop(map, constructionGathering); }
             equipmentAutomation = enabled;
             CurrentState = ColonyStateScanner.Scan(map);
             EquipmentStatus = enabled && !ExpansionSuspended ? EquipmentManager.Apply(map, CurrentState, equipmentOrders, managedApparel, equipmentExcluded) : "Autoequipamento suspenso/desativado; equipamentos atuais mantidos.";
@@ -375,6 +443,10 @@ namespace AutonomousRim.Core
                 foreach (var cell in gatheringMineCells)
                     if (cell.InBounds(map) && cell.GetEdifice(map) is Mineable rock && !constructionGathering.Contains(rock)) constructionGathering.Add(rock);
             CurrentState = ColonyStateScanner.Scan(map);
+            progress.ResetSampling(Find.TickManager?.TicksGame ?? 0);
+            observations.ResetSession(Find.TickManager?.TicksGame??0);
+            observations.ColonyId=Current.Game.GetComponent<ObservationIdentity>().ColonyId;
+            ObserveNow();
         }
 
         public override void MapComponentUpdate()
@@ -404,6 +476,8 @@ namespace AutonomousRim.Core
             if (ticks > 0 && ticks % 1800 == 73) EvaluateStrategy();
             if (ticks > 0 && ticks % 1800 == 173) EvaluateFailure();
             if (ticks <= 0) return;
+            if (ticks % 600 == 317) { ObserveNow(); ColonyProgressMonitor.Sample(map, this); }
+            if (ticks % 600 == 347) equipmentDemands.Reconcile(map, this);
             if (ticks % ScanIntervalTicks == 0)
             {
                 string lastTransition = CurrentState?.Threat?.LastTransition;
@@ -423,8 +497,16 @@ namespace AutonomousRim.Core
         private void ManageColony(bool force = true)
         {
             int cycle = Find.TickManager.TicksGame;
+            // One fresh observation for all decisions in this economic cycle. Purely idle
+            // cycles do not rescan. Every emitted job still revalidates its native target.
+            bool decisionDue=force || workAutomation && cycle%180==0 || scheduleAutomation && cycle%300==30 ||
+                foodAutomation && cycle%600==60 || equipmentAutomation && (cycle%600==120 || cycle%900==90) ||
+                baseAutomation && (cycle%300==150 || cycle%600==240);
+            if(decisionDue && CurrentState?.Tick!=cycle)ObserveNow(false);
             if(emergencyAutomation && emergency.BlockSecondary)
             {
+                if (equipmentAutomation && (force || cycle % 600 == 120)) Industry.Update(map,this,industryBills);
+                IndustryInfrastructure.Suspend(map,baseProjects);
                 EmergencyManager.Apply(map,CurrentState,emergency);
                 if(scheduleAutomation)ScheduleStatus=ScheduleManager.Apply(map,CurrentState,scheduleChanges,true);
                 ManagementStatus="Emergência: trabalho secundário suspenso; recuperação libera medicina e alimentação antes da expansão.";
@@ -444,17 +526,23 @@ namespace AutonomousRim.Core
                 }
             }
             if (workAutomation && Find.PlaySettings.useWorkPriorities && (force || cycle % 180 == 0)) WorkPriorityManager.Apply(map, CurrentState, workChanges,
-                baseAutomation && baseProjects.Exists(p => !p.Completed && BaseConstructionManager.Tasks(p).Any()), constructionGathering.Count > 0, strategyAutomation && Find.ResearchManager.GetProject() != null);
+                baseAutomation && baseProjects.Exists(p => !p.Completed && BaseConstructionManager.Tasks(p).Any()), constructionGathering.Count > 0, Find.ResearchManager.GetProject() != null);
             if (scheduleAutomation && (force || cycle % 300 == 30)) ScheduleStatus = ScheduleManager.Apply(map, CurrentState, scheduleChanges, true);
             if (force || cycle % 600 == 60)
                 ManagementStatus = foodAutomation ? FoodManager.Apply(map, CurrentState, ownedHunts, ownedBills, baseProjects) : "Comida / roupas automáticas desativadas.";
             if (workAutomation && (force || cycle % 600 == 60)) ManagementStatus += Find.PlaySettings.useWorkPriorities
                 ? " Prioridades ativas; alterações manuais do jogador são preservadas."
                 : " Prioridades pausadas: o modo numérico de trabalho foi desligado pelo jogador.";
-            if (baseAutomation && (force || cycle % 300 == 150)) StorageStatus=StoragePolicy.ManageFoodStorage(map, CurrentState, baseProjects);
+            if (baseAutomation && (force || cycle % 300 == 150)) StorageStatus=StoragePolicy.ManageFoodStorage(map, CurrentState, baseProjects)+IndustryInfrastructure.Status(map,baseProjects);
             if (baseAutomation && (force || cycle % 1200 == 150)) AgriculturePlanner.Add(map,baseProjects);
             if (baseAutomation && (force || cycle % 600 == 150)) StoneProductionManager.Apply(map,CurrentState,baseProjects,infrastructureBills);
             if (equipmentAutomation && (force || cycle % 600 == 120)) DefenseProductionPlan.Apply(map, CurrentState, defenseBills);
+            if (equipmentAutomation && (force || cycle % 600 == 120)) Industry.Update(map,this,industryBills);
+            if (force || cycle % 600 == 120) IndustryInfrastructure.Update(map,this,baseProjects);
+            // Industry must gather inputs even when base automation has no projects or is off.
+            if ((baseAutomation || equipmentAutomation) && (force || cycle % 600 == 240))
+                GatheringStatus = ConstructionResourceManager.Apply(map, baseAutomation ? baseProjects : new List<RoomProject>(), constructionGathering,
+                    equipmentAutomation ? defenseBills.Concat(industryBills).ToList() : null, equipmentAutomation ? Industry.Targets : null);
             if (equipmentAutomation && (force || cycle % 900 == 90)) EquipmentStatus = EquipmentManager.Apply(map, CurrentState, equipmentOrders, managedApparel, equipmentExcluded);
             if (force && baseAutomation) ExecuteConstruction(cycle);
         }
@@ -478,7 +566,6 @@ namespace AutonomousRim.Core
                 lastConstructionReview = ticks;
                 BaseStatus = BaseConstructionManager.Apply(map, baseProjects);
             }
-            if (ticks % 600 == 0) GatheringStatus = ConstructionResourceManager.Apply(map, baseProjects, constructionGathering, equipmentAutomation ? defenseBills : null);
             ConstructionWorkManager.Apply(map, baseProjects, constructionOrders);
         }
 
@@ -500,8 +587,11 @@ namespace AutonomousRim.Core
             CurrentState.Threat = next;
             CurrentState.HostilePawnCount = next.ActiveCount;
             var previousPhase=emergency.Phase;
-            emergency.Update(next.Immediate || EmergencyManager.LocalFire(map),EmergencyManager.NeedsCare(map),ticks);
-            if(previousPhase!=emergency.Phase)Log.Message($"[AutonomousRim.Emergency] {previousPhase} → {emergency.Phase}; {next.Classification}");
+            emergency.Update(next.Immediate || EmergencyManager.CriticalFire(map),EmergencyManager.NeedsCare(map),ticks);
+            if(previousPhase!=emergency.Phase) {
+                Log.Message($"[AutonomousRim.Emergency] {previousPhase} → {emergency.Phase}; {next.Classification}");
+                progress.Record(ticks,previousPhase+" → "+emergency.Phase+"; "+next.Classification+"; "+emergency.Decision,"Emergência","threat");
+            }
             if(emergencyAutomation)
             {
                 if(emergency.BlockSecondary)
