@@ -1,0 +1,288 @@
+{
+  "validatedUtc": "2026-10-12T20:36:41.2046689Z",
+  "installedDllHash": "7F55EC18C7C22C06D95439032F66EDF1E7C1FFD505DE54ADED12B8D511D70DB1",
+  "originalV3Hash": "01B0BEC2823B5711CE0CC528CEFE61CF5DC3AD9F6E4A1AB62A598107F0E695FD",
+  "originalV4Hash": "A1EE5524D1E65D0ABF6B3786823D8268837688FE2FA086149C8C4EF39B098DBE",
+  "limitations": [
+    "Mature crops supplied initially; native harvest and resowing verified, not a full biological growth wait.",
+    "Original worn items retained; missing items crafted/equipped, six initial functional sets completed.",
+    "Six Cataphract sets not manufactured in this test.",
+    "Gear passed before final component ordering and orbital destination-capacity changes; focused regressions cover those changes.",
+    "Batch execution does not visually validate the HUD."
+  ],
+  "accepted": [
+    {
+      "stage": "commerce-economic-final",
+      "result": "PASS",
+      "profile": ".tools/validation/commerce-economic-final-20261012-200412-718",
+      "dllHash": "9DCFD9002E378DD3C08A329697609C79C29AAEA6D8EADDC593D6A8B1998DB7D9",
+      "runtimeHash": "8BEF0276806362868E845EE451E797378986BF91B09929B974D9418F7D65A0E7",
+      "sourceCommit": "b48e14e2f5a6e6e5d6a5e0fcfbab213744135ac3",
+      "sourceDirty": true,
+      "sourceSaveHash": "E56FBC00E4078A9EBA66EC77393F8BA2C56A1A14B59E071965518150B171D1F2",
+      "scenarioHash": "35E7A528ACFD4FA1C28ABE8AC7E9ECB9207A68DFB6534E74295322D966FAA5BC",
+      "presetHash": "63C2BA64663F67A1B5F32ADE4858DDF37FECB31BCA6223CE015FE5B1673AC809",
+      "evidence": [
+        "[CommerceTests] PASS: same buyer accepts newly crafted joints after save/load; native leaves consumed, second sale completed, exclusive smokeleaf reserve retained",
+        "[CommerceTests] PASS: all six initial sets crafted/equipped through native work while commercial production and repeated sales continue",
+        "[CommerceTests] METRICS firstTrade=546122 lastTrade=720775 firstSilver=302 silver=964 crafted=84 repeatSold=45 remainingJoints=0",
+        "[CommerceTests] DONE"
+      ]
+    },
+    {
+      "stage": "commerce-final-caravan",
+      "result": "PASS",
+      "profile": ".tools/validation/commerce-final-caravan-20261012-200814-449",
+      "dllHash": "DE003343FEC6D45857E7687AD589746C6F87A35CDB2C7EB1636FE047F6AA4BC6",
+      "runtimeHash": "28D550DAD134CF74F8EA52E1E50749DB723B1944050E7DDDAE27CDAC0AD1ACAC",
+      "sourceCommit": "b48e14e2f5a6e6e5d6a5e0fcfbab213744135ac3",
+      "sourceDirty": true,
+      "sourceSaveHash": "01B0BEC2823B5711CE0CC528CEFE61CF5DC3AD9F6E4A1AB62A598107F0E695FD",
+      "scenarioHash": "35E7A528ACFD4FA1C28ABE8AC7E9ECB9207A68DFB6534E74295322D966FAA5BC",
+      "presetHash": "63C2BA64663F67A1B5F32ADE4858DDF37FECB31BCA6223CE015FE5B1673AC809",
+      "evidence": [
+        "[CommerceTests] PASS: native formation reserves two couriers and retains three defenders and medicine/food reserves",
+        "[CommerceTests] PASS: couriers packed real goods, left map and formed native world caravan",
+        "[CommerceTests] PASS: native trade transfers drugs and needed materials, preserves silver reserve and protected goods, closes session",
+        "[CommerceTests] PASS: native world travel, settlement trade and return deliver actual purchases to the colony",
+        "[CommerceTests] PASS: native save/load preserves completed transaction, history and toggle",
+        "[CommerceTests] PASS: disable removes only managed trade production and job ownership",
+        "[CommerceTests] DONE"
+      ]
+    },
+    {
+      "stage": "commerce-orbit-verified",
+      "result": "PASS",
+      "profile": ".tools/validation/commerce-orbit-verified-20261012-201102-273",
+      "dllHash": "DE003343FEC6D45857E7687AD589746C6F87A35CDB2C7EB1636FE047F6AA4BC6",
+      "runtimeHash": "28D550DAD134CF74F8EA52E1E50749DB723B1944050E7DDDAE27CDAC0AD1ACAC",
+      "sourceCommit": "b48e14e2f5a6e6e5d6a5e0fcfbab213744135ac3",
+      "sourceDirty": true,
+      "sourceSaveHash": "01B0BEC2823B5711CE0CC528CEFE61CF5DC3AD9F6E4A1AB62A598107F0E695FD",
+      "scenarioHash": "35E7A528ACFD4FA1C28ABE8AC7E9ECB9207A68DFB6534E74295322D966FAA5BC",
+      "presetHash": "63C2BA64663F67A1B5F32ADE4858DDF37FECB31BCA6223CE015FE5B1673AC809",
+      "evidence": [
+        "[CommerceTests] PASS: native powered console/beacon and orbital negotiator dispatch",
+        "[CommerceTests] PASS: identified pending pods reduce purchase deficits before arrival; save/load resumes real delivery",
+        "[CommerceTests] PASS: native trade transfers drugs and needed materials, preserves silver reserve and protected goods, closes session",
+        "[CommerceTests] PASS: orbital drop pods landed; in-transit purchases cleared against real accessible stock",
+        "[CommerceTests] PASS: native save/load preserves completed transaction, history and toggle",
+        "[CommerceTests] PASS: same buyer accepts newly crafted joints after save/load; native leaves consumed, second sale completed, exclusive smokeleaf reserve retained",
+        "[CommerceTests] METRICS firstTrade=546882 lastTrade=574766 firstSilver=300 silver=397 crafted=20 repeatSold=20 remainingJoints=0",
+        "[CommerceTests] DONE"
+      ]
+    },
+    {
+      "stage": "commerce-guards-verified",
+      "result": "PASS",
+      "profile": ".tools/validation/commerce-guards-verified-20261012-201313-116",
+      "dllHash": "DE003343FEC6D45857E7687AD589746C6F87A35CDB2C7EB1636FE047F6AA4BC6",
+      "runtimeHash": "28D550DAD134CF74F8EA52E1E50749DB723B1944050E7DDDAE27CDAC0AD1ACAC",
+      "sourceCommit": "b48e14e2f5a6e6e5d6a5e0fcfbab213744135ac3",
+      "sourceDirty": true,
+      "sourceSaveHash": "01B0BEC2823B5711CE0CC528CEFE61CF5DC3AD9F6E4A1AB62A598107F0E695FD",
+      "scenarioHash": "35E7A528ACFD4FA1C28ABE8AC7E9ECB9207A68DFB6534E74295322D966FAA5BC",
+      "presetHash": "63C2BA64663F67A1B5F32ADE4858DDF37FECB31BCA6223CE015FE5B1673AC809",
+      "evidence": [
+        "[CommerceTests] PASS: native sale-only buyer without cash preserves stock and records no transaction",
+        "[CommerceTests] PASS: native incompatible trader accepts no smokeleaf sale and preserves silver",
+        "[CommerceTests] PASS: native manual TradeSession survives enable/disable with unchanged goods and no automatic transaction",
+        "[CommerceTests] PASS: food shortage pauses owned native bills while preserving cash/product goals",
+        "[CommerceTests] PASS: native nearby fire suspends an owned negotiator and prevents transactions without changing stock",
+        "[CommerceTests] PASS: native ordered job replaces automatic negotiator; disable preserves player control",
+        "[CommerceTests] PASS: deficit plan, bounded production bill and native negotiator dispatch from idle state",
+        "[CommerceTests] PASS: native trade transfers drugs and needed materials, preserves silver reserve and protected goods, closes session",
+        "[CommerceTests] PASS: native save/load preserves completed transaction, history and toggle",
+        "[CommerceTests] PASS: disable removes only managed trade production and job ownership",
+        "[CommerceTests] DONE"
+      ]
+    },
+    {
+      "stage": "commerce-orbit-storage-final",
+      "result": "PASS",
+      "profile": ".tools/validation/commerce-orbit-storage-final-20261012-203207-057",
+      "dllHash": "7F55EC18C7C22C06D95439032F66EDF1E7C1FFD505DE54ADED12B8D511D70DB1",
+      "runtimeHash": "A942E8F8F2F5A7F5FA5D5D5CE8BEC327DF2A8C2DBD911C5F0F73DF2E1A88F528",
+      "sourceCommit": "b48e14e2f5a6e6e5d6a5e0fcfbab213744135ac3",
+      "sourceDirty": true,
+      "sourceSaveHash": "01B0BEC2823B5711CE0CC528CEFE61CF5DC3AD9F6E4A1AB62A598107F0E695FD",
+      "scenarioHash": "35E7A528ACFD4FA1C28ABE8AC7E9ECB9207A68DFB6534E74295322D966FAA5BC",
+      "presetHash": "63C2BA64663F67A1B5F32ADE4858DDF37FECB31BCA6223CE015FE5B1673AC809",
+      "evidence": [
+        "[CommerceTests] PASS: full nearest orbital shelf skipped in favor of a covered destination with capacity",
+        "[CommerceTests] PASS: native powered console/beacon and orbital negotiator dispatch",
+        "[CommerceTests] PASS: identified pending pods reduce purchase deficits before arrival; save/load resumes real delivery",
+        "[CommerceTests] PASS: native trade transfers drugs and needed materials, preserves silver reserve and protected goods, closes session",
+        "[CommerceTests] PASS: orbital drop pods landed; in-transit purchases cleared against real accessible stock",
+        "[CommerceTests] PASS: native save/load preserves completed transaction, history and toggle",
+        "[CommerceTests] PASS: same buyer accepts newly crafted joints after save/load; native leaves consumed, second sale completed, exclusive smokeleaf reserve retained",
+        "[CommerceTests] METRICS firstTrade=546848 lastTrade=569838 firstSilver=300 silver=379 crafted=20 repeatSold=20 remainingJoints=0",
+        "[CommerceTests] DONE"
+      ]
+    }
+  ],
+  "otherAttempts": [
+    {
+      "stage": "commerce-continuous-visitor",
+      "result": "FAIL",
+      "error": "Stage failed: C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\commerce-continuous-visitor-20261012-180116-259\\Player.log",
+      "profile": ".tools/validation/commerce-continuous-visitor-20261012-180116-259"
+    },
+    {
+      "stage": "commerce-continuous-visitor",
+      "result": "PASS",
+      "error": null,
+      "profile": ".tools/validation/commerce-continuous-visitor-20261012-180327-702"
+    },
+    {
+      "stage": "commerce-covered-orbital",
+      "result": "FAIL",
+      "error": "Stage failed: C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\commerce-covered-orbital-20261012-182203-455\\Player.log",
+      "profile": ".tools/validation/commerce-covered-orbital-20261012-182203-455"
+    },
+    {
+      "stage": "commerce-cycle-shelves",
+      "result": "FAIL",
+      "error": "Game exited before stage completed.",
+      "profile": ".tools/validation/commerce-cycle-shelves-20261012-191658-550"
+    },
+    {
+      "stage": "commerce-final-orbital",
+      "result": "FAIL",
+      "error": "Stage failed: C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\commerce-final-orbital-20261012-181354-113\\Player.log",
+      "profile": ".tools/validation/commerce-final-orbital-20261012-181354-113"
+    },
+    {
+      "stage": "commerce-final-visitor",
+      "result": "FAIL",
+      "error": "Stage failed: C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\commerce-final-visitor-20261012-180652-485\\Player.log",
+      "profile": ".tools/validation/commerce-final-visitor-20261012-180652-485"
+    },
+    {
+      "stage": "commerce-final-visitor",
+      "result": "PASS",
+      "error": null,
+      "profile": ".tools/validation/commerce-final-visitor-20261012-181002-006"
+    },
+    {
+      "stage": "commerce-gear-peaceful",
+      "result": "FAIL",
+      "error": "Game exited before stage completed.",
+      "profile": ".tools/validation/commerce-gear-peaceful-20261012-200225-983"
+    },
+    {
+      "stage": "commerce-gear-policy",
+      "result": "FAIL",
+      "error": "Game exited before stage completed.",
+      "profile": ".tools/validation/commerce-gear-policy-20261012-195641-240"
+    },
+    {
+      "stage": "commerce-gear-protection",
+      "result": "FAIL",
+      "error": "Game exited before stage completed.",
+      "profile": ".tools/validation/commerce-gear-protection-20261012-195714-636"
+    },
+    {
+      "stage": "commerce-harvest-gear-cycle",
+      "result": "FAIL",
+      "error": "Game exited before stage completed.",
+      "profile": ".tools/validation/commerce-harvest-gear-cycle-20261012-185338-323"
+    },
+    {
+      "stage": "commerce-hauling-orbital",
+      "result": "FAIL",
+      "error": "Stage failed: C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\commerce-hauling-orbital-20261012-182618-652\\Player.log",
+      "profile": ".tools/validation/commerce-hauling-orbital-20261012-182618-652"
+    },
+    {
+      "stage": "commerce-isolated-orbital",
+      "result": "FAIL",
+      "error": "Game exited before stage completed.",
+      "profile": ".tools/validation/commerce-isolated-orbital-20261012-183037-537"
+    },
+    {
+      "stage": "commerce-orbit-blocked-storage",
+      "result": "FAIL",
+      "error": "Stage failed: C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\commerce-orbit-blocked-storage-20261012-202250-381\\Player.log",
+      "profile": ".tools/validation/commerce-orbit-blocked-storage-20261012-202250-381"
+    },
+    {
+      "stage": "commerce-orbit-capacity",
+      "result": "FAIL",
+      "error": "Stage failed: C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\commerce-orbit-capacity-20261012-201747-825\\Player.log",
+      "profile": ".tools/validation/commerce-orbit-capacity-20261012-201747-825"
+    },
+    {
+      "stage": "commerce-orbit-clear-shelf",
+      "result": "FAIL",
+      "error": "Stage failed: C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\commerce-orbit-clear-shelf-20261012-202508-008\\Player.log",
+      "profile": ".tools/validation/commerce-orbit-clear-shelf-20261012-202508-008"
+    },
+    {
+      "stage": "commerce-orbit-full-shelf",
+      "result": "FAIL",
+      "error": "Stage failed: C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\commerce-orbit-full-shelf-20261012-201943-751\\Player.log",
+      "profile": ".tools/validation/commerce-orbit-full-shelf-20261012-201943-751"
+    },
+    {
+      "stage": "commerce-orbit-saturated-shelf",
+      "result": "FAIL",
+      "error": "Stage failed: C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\commerce-orbit-saturated-shelf-20261012-203036-151\\Player.log",
+      "profile": ".tools/validation/commerce-orbit-saturated-shelf-20261012-203036-151"
+    },
+    {
+      "stage": "commerce-powered-orbital",
+      "result": "PASS",
+      "error": null,
+      "profile": ".tools/validation/commerce-powered-orbital-20261012-183221-811"
+    },
+    {
+      "stage": "commerce-ready-orbital",
+      "result": "FAIL",
+      "error": "Stage failed: C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\commerce-ready-orbital-20261012-181736-857\\Player.log",
+      "profile": ".tools/validation/commerce-ready-orbital-20261012-181736-857"
+    },
+    {
+      "stage": "commerce-release-gear",
+      "result": "FAIL",
+      "error": "Game exited before stage completed.",
+      "profile": ".tools/validation/commerce-release-gear-20261012-193536-257"
+    },
+    {
+      "stage": "commerce-release-orbital",
+      "result": "PASS",
+      "error": null,
+      "profile": ".tools/validation/commerce-release-orbital-20261012-193136-579"
+    },
+    {
+      "stage": "commerce-release-safety",
+      "result": "PASS",
+      "error": null,
+      "profile": ".tools/validation/commerce-release-safety-20261012-193408-099"
+    },
+    {
+      "stage": "commerce-safety-final",
+      "result": "FAIL",
+      "error": "Stage failed: C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\commerce-safety-final-20261012-183717-991\\Player.log",
+      "profile": ".tools/validation/commerce-safety-final-20261012-183717-991"
+    },
+    {
+      "stage": "commerce-safety-recovery",
+      "result": "FAIL",
+      "error": "Stage failed: C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\commerce-safety-recovery-20261012-184056-435\\Player.log",
+      "profile": ".tools/validation/commerce-safety-recovery-20261012-184056-435"
+    },
+    {
+      "stage": "commerce-safety-shelves",
+      "result": "PASS",
+      "error": null,
+      "profile": ".tools/validation/commerce-safety-shelves-20261012-184802-457"
+    },
+    {
+      "stage": "commerce-safety-storage",
+      "result": "FAIL",
+      "error": "Stage failed: C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\commerce-safety-storage-20261012-184418-070\\Player.log",
+      "profile": ".tools/validation/commerce-safety-storage-20261012-184418-070"
+    }
+  ]
+}

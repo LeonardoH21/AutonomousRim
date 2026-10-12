@@ -39,7 +39,7 @@ namespace AutonomousRim.Planning
             int stage=Stage(map);
             return stage==0?new[]{"ComplexClothing","Smithing","PlateArmor","LongBlades"}:
                 stage==1?new[]{"Machining","FlakArmor","GasOperation"}:
-                stage==2?new[]{"PrecisionRifling"}:
+                stage==2?new[]{"PrecisionRifling","MicroelectronicsBasics","ShieldBelt"}:
                 stage==3?new[]{"MicroelectronicsBasics","MultiAnalyzer","Fabrication","AdvancedFabrication","ShieldBelt","PoweredArmor","ChargedShot"}:
                 new[]{"CataphractArmor"};
         }

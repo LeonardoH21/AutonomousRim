@@ -54,6 +54,7 @@ namespace AutonomousRim.Planning
             {
                 yield return melee?"Apparel_PlateArmor":"Apparel_FlakVest";
                 yield return "Apparel_AdvancedHelmet";
+                if(melee && stage>=2)yield return "Apparel_ShieldBelt";
                 yield return melee?"MeleeWeapon_LongSword":stage==1?"Gun_HeavySMG":"Gun_AssaultRifle";
             }
             else
@@ -62,7 +63,7 @@ namespace AutonomousRim.Planning
                 yield return cat?"Apparel_ArmorCataphract":"Apparel_PowerArmor";
                 yield return cat?"Apparel_ArmorHelmetCataphract":"Apparel_PowerArmorHelmet";
                 if(melee)yield return "Apparel_ShieldBelt";
-                yield return melee?"MeleeWeapon_LongSword":"Gun_ChargeRifle";
+                yield return melee?(DefDatabase<ThingDef>.GetNamedSilentFail("MeleeWeapon_MonoSword")!=null?"MeleeWeapon_MonoSword":"MeleeWeapon_LongSword"):"Gun_ChargeRifle";
             }
         }
         public static bool Meets(Pawn p,Thing item,string target)
@@ -86,11 +87,11 @@ namespace AutonomousRim.Planning
         }
         public static bool Equipped(Pawn p,int stage)=>Set(p,stage).All(name=>
             Meets(p,p.equipment?.Primary,name) || p.apparel.WornApparel.Any(a=>Meets(p,a,name)));
-        private static ThingDef Material(IngredientCount ingredient)=>ingredient.filter.AllowedThingDefs.Where(d=>d.defName!="Leather_Human")
+        public static ThingDef Material(IngredientCount ingredient)=>ingredient.filter.AllowedThingDefs.Where(d=>d.defName!="Leather_Human")
             .OrderByDescending(d=>d==ThingDefOf.Cloth || d==ThingDefOf.Steel).ThenBy(d=>d.defName,StringComparer.Ordinal).FirstOrDefault();
         public static LoadoutCheckpoint Analyze(Map map,int stage)
         {
-            var fighters=DefenseProductionPlan.Fighters(map).OrderByDescending(p=>
+            var fighters=DefenseProductionPlan.Fighters(map).OrderByDescending(DefenseProductionPlan.Melee).ThenByDescending(p=>
                 (p.skills?.GetSkill(DefenseProductionPlan.Melee(p)?SkillDefOf.Melee:SkillDefOf.Shooting).Level??0)).ThenBy(p=>p.thingIDNumber).ToList();
             var result=new LoadoutCheckpoint{Stage=stage,Fighters=fighters.Count,Melee=fighters.Count(DefenseProductionPlan.Melee)};
             result.Ranged=result.Fighters-result.Melee;
@@ -136,7 +137,8 @@ namespace AutonomousRim.Planning
                 {
                     var def=Material(ingredient);
                     if(def==null)continue;
-                    int need=ingredient.CountRequiredOfFor(def,recipe)*pair.Value;
+                    int unfunded=Math.Max(0,pair.Value-CommercePlanner.InProduction(map,DefDatabase<ThingDef>.GetNamed(pair.Key)));
+                    int need=ingredient.CountRequiredOfFor(def,recipe)*unfunded;
                     result.Materials[def.defName]=(result.Materials.TryGetValue(def.defName,out int old)?old:0)+need;
                 }
             }
@@ -145,8 +147,9 @@ namespace AutonomousRim.Planning
             foreach(string component in new[]{"ComponentSpacer","ComponentIndustrial"})
             {
                 if(!result.Materials.TryGetValue(component,out int required))continue;
-                int available=map.listerThings.AllThings.Where(t=>t.Spawned && t.def.defName==component && !t.IsForbidden(Faction.OfPlayer)).Sum(t=>t.stackCount);
-                int missing=Math.Max(0,required-available);
+                var componentDef=DefDatabase<ThingDef>.GetNamed(component);
+                int available=CommercePlanner.Stock(map,componentDef)+CommercePlanner.InTransit(map.GetComponent<AutonomousRimMapComponent>().Commerce,componentDef);
+                int missing=Math.Max(0,required-available-CommercePlanner.InProduction(map,componentDef));
                 var recipe=DefDatabase<RecipeDef>.AllDefsListForReading.FirstOrDefault(r=>r.products?.Any(p=>p.thingDef.defName==component)==true);
                 if(recipe==null || missing==0)continue;
                 foreach(var ingredient in recipe.ingredients)
@@ -157,7 +160,7 @@ namespace AutonomousRim.Planning
             }
             foreach(var pair in result.Materials)
             {
-                int stock=map.listerThings.AllThings.Where(t=>t.Spawned && t.def.defName==pair.Key && !t.IsForbidden(Faction.OfPlayer) && !t.Position.Fogged(map)).Sum(t=>t.stackCount);
+                int stock=CommercePlanner.Stock(map,DefDatabase<ThingDef>.GetNamed(pair.Key));
                 if(stock<pair.Value)result.Blockers.Add(pair.Key+": faltam "+(pair.Value-stock)+" para completar a etapa");
             }
             return result;

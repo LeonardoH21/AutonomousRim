@@ -8,7 +8,11 @@ namespace AutonomousRim.Execution
     {
         public Bill_Production Bill;
         public string Signature;
-        public bool Matches => Bill != null && !Bill.DeletedOrDereferenced && Signature == Describe(Bill);
+        public string StorageSignature;
+        public static string DescribeStorage(Bill_Production bill)=>bill.GetStoreMode()?.defName+"|"+
+            (bill.GetSlotGroup()==null?"":SlotGroup.GetGroupLabel(bill.GetSlotGroup()));
+        public bool Matches => Bill != null && !Bill.DeletedOrDereferenced && Signature == Describe(Bill) &&
+            (StorageSignature==null || StorageSignature==DescribeStorage(Bill));
 
         public static string Describe(Bill_Production bill)
             =>Describe(bill,true);
@@ -23,6 +27,7 @@ namespace AutonomousRim.Execution
         {
             Scribe_References.Look(ref Bill, "bill");
             Scribe_Values.Look(ref Signature, "signature");
+            Scribe_Values.Look(ref StorageSignature,"storageSignature");
             if (Scribe.mode == LoadSaveMode.PostLoadInit && Bill != null && Signature != null)
             {
                 // Native saving intersects a bill's filter with its recipe. Default

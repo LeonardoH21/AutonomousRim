@@ -22,10 +22,13 @@ namespace AutonomousRim.Core
     {
         public ThingDef Def;
         public int Count, Baseline, Tick;
+        public List<string> ShipmentIds=new List<string>();
         public void ExposeData()
         {
             Scribe_Defs.Look(ref Def,"def"); Scribe_Values.Look(ref Count,"count");
             Scribe_Values.Look(ref Baseline,"baseline"); Scribe_Values.Look(ref Tick,"tick");
+            Scribe_Collections.Look(ref ShipmentIds,"shipmentIds",LookMode.Value);
+            if(Scribe.mode==LoadSaveMode.PostLoadInit)ShipmentIds=ShipmentIds??new List<string>();
         }
     }
     public sealed class CommerceDrugPolicy : IExposable
@@ -52,6 +55,11 @@ namespace AutonomousRim.Core
         public TradeShip Ship;
         public string JobId, Status = "Comércio automático desligado.", CaravanStatus = "Expedição ainda não avaliada.";
         public int NextAttempt, LastTrade, Target, Silver, Reserve, Budget, LastDemandTick;
+        public int RefreshTicks = 5000, JointReserve = 60, SilverTarget = 1000;
+        public string OpportunitySignature, BuyerStatus, ProductionStatus, Blocker;
+        public string LastBuyer;
+        public int Transactions;
+        public Dictionary<string,int> JointSales=new Dictionary<string,int>();
         public float FundingGap;
         public string Product = "SmokeleafJoint";
         public bool ExpeditionsEnabled, Returning, ExpeditionManual;
@@ -82,6 +90,14 @@ namespace AutonomousRim.Core
             Scribe_Values.Look(ref NextAttempt,"nextAttempt"); Scribe_Values.Look(ref LastTrade,"lastTrade");
             Scribe_Values.Look(ref LastDemandTick,"lastDemandTick"); Scribe_Values.Look(ref FundingGap,"fundingGap");
             Scribe_Values.Look(ref Target,"target"); Scribe_Values.Look(ref Product,"product","SmokeleafJoint");
+            Scribe_Values.Look(ref RefreshTicks,"refreshTicks",5000);
+            Scribe_Values.Look(ref JointReserve,"jointReserve",60);
+            Scribe_Values.Look(ref SilverTarget,"silverTarget",1000);
+            Scribe_Values.Look(ref BuyerStatus,"buyerStatus");
+            Scribe_Values.Look(ref ProductionStatus,"productionStatus");
+            Scribe_Values.Look(ref Blocker,"blocker");
+            Scribe_Values.Look(ref LastBuyer,"lastBuyer");Scribe_Values.Look(ref Transactions,"transactions");
+            Scribe_Collections.Look(ref JointSales,"jointSales",LookMode.Value,LookMode.Value);
             Scribe_Values.Look(ref ExpeditionsEnabled,"expeditionsEnabled"); Scribe_Values.Look(ref Returning,"returning");
             Scribe_Values.Look(ref ExpeditionManual,"expeditionManual");
             Scribe_Collections.Look(ref ExpeditionPawns,"expeditionPawns",LookMode.Reference);
@@ -99,6 +115,10 @@ namespace AutonomousRim.Core
                 History=History??new List<string>();
                 ExpeditionPawns=ExpeditionPawns??new List<Pawn>();
                 ExpeditionMaterials=ExpeditionMaterials??new List<CommerceNeed>(); ExpeditionGear=ExpeditionGear??new List<CommerceNeed>();
+                Product="SmokeleafJoint";
+                OpportunitySignature=null; NextAttempt=0;
+                RefreshTicks=System.Math.Max(600,RefreshTicks);
+                JointSales=JointSales??new Dictionary<string,int>();
             }
         }
     }

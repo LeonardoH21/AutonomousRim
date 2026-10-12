@@ -183,8 +183,11 @@ namespace AutonomousRim.UI
             if(gear.Materials.Count==0)Line("Sem demanda de materiais para fabricação nesta etapa.",Accent);
             foreach(var pair in gear.Materials.OrderBy(p=>p.Key))
             {
-                int stock=view.Stock.TryGetValue(pair.Key,out var amount)?amount:0;int missing=Math.Max(0,pair.Value-stock);
-                Line(ProgressDashboard.Label(pair.Key)+": "+pair.Value+" / "+stock+" / faltam "+missing,missing>0?Warning:Accent);
+                var def=DefDatabase<ThingDef>.GetNamedSilentFail(pair.Key);
+                int stock=def==null?0:CommercePlanner.Stock(ai.map,def);int missing=Math.Max(0,pair.Value-stock);
+                int transit=def==null?0:CommercePlanner.InTransit(ai.Commerce,def);
+                int reserved=def!=null && ai.Coordination.Materials.TryGetValue(def,out int held)?held:0;
+                Line(ProgressDashboard.Label(pair.Key)+": "+pair.Value+" / "+stock+" / faltam "+Math.Max(0,missing-transit)+" • reservados para produção "+reserved+" • em transporte "+transit,missing>transit?Warning:Accent);
             }
             Section("Equipamento de cada colono");
             foreach(var group in gear.Items.GroupBy(row=>row.Pawn))
@@ -205,6 +208,15 @@ namespace AutonomousRim.UI
             Section("Impedimentos da etapa");
             if(gear.Blockers.Count==0)Line("Nenhum impedimento adicional detectado.",Accent);
             foreach(var blocker in gear.Blockers.Distinct())Line(blocker,Warning);
+            Section("Fabricação em andamento e responsáveis");
+            foreach(var demand in ai.Coordination.Equipment.Where(d=>d.Bill.recipe.products.Any(p=>p.thingDef.IsApparel || p.thingDef.IsWeapon)))
+            {
+                var workers=demand.ReadyPawns.OrderByDescending(p=>p.CurJob?.bill==demand.Bill)
+                    .ThenByDescending(p=>p.skills?.GetSkill(SkillDefOf.Crafting).Level??0).ToList();
+                Line(demand.Bill.LabelCap+" • "+demand.Table.LabelCap+" • "+demand.Blocker, demand.Ready?Muted:Warning);
+                Line("Responsável apto: "+(workers.FirstOrDefault()?.LabelShort??"nenhum")+
+                    " • substitutos aptos: "+(workers.Count>1?string.Join(", ",workers.Skip(1).Select(p=>p.LabelShort)):"nenhum"),Muted);
+            }
         }
 
         private void ResearchBar()
@@ -314,8 +326,18 @@ namespace AutonomousRim.UI
         private void CommercePrison(AutonomousRimMapComponent ai)
         {
             Section("Comércio"); Line(ai.Commerce.Status); Line(ai.Commerce.CaravanStatus);
+            var commerce=ai.Commerce;
+            Line("Prata: "+commerce.Silver+" • reserva protegida: "+commerce.Reserve+" • meta: "+commerce.SilverTarget+" • financiamento estimado faltante: "+commerce.FundingGap.ToString("0"),Accent);
+            Line("Baseados: "+CommercePlanner.Stock(ai.map,DefDatabase<ThingDef>.GetNamed("SmokeleafJoint"))+" / "+commerce.Target+" • reserva comercial: "+commerce.JointReserve);
+            Line(commerce.ProductionStatus??"Produção ainda não avaliada.");
+            Line("Transações concluídas: "+commerce.Transactions+" • baseados vendidos: "+commerce.JointSales.Values.Sum());
+            Line(commerce.BuyerStatus??"Compradores ainda não avaliados.");
+            Line("Última negociação: "+(commerce.LastTrade==0?"nenhuma":"dia "+(commerce.LastTrade/(float)GenDate.TicksPerDay).ToString("0.00"))+" • próxima revisão em "+Math.Max(0,commerce.NextAttempt-Find.TickManager.TicksGame)+" ticks.",Muted);
+            Line("Intervalo: "+(commerce.RefreshTicks/2500f).ToString("0.0")+" horas; mudanças de estoque antecipam a revisão.",Muted);
+            if(Button("Alternar revisão: 1 / 2 / 4 horas")){commerce.RefreshTicks=commerce.RefreshTicks==2500?5000:commerce.RefreshTicks==5000?10000:2500;commerce.NextAttempt=0;}
+            if(!string.IsNullOrEmpty(commerce.Blocker))Line(commerce.Blocker,Warning);
             Toggle("Expedições comerciais", "Permitir planejamento de caravanas comerciais.", ai.Commerce.ExpeditionsEnabled, () => ai.Commerce.ExpeditionsEnabled = !ai.Commerce.ExpeditionsEnabled);
-            foreach (var need in ai.Commerce.Needs.Where(n => n.Def != null)) Line("Comprar: " + need.Def.LabelCap + " ×" + need.Count + " • " + need.Reason);
+            foreach (var need in ai.Commerce.Needs.Where(n => n.Def != null)) Line("Comprar: " + need.Def.LabelCap + " ×" + need.Count + " • estoque "+CommercePlanner.Stock(ai.map,need.Def)+" • em transporte "+CommercePlanner.InTransit(commerce,need.Def)+" • em fabricação "+CommercePlanner.InProduction(ai.map,need.Def)+" • " + need.Reason);
             foreach (var delivery in ai.Commerce.Deliveries.Where(d => d.Def != null)) Line("Aguardando entrega: " + delivery.Def.LabelCap + " ×" + delivery.Count, Accent);
             foreach (var record in ai.Commerce.History.AsEnumerable().Reverse().Take(6)) Line(record, Muted);
             Section("Prisão e novos colonos"); Line(ai.Prison.Status);

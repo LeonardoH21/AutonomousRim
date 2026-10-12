@@ -11,8 +11,13 @@ namespace AutonomousRim.Execution
         protected override IEnumerable<Toil> MakeNewToils()
         {
             this.FailOnDespawnedOrNull(TargetIndex.A);
-            this.FailOn(()=>!pawn.Map.GetComponent<AutonomousRimMapComponent>().CommerceAutomation ||
-                pawn.Map.GetComponent<AutonomousRimMapComponent>().SecondarySuspended || WorkReadiness.NeedsRecovery(pawn));
+            this.FailOn(()=>
+            {
+                var ai=pawn.Map.GetComponent<AutonomousRimMapComponent>();
+                bool blocked=!ai.CommerceAutomation || ai.SecondarySuspended || WorkReadiness.NeedsRecovery(pawn);
+                if(blocked)ai.Commerce.Blocker="Negociação interrompida: módulo desligado, emergência ou necessidades do negociador "+pawn.LabelShort+".";
+                return blocked;
+            });
             yield return Toils_Goto.GotoThing(TargetIndex.A,job.targetA.Thing is RimWorld.Building_CommsConsole?PathEndMode.InteractionCell:PathEndMode.Touch);
             yield return Toils_General.Wait(120);
             var trade=ToilMaker.MakeToil("AutonomousRimTrade");

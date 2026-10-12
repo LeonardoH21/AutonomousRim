@@ -10,6 +10,7 @@ namespace AutonomousRim.RuntimeChecks
     public sealed class EliteFixtureBaseline : MapComponent
     {
         private static bool loaded;
+        private static bool requested;
         private static List<string> originalIds;
         public static bool Enabled => GenCommandLine.CommandLineArgPassed("autonomousrimfixturebaseline");
         public static bool Ready => !Enabled || loaded;
@@ -17,7 +18,14 @@ namespace AutonomousRim.RuntimeChecks
         public override void MapComponentUpdate()
         {
             if (!Enabled || Current.ProgramState != ProgramState.Playing) return;
-            if (!loaded) { loaded = true; GameDataSaveLoader.LoadGame("ModularResume"); return; }
+            if (!requested)
+            {
+                requested=true;
+                GameDataSaveLoader.LoadGame("ModularResume");
+                LongEventHandler.ExecuteWhenFinished(()=>{loaded=true;Log.Message("[EliteFixtureBaseline] READY: isolated user save finished loading.");});
+                return;
+            }
+            if(!loaded)return;
             foreach (var window in Find.WindowStack.Windows.Where(w => w.forcePause).ToList()) window.Close(false);
             Find.TickManager.CurTimeSpeed = TimeSpeed.Superfast;
         }

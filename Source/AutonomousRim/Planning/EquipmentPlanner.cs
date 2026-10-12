@@ -36,6 +36,7 @@ namespace AutonomousRim.Planning
             var biocode = item.TryGetComp<CompBiocodable>();
             if (biocode?.Biocoded == true && !CompBiocodable.IsBiocodedFor(item, pawn)) return false;
             if (pawn.equipment?.Primary?.def.IsRangedWeapon == true && ApparelAnalyzer.BlocksRanged(item)) return false;
+            if(!LoadoutApparelPolicy.Allows(pawn,item))return false;
             return !Conflicts(pawn, item).Any(a => pawn.apparel.IsLocked(a) ||
                 (pawn.outfits?.forcedHandler.IsForced(a) == true && !owned.Any(o => o.Pawn == pawn && o.Apparel == a)));
         }
@@ -72,6 +73,7 @@ namespace AutonomousRim.Planning
                 {
                     float current = Conflicts(pawn, a).Sum(old => ApparelAnalyzer.Score(pawn, old, map.mapTemperature.OutdoorTemp));
                     float candidate = ApparelAnalyzer.Score(pawn, a, map.mapTemperature.OutdoorTemp);
+                    if(LoadoutApparelPolicy.Needed(pawn,a))candidate=Mathf.Max(candidate,current+5);
                     return new EquipmentDecision { Pawn = pawn, Item = a, Wear = true, CurrentScore = current, CandidateScore = candidate,
                         Reason = $"Roupa: {current:0.00} → {candidate:0.00}; proteção das partes cobertas, temperatura, estado e penalidade de movimento." };
                 }).Where(d => EquipmentPolicy.WorthUpgrade(d.CurrentScore, d.CandidateScore)).OrderByDescending(d => d.Gain).Take(5);
