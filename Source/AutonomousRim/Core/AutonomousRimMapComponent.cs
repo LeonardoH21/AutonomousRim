@@ -24,6 +24,8 @@ namespace AutonomousRim.Core
         public string EmergencyStatus => $"Emergência: {emergency.Phase}; {emergency.Decision}. Vulneráveis: {CurrentState?.Threat?.Vulnerable.Count ?? 0}; resgates sem rota/cama segura: {emergency.DeferredRescues}; sem abrigo acessível: {emergency.MissingShelters}.";
 
         public ColonyState CurrentState { get; private set; }
+        public ExistingHousing Housing {get;}=new ExistingHousing();
+        public ConstructionWorkIndex WorkIndex {get;}=new ConstructionWorkIndex();
         private ProgressState progress = new ProgressState();
         public ProgressState Progress => progress;
         private LogisticsState logistics=new LogisticsState();
@@ -545,7 +547,8 @@ namespace AutonomousRim.Core
                 if (Prefs.DevMode) Log.Message($"[AutonomousRim] Scan: {CurrentState}");
             }
             if (ticks % 30 == 0 && CurrentState != null) ManageColony(false);
-            if(prisonAutomation && CurrentState!=null && ticks%60==45)
+            if(prisonAutomation && CurrentState!=null && ticks%60==45 &&
+                (ticks%600==45 || prison.Orders.Count>0 || map.mapPawns.AllPawnsSpawned.Any(p=>p.IsPrisonerOfColony || p.Downed && p.HostileTo(Faction.OfPlayer))))
                 PrisonManager.Apply(map,CurrentState,baseProjects,prison,baseAutomation);
             if(commerceAutomation && CurrentState!=null && ticks%600==210)
                 CommerceManager.Apply(map,CurrentState,baseProjects,commerce,baseAutomation);
@@ -559,10 +562,10 @@ namespace AutonomousRim.Core
             int cycle = Find.TickManager.TicksGame;
             // One fresh observation for all decisions in this economic cycle. Purely idle
             // cycles do not rescan. Every emitted job still revalidates its native target.
-            bool decisionDue=force || workAutomation && cycle%180==0 || scheduleAutomation && cycle%300==30 ||
+            bool decisionDue=force || workAutomation && cycle%600==0 || scheduleAutomation && cycle%300==30 ||
                 foodAutomation && cycle%600==60 || equipmentAutomation && (cycle%600==120 || cycle%900==90) ||
                 baseAutomation && (cycle%300==150 || cycle%600==240);
-            if(decisionDue && CurrentState?.Tick!=cycle)ObserveNow(false);
+            if(decisionDue && (CurrentState==null || cycle-CurrentState.Tick>=180))ObserveNow(false);
             if(emergencyAutomation && emergency.BlockSecondary)
             {
                 if (equipmentAutomation && (force || cycle % 600 == 120)) Industry.Update(map,this,industryBills);
@@ -585,7 +588,7 @@ namespace AutonomousRim.Core
                     CurrentState.Threat.LastTransition = transition;
                 }
             }
-            if (workAutomation && Find.PlaySettings.useWorkPriorities && (force || cycle % 180 == 0)) WorkPriorityManager.Apply(map, CurrentState, workChanges,
+            if (workAutomation && Find.PlaySettings.useWorkPriorities && (force || cycle % 600 == 0)) WorkPriorityManager.Apply(map, CurrentState, workChanges,
                 baseAutomation && baseProjects.Exists(p => !p.Completed && BaseConstructionManager.Tasks(p).Any()), constructionGathering.Count > 0, Find.ResearchManager.GetProject() != null);
             if (scheduleAutomation && (force || cycle % 300 == 30)) ScheduleStatus = ScheduleManager.Apply(map, CurrentState, scheduleChanges, true);
             if (force || cycle % 600 == 60)
@@ -632,7 +635,7 @@ namespace AutonomousRim.Core
             if (ticks - lastConstructionReview >= BaseConstructionManager.ReviewInterval)
             {
                 lastConstructionReview = ticks;
-                BaseStatus = BaseConstructionManager.Apply(map, baseProjects);
+                BaseStatus = BaseConstructionManager.Apply(map, baseProjects);WorkIndex.Invalidate();
             }
             ConstructionWorkManager.Apply(map, baseProjects, constructionOrders);
         }

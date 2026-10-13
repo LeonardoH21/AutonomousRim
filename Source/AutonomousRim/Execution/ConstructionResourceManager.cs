@@ -46,12 +46,13 @@ namespace AutonomousRim.Execution
             if (AutonomousRim.Perception.FoodReservePolicy.PreparingForWinter(map))
                 costs[ThingDefOf.WoodLog] = Math.Max(costs.TryGetValue(ThingDefOf.WoodLog, out int winterCost) ? winterCost : 0,
                     map.mapPawns.FreeColonistsSpawnedCount * 100);
+            var minerals=new HashSet<ThingDef>(map.listerThings.AllThings.Where(t=>t.def.building?.mineableThing!=null).Select(t=>t.def.building.mineableThing));
             foreach (var managed in production ?? new List<ManagedFoodBill>())
                 if (managed.Matches && !managed.Bill.suspended && managed.Bill.ShouldDoNow())
                     foreach (var ingredient in managed.Bill.recipe.ingredients)
                     {
                         var mineral = DefDatabase<ThingDef>.AllDefsListForReading.Where(d => ingredient.filter.Allows(d) &&
-                            (ingredient.IsFixedIngredient || managed.Bill.ingredientFilter.Allows(d)) && map.listerThings.AllThings.Any(t => t.def.building?.mineableThing == d))
+                            (ingredient.IsFixedIngredient || managed.Bill.ingredientFilter.Allows(d)) && minerals.Contains(d))
                             .OrderByDescending(d => d == ThingDefOf.Steel).ThenByDescending(d => budget.TryGetValue(d, out int count) ? count : 0).FirstOrDefault();
                         if (mineral != null)
                             costs[mineral] = Math.Max(costs.TryGetValue(mineral, out int current) ? current : 0,

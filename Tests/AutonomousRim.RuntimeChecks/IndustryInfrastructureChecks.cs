@@ -58,6 +58,15 @@ namespace AutonomousRim.RuntimeChecks
                     if(buffers.Count==2 && buffers.All(p=>p.Furniture[0].SettingsConfigured && p.Furniture[0].Complete(map)) && hauled && crafted && bench)
                     {
                         Check(true,"missing smithy and two ingredient shelves built by native construction; cloth hauled into buffer and pants crafted by native jobs");
+                        // The storage-policy contract needs a stable map. Natural fires
+                        // can suspend buffers correctly even with emergency automation off.
+                        if(EmergencyManager.LocalFire(map))
+                        {
+                            Refresh(ai);Check(buffers.SelectMany(p=>p.Furniture).Where(t=>!t.SupplyManual).All(t=>t.Position.GetThingList(map).OfType<Building_Storage>().Single().GetStoreSettings().Priority==StoragePriority.Preferred),"local fire correctly suspends buffers before stable policy fixture");
+                            foreach(var fire in map.listerThings.AllThings.OfType<Fire>().ToList())fire.Destroy(DestroyMode.Vanish);
+                            Log.Message("[IndustryInfrastructure] POLICY FIXTURE: cleared natural fires after native construction/hauling/crafting were verified.");
+                        }
+                        Check(!EmergencyManager.LocalFire(map),"stable storage-policy fixture has no local fire");Refresh(ai);
                         Check(buffers.All(p=>p.Furniture[0].SupplyInputs.Contains(ThingDefOf.Cloth) && !p.Furniture[0].SupplyInputs.Any(d=>d.IsMedicine || StoragePolicy.IsFood(d))),"tailoring buffers accept recipe inputs and exclude medicine/food");
                         int count=projects.Count;Refresh(ai);Refresh(ai);Check(projects.Count==count,"repeated reviews do not duplicate benches or buffers");
                         var owned=buffers[0].Furniture[0];var shelf=owned.Position.GetThingList(map).OfType<Building_Storage>().Single();
@@ -67,7 +76,7 @@ namespace AutonomousRim.RuntimeChecks
                         float food=ai.CurrentState.EstimatedFoodDays;ai.CurrentState.EstimatedFoodDays=2;Refresh(ai);
                         Check(other.GetStoreSettings().Priority==StoragePriority.Preferred,"low food releases industrial storage emphasis");
                         ai.CurrentState.EstimatedFoodDays=food;Refresh(ai);
-                        Check(other.GetStoreSettings().Priority==StoragePriority.Important,"stable demand restores only intact buffer priority");
+                        Check(other.GetStoreSettings().Priority==StoragePriority.Important,"stable demand restores only intact buffer priority; fire="+EmergencyManager.LocalFire(map)+" suspended="+ai.SecondarySuspended+" manual="+second.SupplyManual+" requested="+BillDiagnostics.Requested(order)+" matches="+ai.ManagedProduction.Any(m=>m.Bill==order&&m.Matches)+" billSuspended="+order.suspended+" mode="+order.repeatMode+" remaining="+order.repeatCount+" target="+order.targetCount);
                         ai.CurrentState.Threat.ActiveCount=1;Refresh(ai);
                         Check(other.GetStoreSettings().Priority==StoragePriority.Preferred,"immediate threat releases buffer emphasis without emergency toggle");
                         ai.CurrentState.Threat.ActiveCount=0;Refresh(ai);

@@ -31,13 +31,12 @@ namespace AutonomousRim.Execution
             FoodUtility.WillEat(pawn, t, pawn, true, false) && (pawn.foodRestriction?.CurrentFoodPolicy == null || pawn.foodRestriction.CurrentFoodPolicy.filter.Allows(t));
         public override IEnumerable<Thing> PotentialWorkThingsGlobal(Pawn pawn)
         {
-            var targets = pawn.Map.GetComponent<AutonomousRimMapComponent>().BaseProjects
-                .Where(BaseConstructionManager.CanContinueExistingWork).OrderBy(p => p.Priority).SelectMany(BaseConstructionManager.Tasks)
-                .Where(t => t.Pending?.Spawned == true && !t.Complete(pawn.Map) && t.RetryAfter <= Find.TickManager.TicksGame).Select(t => t.Pending);
-            if (def.workType == WorkTypeDefOf.Construction)
-                targets = targets.Concat(pawn.Map.GetComponent<AutonomousRimMapComponent>().BaseProjects.Where(p => p.State != ConstructionState.Paused)
-                    .SelectMany(p => p.OwnedClearCells).Select(c => c.GetEdifice(pawn.Map)).Where(t => t != null &&
-                        pawn.Map.designationManager.DesignationOn(t, DesignationDefOf.Deconstruct) != null));
+            var ai=pawn.Map.GetComponent<AutonomousRimMapComponent>();var index=ai.WorkIndex;index.Refresh(pawn.Map,ai.BaseProjects);
+            var targets=index.Owners.Where(pair=>BaseConstructionManager.CanContinueExistingWork(pair.Value) &&
+                pair.Key.Spawned && index.Tasks[pair.Key].Pending==pair.Key && index.Tasks[pair.Key].RetryAfter<=Find.TickManager.TicksGame).Select(pair=>pair.Key);
+            if(def.workType==WorkTypeDefOf.Construction)
+                targets=targets.Concat(index.ClearOwners.Where(pair=>pair.Value.State!=ConstructionState.Paused)
+                    .Select(pair=>pair.Key.GetEdifice(pawn.Map)).Where(t=>t!=null && pawn.Map.designationManager.DesignationOn(t,DesignationDefOf.Deconstruct)!=null));
             if (def.workType == WorkTypeDefOf.Hauling && FoodDeliveryNeeded(pawn))
                 targets = targets.Concat(pawn.Map.listerThings.ThingsInGroup(ThingRequestGroup.HaulableEver).Where(t => FoodTarget(pawn, t)));
             return targets.Distinct();
@@ -47,7 +46,8 @@ namespace AutonomousRim.Execution
         public override float GetPriority(Pawn pawn, TargetInfo target)
         {
             if (def.workType == WorkTypeDefOf.Hauling && FoodDeliveryNeeded(pawn) && FoodTarget(pawn, target.Thing)) return 5000;
-            var p = pawn.Map.GetComponent<AutonomousRimMapComponent>().BaseProjects.FirstOrDefault(r => BaseConstructionManager.Tasks(r).Any(t => t.Pending == target.Thing) || r.OwnedClearCells.Contains(target.Cell));
+            var ai=pawn.Map.GetComponent<AutonomousRimMapComponent>();var index=ai.WorkIndex;index.Refresh(pawn.Map,ai.BaseProjects);
+            RoomProject p=null;if(target.Thing!=null)index.Owners.TryGetValue(target.Thing,out p);if(p==null)index.ClearOwners.TryGetValue(target.Cell,out p);
             if (p == null) return 0;
             return 4000 - (int)p.Priority * 1000 + 400 - RingBasePlanner.Rank(p.Kind) * 60;
         }
@@ -69,7 +69,10 @@ namespace AutonomousRim.Execution
                 return native.HasJobOnThing(pawn,t,false)?native.JobOnThing(pawn,t,false):null;
             }
             var ai = pawn.Map.GetComponent<AutonomousRimMapComponent>();
-            var project = ai.BaseProjects.FirstOrDefault(p => BaseConstructionManager.CanContinueExistingWork(p) && BaseConstructionManager.Tasks(p).Any(task => task.Pending == t && task.RetryAfter <= Find.TickManager.TicksGame));
+            var index=ai.WorkIndex;index.Refresh(pawn.Map,ai.BaseProjects);
+            index.Owners.TryGetValue(t,out var project);
+            if(project!=null && (!BaseConstructionManager.CanContinueExistingWork(project) || !index.Tasks.TryGetValue(t,out var task) ||
+                task.Pending!=t || task.RetryAfter>Find.TickManager.TicksGame))return null;
             if (project == null) return null;
             bool hauling = def.workType == WorkTypeDefOf.Hauling;
             if (!hauling && t is Frame f && f.def.entityDefToBuild is ThingDef quality && quality.comps?.Any(c => c.compClass == typeof(CompQuality)) == true && !project.Stalled)

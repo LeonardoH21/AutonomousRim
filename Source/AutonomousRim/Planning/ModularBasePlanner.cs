@@ -57,9 +57,7 @@ namespace AutonomousRim.Planning
             (!p.RequiresRoof || p.RoofArea.All(c => c.Roofed(map)));
         private static bool ShelterReady(Map map,List<RoomProject> projects)
         {
-            int population=map.mapPawns.FreeColonistsSpawnedCount;
-            var bedrooms=projects.Where(p=>IsModular(p) && p.Kind=="Quarto").OrderByDescending(p=>Functional(map,p)).Take(population).ToList();
-            return bedrooms.Count==population && bedrooms.All(p=>Functional(map,p));
+            return map.GetComponent<AutonomousRim.Core.AutonomousRimMapComponent>().Housing.Count(map)>=map.mapPawns.FreeColonistsSpawnedCount;
         }
         private static bool CoreServicesReady(Map map,List<RoomProject> projects) => ShelterReady(map,projects) &&
             projects.Where(p=>IsModular(p) && p.Crop==null && p.Kind!="Quarto").All(p=>Functional(map,p));
@@ -215,7 +213,7 @@ namespace AutonomousRim.Planning
                 path.Furniture.RemoveAll(t => t.Def is TerrainDef floor && !t.Issued && !t.WasCompleted &&
                     !t.Position.GetTerrain(map).affordances.Contains(floor.terrainAffordanceNeeded));
             }
-            while (projects.Count(p => p.Kind == "Quarto") < PrisonManager.HousingTarget(map))
+            while (map.GetComponent<AutonomousRim.Core.AutonomousRimMapComponent>().Housing.Count(map)+projects.Count(p=>p.Kind=="Quarto" && !map.GetComponent<AutonomousRim.Core.AutonomousRimMapComponent>().Housing.Ready(map,p)) < PrisonManager.HousingTarget(map))
                 if (!AddRoom(map, projects, root, "Quarto", 1)) return "Sem módulo acessível disponível para novos quartos.";
             ReferenceModulePlanner.AddStores(map,projects,root);
             if (!projects.Any(p => p.Kind == "Cozinha" || p.Kind == "Abate" || p.Kind == "Freezer")) ReferenceModulePlanner.AddFood(map,projects,root);

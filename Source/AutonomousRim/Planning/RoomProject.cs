@@ -104,6 +104,7 @@ namespace AutonomousRim.Planning
         public Zone_Growing GrowingZone;
         public bool Started;
         public bool Completed;
+        public bool HousingRecognized;
         public ConstructionState State;
         public ConstructionPriority Priority = ConstructionPriority.High;
         public string BlockReason;
@@ -144,7 +145,7 @@ namespace AutonomousRim.Planning
             Scribe_References.Look(ref GrowingZone, "growingZone");
             Scribe_Values.Look(ref Started, "started"); Scribe_Values.Look(ref Completed, "completed");
             Scribe_Values.Look(ref State, "state"); Scribe_Values.Look(ref Priority, "priority", ConstructionPriority.High);
-            Scribe_Values.Look(ref BlockReason, "blockReason");
+            Scribe_Values.Look(ref BlockReason, "blockReason");Scribe_Values.Look(ref HousingRecognized,"housingRecognized");
             Scribe_Values.Look(ref LastProgressTick, "lastProgressTick"); Scribe_Values.Look(ref LastProgress, "lastProgress");
             Scribe_Values.Look(ref LastRecoveryTick, "lastRecoveryTick"); Scribe_Values.Look(ref FunctionalStorage, "functionalStorage");
             Scribe_Values.Look(ref LastRecoveryLogTick, "lastRecoveryLogTick");

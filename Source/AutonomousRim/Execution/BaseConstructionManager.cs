@@ -92,11 +92,12 @@ namespace AutonomousRim.Execution
             FurnitureStage(map,p).Any(t => t.Def == ThingDefOf.Bed && !t.Complete(map)) ? -1 : RingBasePlanner.Rank(p.Kind);
         private static IEnumerable<RoomProject> NeededBedrooms(Map map, List<RoomProject> all)
         {
-            var bedrooms=all.Where(p=>p.Kind=="Quarto");
-            return all.Any(p=>p.Kind==CourtyardBasePlanner.ReservationKind || p.Kind==ModularBasePlanner.ReservationKind)
-                ?bedrooms.OrderByDescending(p=>p.Completed).Take(map.mapPawns.FreeColonistsSpawnedCount):bedrooms;
+            var housing=map.GetComponent<AutonomousRim.Core.AutonomousRimMapComponent>().Housing;
+            int missing=System.Math.Max(0,map.mapPawns.FreeColonistsSpawnedCount-housing.Count(map));
+            return all.Where(p=>p.Kind=="Quarto" && !housing.Ready(map,p)).OrderBy(p=>p.State==ConstructionState.Paused || p.State==ConstructionState.Blocked)
+                .ThenBy(p=>p.Priority).Take(missing);
         }
-        private static bool EssentialFoodRoom(RoomProject p) => p.Kind=="Cozinha" || p.Kind=="Abate" || p.Kind=="Estoque" || p.Kind=="Refeitório e recreação" || p.Crop!=null;
+        private static bool EssentialFoodRoom(RoomProject p) => p.Kind=="Freezer" || p.Kind=="Cozinha" || p.Kind=="Abate" || p.Kind=="Estoque" || p.Kind=="Refeitório e recreação" || p.Crop!=null;
         private static void CompleteDoorFloorPlan(Map map, List<RoomProject> projects)
         {
             if (!projects.Any(p => p.Kind == CourtyardBasePlanner.ReservationKind)) return;
@@ -122,7 +123,7 @@ namespace AutonomousRim.Execution
             {
                 // Feed/store while providing shelter. A spare room for future
                 // recruits must not stop the colony's current production chain.
-                if (p.Kind != "Recreação inicial" && p.Kind != "Preparação do terreno" && p.Kind != "Corredor" && p.Kind != "Despejo" && p.Kind != ModularBasePlanner.ReservationKind && p.Kind != "Quarto" &&
+                if (p.Kind != "Recreação inicial" && p.Kind != "Preparação do terreno" && p.Kind != "Corredor" && p.Kind != "Despejo" && p.Kind != ModularBasePlanner.ReservationKind && p.Kind != "Quarto" && p.Kind!="Energia e climatização" &&
                     !EssentialFoodRoom(p) && NeededBedrooms(map,all).Any(r => !r.Completed && r.State != ConstructionState.Paused)) return true;
                 if (p.Kind == "Corredor")
                 {
@@ -263,6 +264,14 @@ namespace AutonomousRim.Execution
             foreach (var p in projects)
             {
                 p.BlockReason = null;
+                if(p.Kind=="Quarto" && map.GetComponent<AutonomousRim.Core.AutonomousRimMapComponent>().Housing.Ready(map,p) &&
+                    (p.HousingRecognized || Tasks(p).Any(t=>t.WasCompleted && !t.Complete(map) && (t.Def is ThingDef bedDef && typeof(Building_Bed).IsAssignableFrom(bedDef.thingClass) || p.Shell.Contains(t)))))
+                {
+                    p.HousingRecognized=true;p.Completed=true;p.State=ConstructionState.Completed;
+                    p.BlockReason="Quarto existente reconhecido; cama e recinto do jogador preservados.";
+                    continue;
+                }
+                if(p.HousingRecognized){p.HousingRecognized=false;p.Completed=false;}
                 if(p.Stockpile!=null && (p.Stockpile.Cells.Count==0 || !map.zoneManager.AllZones.Contains(p.Stockpile)))p.Stockpile=null;
                 if(!danger)foreach(var c in p.NoRoofCells)map.areaManager.NoRoof[c]=true;
                 if (p.Kind == "Energia e climatização") p.Priority = (map.mapTemperature.OutdoorTemp < 0 || map.mapTemperature.OutdoorTemp > 35) &&
@@ -319,7 +328,7 @@ namespace AutonomousRim.Execution
                     if (p.LayoutSlot?.StartsWith("prep:mod:") == true)
                     {
                         var owner = projects.FirstOrDefault(r => "prep:" + r.LayoutSlot == p.LayoutSlot);
-                        if (owner != null && owner.Kind != "Quarto" && !EssentialFoodRoom(owner) && NeededBedrooms(map,projects).Any(r => !r.Completed))
+                        if (owner != null && owner.Kind != "Quarto" && owner.Kind!="Energia e climatização" && !EssentialFoodRoom(owner) && NeededBedrooms(map,projects).Any(r => !r.Completed))
                         { p.State = ConstructionState.Blocked; p.BlockReason = "Limpeza aguarda os quartos essenciais."; continue; }
                     }
                     var rocks = p.MineCells.Select(c => c.GetEdifice(map)).Where(t => t is Mineable).ToList();

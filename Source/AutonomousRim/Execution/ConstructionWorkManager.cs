@@ -75,17 +75,11 @@ namespace AutonomousRim.Execution
             var map=pawn.Map;
             var dump=projects.FirstOrDefault(p=>p.Kind=="Despejo" && p.Stockpile!=null);
             if(dump==null)return null;
-            var chunks=DefDatabase<ThingCategoryDef>.GetNamed("StoneChunks");
-            var cells=projects.Where(p=>!p.Completed && p.State!=ConstructionState.Paused && p.Kind!="Preparação do terreno")
-                .OrderBy(p=>p.Priority).SelectMany(p=>BaseConstructionManager.Tasks(p))
-                .Where(t=>!t.CancelledByPlayer && !t.Complete(map) && !t.Def.defName.Contains("Conduit"))
-                .SelectMany(t=>(t.Def is TerrainDef?(IEnumerable<IntVec3>)new[]{t.Position}:GenAdj.OccupiedRect(t.Position,t.Rotation,t.Def.Size)).Concat(
-                    t.Def is ThingDef d && d.hasInteractionCell?ThingUtility.InteractionCellsWhenAt(d,t.Position,t.Rotation,map):Enumerable.Empty<IntVec3>()))
-                .Distinct().Where(c=>c.InBounds(map));
-            var protectedCells=projects.SelectMany(BaseConstructionManager.Tasks).SelectMany(t=>t.Def is TerrainDef?(IEnumerable<IntVec3>)new[]{t.Position}:GenAdj.OccupiedRect(t.Position,t.Rotation,t.Def.Size)).ToHashSet();
-            foreach(var c in cells)
-            foreach(var item in c.GetThingList(map).Where(t=>t.def.thingCategories?.Contains(chunks)==true).ToList())
+            var index=map.GetComponent<AutonomousRimMapComponent>().WorkIndex;index.Refresh(map,projects);
+            var protectedCells=index.Protected;
+            foreach(var item in index.Chunks.Where(t=>t.Spawned && index.DebrisCells.Contains(t.Position)))
             {
+                var c=item.Position;
                 if(!c.IsInAllowedArea(pawn) || !pawn.CanReserveAndReach(item,PathEndMode.Touch,Danger.None))continue;
                 var destination=dump.Stockpile.Cells.Where(v=>!protectedCells.Contains(v) && v.Standable(map) &&
                     v.IsInAllowedArea(pawn) && !v.IsForbidden(pawn) && !v.ContainsStaticFire(map) &&
@@ -104,15 +98,9 @@ namespace AutonomousRim.Execution
         {
             if(!CanDispatch(pawn,WorkTypeDefOf.Hauling))return null;
             var map=pawn.Map;
-            var tasks=projects.Where(p=>p.Started && !p.Completed && p.State!=ConstructionState.Paused)
-                .OrderBy(p=>p.Priority).SelectMany(p=>BaseConstructionManager.CurrentStage(map,p))
-                .Where(t=>!t.CancelledByPlayer && !t.Complete(map) && t.Pending?.Spawned!=true && t.Def is ThingDef d && d.hasInteractionCell).ToList();
-            if(tasks.Count==0)return null;
-            var protectedCells=projects.SelectMany(BaseConstructionManager.Tasks).Where(t=>t.Def is ThingDef d && !d.defName.Contains("Conduit"))
-                .SelectMany(t=>GenAdj.OccupiedRect(t.Position,t.Rotation,t.Def.Size)
-                    .Concat(ThingUtility.InteractionCellsWhenAt((ThingDef)t.Def,t.Position,t.Rotation,map))).ToHashSet();
-            foreach(var task in tasks)
-            foreach(var cell in ThingUtility.InteractionCellsWhenAt((ThingDef)task.Def,task.Position,task.Rotation,map).Where(c=>c.InBounds(map)))
+            var index=map.GetComponent<AutonomousRimMapComponent>().WorkIndex;index.Refresh(map,projects);
+            var protectedCells=index.Protected;
+            foreach(var cell in index.Interactions)
             foreach(var item in cell.GetThingList(map).Where(t=>t.def.category==ThingCategory.Item && t.def.EverHaulable && t.def.passability!=Traversability.Standable).ToList())
             {
                 if(item.IsForbidden(Faction.OfPlayer) || !cell.IsInAllowedArea(pawn) || !pawn.CanReserveAndReach(item,PathEndMode.Touch,Danger.None))continue;

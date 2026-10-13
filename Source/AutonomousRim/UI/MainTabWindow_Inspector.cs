@@ -231,6 +231,7 @@ namespace AutonomousRim.UI
         private void Construction(Map map, AutonomousRimMapComponent ai)
         {
             Line("Construção automática: " + (ai.BaseAutomation ? "ligada" : "desligada"), Accent);
+            Line("Camas em quartos/dormitórios reconhecidos: "+ai.Housing.Count(map)+" / "+map.mapPawns.FreeColonistsSpawnedCount+" colonos. Layouts manuais são preservados.",Muted);
             Line("Última avaliação: " + ai.BaseStatus); Line("Última avaliação da coleta: " + ai.GatheringStatus, Muted);
             if (Button("Visualizar / planejar base")) { ai.PreviewBase(); nextMetrics = 0; }
             Widgets.CheckboxLabeled(new Rect(0, y, width, 28f), "Mostrar apenas projetos com impedimentos", ref onlyBlocked); y += 34;

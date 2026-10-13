@@ -1,0 +1,184 @@
+{
+  "date": "2026-10-13",
+  "sampleTicks": 2000,
+  "speed": "3x",
+  "originalSaveUnchanged": true,
+  "cpuReductionPercent": 40.1,
+  "headlessTpsIncreasePercent": 13.9,
+  "limitations": [
+    "Short benchmarks; no original visible FPS baseline",
+    "Native progress test confirms advancement, not full room completion",
+    "Legacy missing gene definitions present in all L1 runs",
+    "Industry policy contract uses isolated fixture interventions"
+  ],
+  "runs": [
+    {
+      "manifest": {
+        "stage": "l1-before-on",
+        "flag": "autonomousrimlonebenchmark",
+        "extraFlags": [],
+        "resumeSaveHash": "919248EB574C63AF85380F399D69843C4BEA92851E4232670F0BB3111E2D0774",
+        "sourceCommit": "41515fd305ce88b55b8f1446dae5f43ef7f2369a",
+        "dllHash": "9C9C63B263D68F6B008FD27F78677E25BEF874BC3203A4DEB789E36032070856",
+        "runtimeHash": "38BBE141123707C80DBF544F7F46685737880848AF31CBD2FBB83B0A090032A3",
+        "result": "PASS",
+        "profile": "C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\l1-before-on-20261013-220509-734",
+        "sourceDirty": true,
+        "yieldCapsHash": "BEA9183CC1B7AC86C424AB7225F5AAFF6FC8792CBC9FDA2F6FFB3B4170DF0751"
+      },
+      "evidence": [
+        "[L1Benchmark] TPS 243.4 elapsed=8.22",
+        "[L1Benchmark] COST AutonomousRimMapComponent.MapComponentTick calls=2000 totalMs=3758.8 meanMs=1.88 p95=3.76",
+        "[L1Benchmark] DONE"
+      ]
+    },
+    {
+      "manifest": {
+        "stage": "l1-before-off",
+        "flag": "autonomousrimlonebenchmark",
+        "extraFlags": [
+          "autonomousrimloneoff"
+        ],
+        "resumeSaveHash": "919248EB574C63AF85380F399D69843C4BEA92851E4232670F0BB3111E2D0774",
+        "sourceCommit": "41515fd305ce88b55b8f1446dae5f43ef7f2369a",
+        "dllHash": "9C9C63B263D68F6B008FD27F78677E25BEF874BC3203A4DEB789E36032070856",
+        "runtimeHash": "38BBE141123707C80DBF544F7F46685737880848AF31CBD2FBB83B0A090032A3",
+        "result": "PASS",
+        "profile": "C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\l1-before-off-20261013-220548-595",
+        "sourceDirty": true,
+        "yieldCapsHash": "BEA9183CC1B7AC86C424AB7225F5AAFF6FC8792CBC9FDA2F6FFB3B4170DF0751"
+      },
+      "evidence": [
+        "[L1Benchmark] TPS 337.1 elapsed=5.93",
+        "[L1Benchmark] COST AutonomousRimMapComponent.MapComponentTick calls=2000 totalMs=373.0 meanMs=0.19 p95=0.02",
+        "[L1Benchmark] DONE"
+      ]
+    },
+    {
+      "manifest": {
+        "stage": "l1-final-headless-on",
+        "flag": "autonomousrimlonebenchmark",
+        "extraFlags": [
+          "autonomousrimloneverify"
+        ],
+        "resumeSaveHash": "919248EB574C63AF85380F399D69843C4BEA92851E4232670F0BB3111E2D0774",
+        "sourceCommit": "41515fd305ce88b55b8f1446dae5f43ef7f2369a",
+        "dllHash": "72CC5CE1A39C18BE7EF4C46CDCC40C35C8451FBF239AB8C18A9D0661E4789DCC",
+        "runtimeHash": "7322272365C0BEDFD134351755050484E1B6757E7A84AC0DB537CA0F55D4B238",
+        "result": "PASS",
+        "profile": "C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\l1-final-headless-on-20261013-224601-793",
+        "sourceDirty": true,
+        "yieldCapsHash": "BEA9183CC1B7AC86C424AB7225F5AAFF6FC8792CBC9FDA2F6FFB3B4170DF0751"
+      },
+      "evidence": [
+        "[L1Benchmark] FPS 54.9 resolution=1424x750 batch=True",
+        "[L1Benchmark] TPS 277.2 elapsed=7.22",
+        "[L1Benchmark] COST AutonomousRimMapComponent.MapComponentTick calls=2000 totalMs=2252.4 meanMs=1.13 p95=0.03",
+        "[L1Benchmark] PASS: 8 existing bedrooms; three changed layouts adopted; original beds preserved; freezer/power no longer wait for bedrooms.",
+        "[L1Benchmark] DONE"
+      ]
+    },
+    {
+      "manifest": {
+        "stage": "l1-final-visible-on",
+        "flag": "autonomousrimlonebenchmark",
+        "extraFlags": [
+          "autonomousrimloneverify"
+        ],
+        "resumeSaveHash": "919248EB574C63AF85380F399D69843C4BEA92851E4232670F0BB3111E2D0774",
+        "sourceCommit": "41515fd305ce88b55b8f1446dae5f43ef7f2369a",
+        "dllHash": "72CC5CE1A39C18BE7EF4C46CDCC40C35C8451FBF239AB8C18A9D0661E4789DCC",
+        "runtimeHash": "7322272365C0BEDFD134351755050484E1B6757E7A84AC0DB537CA0F55D4B238",
+        "result": "PASS",
+        "profile": "C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\l1-final-visible-on-20261013-223731-283",
+        "sourceDirty": true,
+        "yieldCapsHash": "BEA9183CC1B7AC86C424AB7225F5AAFF6FC8792CBC9FDA2F6FFB3B4170DF0751"
+      },
+      "evidence": [
+        "[L1Benchmark] FPS 75.2 resolution=1920x1080 batch=False",
+        "[L1Benchmark] TPS 226.2 elapsed=8.84",
+        "[L1Benchmark] COST AutonomousRimMapComponent.MapComponentTick calls=2000 totalMs=2111.1 meanMs=1.06 p95=0.03",
+        "[L1Benchmark] PASS: 8 existing bedrooms; three changed layouts adopted; original beds preserved; freezer/power no longer wait for bedrooms.",
+        "[L1Benchmark] DONE"
+      ]
+    },
+    {
+      "manifest": {
+        "stage": "l1-final-visible-off",
+        "flag": "autonomousrimlonebenchmark",
+        "extraFlags": [
+          "autonomousrimloneoff"
+        ],
+        "resumeSaveHash": "919248EB574C63AF85380F399D69843C4BEA92851E4232670F0BB3111E2D0774",
+        "sourceCommit": "41515fd305ce88b55b8f1446dae5f43ef7f2369a",
+        "dllHash": "72CC5CE1A39C18BE7EF4C46CDCC40C35C8451FBF239AB8C18A9D0661E4789DCC",
+        "runtimeHash": "7322272365C0BEDFD134351755050484E1B6757E7A84AC0DB537CA0F55D4B238",
+        "result": "PASS",
+        "profile": "C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\l1-final-visible-off-20261013-223812-056",
+        "sourceDirty": true,
+        "yieldCapsHash": "BEA9183CC1B7AC86C424AB7225F5AAFF6FC8792CBC9FDA2F6FFB3B4170DF0751"
+      },
+      "evidence": [
+        "[L1Benchmark] FPS 87.6 resolution=1920x1080 batch=False",
+        "[L1Benchmark] TPS 316.3 elapsed=6.32",
+        "[L1Benchmark] COST AutonomousRimMapComponent.MapComponentTick calls=2000 totalMs=351.9 meanMs=0.18 p95=0.02",
+        "[L1Benchmark] DONE"
+      ]
+    },
+    {
+      "manifest": {
+        "stage": "l1-final-native-progress",
+        "flag": "autonomousrimloneprogress",
+        "extraFlags": [],
+        "resumeSaveHash": "919248EB574C63AF85380F399D69843C4BEA92851E4232670F0BB3111E2D0774",
+        "sourceCommit": "41515fd305ce88b55b8f1446dae5f43ef7f2369a",
+        "dllHash": "72CC5CE1A39C18BE7EF4C46CDCC40C35C8451FBF239AB8C18A9D0661E4789DCC",
+        "runtimeHash": "7322272365C0BEDFD134351755050484E1B6757E7A84AC0DB537CA0F55D4B238",
+        "result": "PASS",
+        "profile": "C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\l1-final-native-progress-20261013-224016-548",
+        "sourceDirty": true,
+        "yieldCapsHash": "BEA9183CC1B7AC86C424AB7225F5AAFF6FC8792CBC9FDA2F6FFB3B4170DF0751"
+      },
+      "evidence": [
+        "[L1Construction] PASS: Freezer actual native tasks 24 -> 35 / 176; state=Active; ",
+        "[L1Construction] PASS: Energia e climatização actual native tasks 0 -> 48 / 93; state=Active; Vegetação na obra: corte nativo antes de entregar/construir.",
+        "[L1Construction] PASS: original eight colonists alive and manual bedrooms preserved for 12 game hours.",
+        "[L1Construction] DONE"
+      ]
+    },
+    {
+      "manifest": {
+        "stage": "l1-final-queued",
+        "flag": "autonomousrimqueuedconstructiontest",
+        "extraFlags": [],
+        "resumeSaveHash": "01B0BEC2823B5711CE0CC528CEFE61CF5DC3AD9F6E4A1AB62A598107F0E695FD",
+        "sourceCommit": "41515fd305ce88b55b8f1446dae5f43ef7f2369a",
+        "dllHash": "72CC5CE1A39C18BE7EF4C46CDCC40C35C8451FBF239AB8C18A9D0661E4789DCC",
+        "runtimeHash": "7322272365C0BEDFD134351755050484E1B6757E7A84AC0DB537CA0F55D4B238",
+        "result": "PASS",
+        "profile": "C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\l1-final-queued-20261013-223946-508",
+        "sourceDirty": true,
+        "yieldCapsHash": "BEA9183CC1B7AC86C424AB7225F5AAFF6FC8792CBC9FDA2F6FFB3B4170DF0751"
+      },
+      "evidence": []
+    },
+    {
+      "manifest": {
+        "stage": "l1-final-industry",
+        "flag": "autonomousrimindustryinfrastructuretest",
+        "extraFlags": [
+          "autonomousrimfixturebaseline"
+        ],
+        "resumeSaveHash": "01B0BEC2823B5711CE0CC528CEFE61CF5DC3AD9F6E4A1AB62A598107F0E695FD",
+        "sourceCommit": "41515fd305ce88b55b8f1446dae5f43ef7f2369a",
+        "dllHash": "72CC5CE1A39C18BE7EF4C46CDCC40C35C8451FBF239AB8C18A9D0661E4789DCC",
+        "runtimeHash": "7322272365C0BEDFD134351755050484E1B6757E7A84AC0DB537CA0F55D4B238",
+        "result": "PASS",
+        "profile": "C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\l1-final-industry-20261013-223850-116",
+        "sourceDirty": true,
+        "yieldCapsHash": "BEA9183CC1B7AC86C424AB7225F5AAFF6FC8792CBC9FDA2F6FFB3B4170DF0751"
+      },
+      "evidence": []
+    }
+  ]
+}
