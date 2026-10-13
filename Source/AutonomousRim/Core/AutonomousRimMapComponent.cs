@@ -27,6 +27,20 @@ namespace AutonomousRim.Core
         public ProgressState Progress => progress;
         private ObservationMemory observations=new ObservationMemory();
         public ObservationMemory Observations => observations;
+        public TickRateMeter Performance { get; } = new TickRateMeter();
+        public PolicyTrialSession Trial { get; } = new PolicyTrialSession();
+        public string PolicyConfiguration => "learning-v1|"+string.Join(",",new[]{baseAutomation,foodAutomation,workAutomation,scheduleAutomation,
+            equipmentAutomation,strategyAutomation,lootAutomation,combatAutomation,emergencyAutomation,commerceAutomation,prisonAutomation})+
+            "|trade="+commerce.RefreshTicks+","+commerce.JointReserve+","+commerce.SilverTarget+
+            "|parallel="+CombatTacticalPlanner.ParallelEnabled+","+CombatTacticalPlanner.MinimumPairs;
+        public string PolicyScenario => "colonos="+map.mapPawns.FreeColonistsSpawnedCount+"|estacao="+GenLocalDate.Season(map);
+        public PolicyVerdict PolicyComparison => AutonomousRimMod.Instance?.Evidence?.Compare(observations.Latest?.Context,PolicyConfiguration,PolicyScenario)
+            ?? new PolicyVerdict {Detail="Arquivo de comparação indisponível."};
+        public bool ApplyProvenPolicy()
+        {
+            if(!PolicyComparison.Approved)return false;
+            SetObservationPolicy("food-buffer-v1");return observations.Policy=="food-buffer-v1";
+        }
         public List<RoomObservation> ObservedRooms { get; private set; } = new List<RoomObservation>();
         public void ObserveNow(bool rooms=true)
         {
@@ -447,11 +461,15 @@ namespace AutonomousRim.Core
             observations.ResetSession(Find.TickManager?.TicksGame??0);
             observations.ColonyId=Current.Game.GetComponent<ObservationIdentity>().ColonyId;
             ObserveNow();
+            bool studyReplay=PolicyStudyController.Replaying;
+            PolicyStudyController.MapLoaded(map,this);
+            if(!studyReplay && AutonomousRimMod.Instance?.Evidence?.ApplyValidatedPolicies==true)ApplyProvenPolicy();
         }
 
         public override void MapComponentUpdate()
         {
             base.MapComponentUpdate();
+            if(Find.TickManager!=null)Performance.Update(Find.TickManager.TicksGame,(int)Find.TickManager.CurTimeSpeed,Find.TickManager.Paused || LongEventHandler.AnyEventNowOrWaiting);
             if (strategyAutomation) ResearchNoticeManager.CloseOwnedCompletion(strategicPlan.OwnedResearch);
         }
 
@@ -492,6 +510,7 @@ namespace AutonomousRim.Core
                 CommerceManager.Apply(map,CurrentState,baseProjects,commerce,baseAutomation);
             if(CurrentState!=null && ticks%600==240 && (commerceAutomation || commerce.ExpeditionPawns.Count>0))
                 CommerceCaravanManager.Apply(map,CurrentState,commerce,commerceAutomation);
+            Trial.Tick(map,this);
         }
 
         private void ManageColony(bool force = true)

@@ -1,0 +1,23 @@
+[
+  {
+    "arm": "control",
+    "replica": 1,
+    "sourceHash": "01B0BEC2823B5711CE0CC528CEFE61CF5DC3AD9F6E4A1AB62A598107F0E695FD",
+    "profile": "C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\policy-control-01b0bec2-r1-20261013-033002-625",
+    "result": "PASS"
+  },
+  {
+    "arm": "candidate",
+    "replica": 1,
+    "sourceHash": "01B0BEC2823B5711CE0CC528CEFE61CF5DC3AD9F6E4A1AB62A598107F0E695FD",
+    "profile": "C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\policy-candidate-01b0bec2-r1-20261013-033344-100",
+    "result": "PASS"
+  },
+  {
+    "arm": "synchronous",
+    "replica": 1,
+    "sourceHash": "01B0BEC2823B5711CE0CC528CEFE61CF5DC3AD9F6E4A1AB62A598107F0E695FD",
+    "profile": "C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\policy-synchronous-01b0bec2-r1-20261013-033823-374",
+    "result": "PASS"
+  }
+]

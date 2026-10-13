@@ -11,7 +11,9 @@ namespace AutonomousRim.Perception
 {
     public static class ColonyStateScanner
     {
-        private static readonly ThingDef[] TrackedResources =
+        // Harmony profiling prepares this type before DefOf initialization. Resolve
+        // native definitions at scan time rather than caching nulls during patching.
+        private static ThingDef[] TrackedResources => new[]
         {
             ThingDefOf.Silver,
             ThingDefOf.Steel,

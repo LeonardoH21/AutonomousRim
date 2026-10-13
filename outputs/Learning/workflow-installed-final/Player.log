@@ -1,0 +1,134 @@
+Mono path[0] = 'C:/Users/Administrador/Downloads/RimWorld.v1.6.4633/RimWorld.v1.6.4633/game/RimWorldWin64_Data/Managed'
+Mono config path = 'C:/Users/Administrador/Downloads/RimWorld.v1.6.4633/RimWorld.v1.6.4633/game/MonoBleedingEdge/etc'
+[PhysX] Initialized MultithreadedTaskDispatcher with 16 workers.
+Initialize engine version: 2022.3.35f1 (011206c7a712)
+[Subsystems] Discovering subsystems at path C:/Users/Administrador/Downloads/RimWorld.v1.6.4633/RimWorld.v1.6.4633/game/RimWorldWin64_Data/UnitySubsystems
+GfxDevice: creating device client; threaded=0; jobified=0
+Direct3D:
+    Version:  Direct3D 11.0 [level 11.1]
+    Renderer: AMD Radeon RX 9070 XT (ID=0x7550)
+    Vendor:   ATI
+    VRAM:     16188 MB
+    Driver:   32.0.31041.1004
+Begin MonoManager ReloadAssembly
+- Loaded All Assemblies, in  0.099 seconds
+- Finished resetting the current domain, in  0.001 seconds
+D3D11 device created for Microsoft Media Foundation video decoding.
+[PhysX] Initialized MultithreadedTaskDispatcher with 16 workers.
+UnloadTime: 0.462100 ms
+Command line arguments: -batchmode -quicktest -autonomousrimstudyworkflow -autonomousrimstagedtest -savedatafolder=C:\Users\Administrador\Desktop\ModRimWorld\.tools\validation\learning-hud-installed-final-20261013-041338-097 -logFile C:\Users\Administrador\Desktop\ModRimWorld\.tools\validation\learning-hud-installed-final-20261013-041338-097\Player.log -autonomousrimfixturebaseline -autonomousrimprogressionresume
+RimWorld 1.6.4633 rev1261
+Save data folder overridden to C:\Users\Administrador\Desktop\ModRimWorld\.tools\validation\learning-hud-installed-final-20261013-041338-097
+Fallback handler could not load library C:/Users/Administrador/Downloads/RimWorld.v1.6.4633/RimWorld.v1.6.4633/game/RimWorldWin64_Data/MonoBleedingEdge/data-000002287B93C030.dll
+Fallback handler could not load library C:/Users/Administrador/Downloads/RimWorld.v1.6.4633/RimWorld.v1.6.4633/game/RimWorldWin64_Data/MonoBleedingEdge/data-000002287B984E10.dll
+[AutonomousRim] Loaded successfully.
+Unloading 5 Unused Serialized files (Serialized files now loaded: 5)
+Unloading 99 unused Assets to reduce memory usage. Loaded Objects now: 26461.
+Total: 190.286000 ms (FindLiveObjects: 1.475600 ms CreateObjectMapping: 1.130300 ms MarkObjects: 187.274800 ms  DeleteObjects: 0.404900 ms)
+
+Unloading 3 Unused Serialized files (Serialized files now loaded: 5)
+[PhysX] Initialized MultithreadedTaskDispatcher with 16 workers.
+UnloadTime: 2.093900 ms
+Unloading 2 unused Assets to reduce memory usage. Loaded Objects now: 26476.
+Total: 183.219500 ms (FindLiveObjects: 1.292100 ms CreateObjectMapping: 0.777400 ms MarkObjects: 181.123700 ms  DeleteObjects: 0.026100 ms)
+
+Initializing new game with mods:
+  - brrainz.harmony
+  - Ludeon.RimWorld
+  - Ludeon.RimWorld.Royalty
+  - Ludeon.RimWorld.Ideology
+  - Ludeon.RimWorld.Biotech
+  - Ludeon.RimWorld.Anomaly
+  - Ludeon.RimWorld.Odyssey
+  - LeonardoH21.AutonomousRim
+  - leonardoh21.autonomousrim.runtimechecks
+Unloading 0 Unused Serialized files (Serialized files now loaded: 5)
+Unloading 1 unused Assets to reduce memory usage. Loaded Objects now: 32598.
+Total: 177.958000 ms (FindLiveObjects: 1.222500 ms CreateObjectMapping: 1.059300 ms MarkObjects: 175.615200 ms  DeleteObjects: 0.060700 ms)
+
+Unloading 1 Unused Serialized files (Serialized files now loaded: 5)
+[EliteFixtureBaseline] READY: isolated user save finished loading.
+Unloading 0 unused Assets to reduce memory usage. Loaded Objects now: 27381.
+Total: 204.428900 ms (FindLiveObjects: 1.081200 ms CreateObjectMapping: 0.836000 ms MarkObjects: 202.475500 ms  DeleteObjects: 0.035600 ms)
+
+Unloading 2 Unused Serialized files (Serialized files now loaded: 5)
+[PhysX] Initialized MultithreadedTaskDispatcher with 16 workers.
+UnloadTime: 0.306900 ms
+Unloading 3 unused Assets to reduce memory usage. Loaded Objects now: 27371.
+Total: 152.003100 ms (FindLiveObjects: 1.095400 ms CreateObjectMapping: 0.762700 ms MarkObjects: 150.093500 ms  DeleteObjects: 0.051100 ms)
+
+Loading game from file ModularResume with mods:
+  - brrainz.harmony
+  - Ludeon.RimWorld
+  - Ludeon.RimWorld.Royalty
+  - Ludeon.RimWorld.Ideology
+  - Ludeon.RimWorld.Biotech
+  - Ludeon.RimWorld.Anomaly
+  - Ludeon.RimWorld.Odyssey
+  - LeonardoH21.AutonomousRim
+  - leonardoh21.autonomousrim.runtimechecks
+Unloading 0 Unused Serialized files (Serialized files now loaded: 5)
+Unloading 1 unused Assets to reduce memory usage. Loaded Objects now: 36051.
+Total: 224.164800 ms (FindLiveObjects: 1.529200 ms CreateObjectMapping: 1.364200 ms MarkObjects: 221.203400 ms  DeleteObjects: 0.067700 ms)
+
+[PolicyWorkflow] PASS: HUD controller saves a separate native baseline with exact SHA-256
+Unloading 1 Unused Serialized files (Serialized files now loaded: 5)
+Unloading 0 unused Assets to reduce memory usage. Loaded Objects now: 27663.
+Total: 230.364900 ms (FindLiveObjects: 1.475100 ms CreateObjectMapping: 0.787600 ms MarkObjects: 228.084900 ms  DeleteObjects: 0.016800 ms)
+
+Unloading 2 Unused Serialized files (Serialized files now loaded: 5)
+[PhysX] Initialized MultithreadedTaskDispatcher with 16 workers.
+UnloadTime: 0.382400 ms
+Unloading 2 unused Assets to reduce memory usage. Loaded Objects now: 27618.
+Total: 177.563700 ms (FindLiveObjects: 1.106700 ms CreateObjectMapping: 0.992400 ms MarkObjects: 175.426900 ms  DeleteObjects: 0.037300 ms)
+
+Loading game from file AutonomousRim-PolicyBaseline-d4d404ac0db84058bd48419846338cca with mods:
+  - brrainz.harmony
+  - Ludeon.RimWorld
+  - Ludeon.RimWorld.Royalty
+  - Ludeon.RimWorld.Ideology
+  - Ludeon.RimWorld.Biotech
+  - Ludeon.RimWorld.Anomaly
+  - Ludeon.RimWorld.Odyssey
+  - LeonardoH21.AutonomousRim
+  - leonardoh21.autonomousrim.runtimechecks
+[AutonomousRim.Study] Baseline carregado; ensaio agendado para o primeiro tick: food-buffer-v1
+Unloading 0 Unused Serialized files (Serialized files now loaded: 5)
+Unloading 0 unused Assets to reduce memory usage. Loaded Objects now: 36058.
+Total: 238.076500 ms (FindLiveObjects: 1.937200 ms CreateObjectMapping: 1.140500 ms MarkObjects: 234.974700 ms  DeleteObjects: 0.024000 ms)
+
+[PolicyWorkflow] PASS: replay begins on the first native map tick without falsely interrupting continuity
+[PolicyWorkflow] PASS: HUD replay starts declared arm from the exact baseline
+[PolicyWorkflow] PASS: HUD trial captures actual native configuration and content
+[PolicyWorkflow] PASS: unvalidated archive cannot automatically apply a strategy
+[AutonomousRim.Study] Ensaio interrompido: política alterada
+[PolicyWorkflow] PASS: manual intervention interrupts the trial without manufacturing completed evidence
+Unloading 1 Unused Serialized files (Serialized files now loaded: 5)
+Unloading 0 unused Assets to reduce memory usage. Loaded Objects now: 27670.
+Total: 227.672100 ms (FindLiveObjects: 1.238000 ms CreateObjectMapping: 1.028800 ms MarkObjects: 225.389300 ms  DeleteObjects: 0.015700 ms)
+
+Unloading 2 Unused Serialized files (Serialized files now loaded: 5)
+[PhysX] Initialized MultithreadedTaskDispatcher with 16 workers.
+UnloadTime: 0.522000 ms
+Unloading 3 unused Assets to reduce memory usage. Loaded Objects now: 27624.
+Total: 168.482500 ms (FindLiveObjects: 1.162100 ms CreateObjectMapping: 1.032900 ms MarkObjects: 166.227700 ms  DeleteObjects: 0.059500 ms)
+
+Loading game from file PolicyWorkflowRoundtrip with mods:
+  - brrainz.harmony
+  - Ludeon.RimWorld
+  - Ludeon.RimWorld.Royalty
+  - Ludeon.RimWorld.Ideology
+  - Ludeon.RimWorld.Biotech
+  - Ludeon.RimWorld.Anomaly
+  - Ludeon.RimWorld.Odyssey
+  - LeonardoH21.AutonomousRim
+  - leonardoh21.autonomousrim.runtimechecks
+Unloading 0 Unused Serialized files (Serialized files now loaded: 5)
+Unloading 0 unused Assets to reduce memory usage. Loaded Objects now: 36066.
+Total: 237.432300 ms (FindLiveObjects: 1.426700 ms CreateObjectMapping: 1.134500 ms MarkObjects: 234.843300 ms  DeleteObjects: 0.027300 ms)
+
+[PolicyWorkflow] PASS: baseline settings persist while active experimental time is discarded on load
+[PolicyWorkflow] PASS: altered disposable baseline is rejected before game load
+[PolicyWorkflow] DONE
+Resolution too small (0x0), resetting UI scale to 1.
+[AutonomousRim.Emergency] Securing → Recovery; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0

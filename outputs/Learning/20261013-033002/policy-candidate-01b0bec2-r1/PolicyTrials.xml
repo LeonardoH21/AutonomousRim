@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TrialExchange xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Schema>1</Schema>
+  <Trials>
+    <PolicyTrial>
+      <Baseline>01B0BEC2823B5711CE0CC528CEFE61CF5DC3AD9F6E4A1AB62A598107F0E695FD</Baseline>
+      <Context>1.6.4633|Grasslands|Cassandra|Medium|adaptationEffectFactor=1;adaptationGrowthRateFactorOverZero=0.75;adultAgingRate=1;allowBigThreats=True;allowCaveHives=True;allowExtremeWeatherIncidents=True;allowInstantKillChance=1;AllowInstantKillChanceDefault=1;allowIntroThreats=True;allowMortars=True;allowTraps=True;allowTurrets=True;allowViolentQuests=True;anomalyThreatsActiveFraction=0.3;anomalyThreatsInactiveFraction=0.08;babiesAreHealthy=False;butcherYieldFactor=1;childAgingRate=4;childRaidersAllowed=False;childShamblersAllowed=True;classicMortars=False;colonistMoodOffset=5;cropYieldFactor=1;deepDrillInfestationChanceFactor=0.75;diseaseIntervalFactor=1.5;DiseaseIntervalFactorCutoff=100;enemyDeathOnDownedChanceFactor=1;enemyReproductionRateFactor=0.5;fishingYieldFactor=1;fixedWealthMode=False;fixedWealthTimeFactor=1;foodPoisonChanceFactor=0.75;friendlyFireChanceFactor=0.4;FriendlyFireDefault=0.4;lowPopConversionBoost=3;maintenanceCostFactor=1;MaintenanceCostFactorMin=0.01;manhunterChanceOnDamageFactor=1;mineYieldFactor=1;minThreatPointsRangeCeiling=70;MinThreatPointsRangeCeilingDefault=70;noBabiesOrChildren=False;nomadicMineableResourcesFactor=0.5;peacefulTemples=False;playerPawnInfectionChanceFactor=0.75;predatorsHuntHumanlikes=True;questRewardValueFactor=1;raidLootPointsFactor=1;researchSpeedFactor=1;scariaRotChance=0.333;studyEfficiencyFactor=1;threatScale=0.6;tradePriceFactorLoss=0;unwaveringPrisoners=True;wastepackInfestationChanceFactor=0.5|brrainz.harmony:DFBD2F9429943877F2363D2A02947BD6D35243F16AD8B9251BC3D3F5940F7300,LeonardoH21.AutonomousRim:3169FE084C058B3034FE1576C81A4A78C86C0A5AA376659526E62A7D6FEA0D25,leonardoh21.autonomousrim.runtimechecks:AC25F60A067DC281210CA48F9A38799D2081EE954BDDDF1A675467C23CC05ECD,Ludeon.RimWorld:9ED96DA05B619BBFC58A9E699F252A11EDD45BF01ABE4865CB733F6A0BFACC16,Ludeon.RimWorld.Anomaly:54A18C0998E92CB9ACD083CFD7F7C12695516E1F22E56CBCC0F1236F289E6AC7,Ludeon.RimWorld.Biotech:9529E2C2AE52C6C8C8705897A9D9356C3F0F2950576B9C9BFAD108D99A394B91,Ludeon.RimWorld.Ideology:86A835C07E15ECD75D09AE6375C98BCB74522DB7E4EB2948B3CAB56F94E9E7FF,Ludeon.RimWorld.Odyssey:0B6E5E2F82C2A616773E25A908F9FC11728FB28DE833EAE892166055D45CB207,Ludeon.RimWorld.Royalty:02A465EB6BE4DD9AF1560B045CA4C5A7EDDF278A0E8F6B3F6E2EBE4CBDA4F8CB</Context>
+      <Colony>f104bb5d05984b98ae1ca269e5847ae1</Colony>
+      <Replica>-autonomousrimreplica1</Replica>
+      <Policy>food-buffer-v1</Policy>
+      <Configuration>learning-v1|False,True,True,True,False,False,False,False,False,False,False|trade=5000,60,1000|parallel=True,256</Configuration>
+      <Horizon>60000</Horizon>
+      <Observed>60000</Observed>
+      <Deaths>0</Deaths>
+      <HungerTicks>0</HungerTicks>
+      <DownedTicks>0</DownedTicks>
+      <Products>40</Products>
+      <MinimumFood>19.38889</MinimumFood>
+      <Research>0</Research>
+      <Completed>true</Completed>
+      <Interrupted>false</Interrupted>
+    </PolicyTrial>
+  </Trials>
+</TrialExchange>

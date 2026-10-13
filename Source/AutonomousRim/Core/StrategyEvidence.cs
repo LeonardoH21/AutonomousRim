@@ -26,6 +26,16 @@ namespace AutonomousRim.Core
     public sealed class EvidenceSettings : ModSettings
     {
         public List<StrategyEvidence> Evidence=new List<StrategyEvidence>();
+        public List<PolicyTrial> Trials=new List<PolicyTrial>();
+        public bool ApplyValidatedPolicies;
+        public string StudySave,StudyHash;
+        public int StudyMap;
+        public bool AddTrial(PolicyTrial trial)
+        {
+            if(trial==null || !trial.Valid || Trials.Any(t=>t.PairKey==trial.PairKey && t.Policy==trial.Policy))return false;
+            Trials.Add(trial);if(Trials.Count>128)Trials.RemoveAt(0);return true;
+        }
+        public PolicyVerdict Compare(string context,string configuration,string scenario)=>PolicyComparison.Evaluate(Trials,context,configuration,scenario);
         public bool Add(StrategyEvidence evidence)
         {
             if(Evidence.Any(e=>e.Colony==evidence.Colony && e.Policy==evidence.Policy && e.End>=evidence.End))return false;
@@ -42,6 +52,10 @@ namespace AutonomousRim.Core
         public override void ExposeData()
         {
             Scribe_Collections.Look(ref Evidence,"evidence",LookMode.Deep);
+            Scribe_Collections.Look(ref Trials,"policyTrials",LookMode.Deep);
+            Scribe_Values.Look(ref ApplyValidatedPolicies,"applyValidatedPolicies");
+            Scribe_Values.Look(ref StudySave,"studySave"); Scribe_Values.Look(ref StudyHash,"studyHash");Scribe_Values.Look(ref StudyMap,"studyMap");
+            if(Scribe.mode==LoadSaveMode.PostLoadInit) {Trials=Trials??new List<PolicyTrial>();Trials.RemoveAll(t=>t==null || !t.Valid);if(Trials.Count>128)Trials.RemoveRange(0,Trials.Count-128);}
             if(Scribe.mode==LoadSaveMode.PostLoadInit) {Evidence=Evidence??new List<StrategyEvidence>();Evidence.RemoveAll(e=>e==null);if(Evidence.Count>128)Evidence.RemoveRange(0,Evidence.Count-128);}
         }
     }

@@ -30,6 +30,7 @@ namespace AutonomousRim.UI
         private int page, lootPage, built, planned;
         private bool onlyBlocked;
         private bool showObservationDetails;
+        private int studyReplica=1;
         private string search = "";
         private Map metricMap;
         private float nextMetrics;
@@ -383,6 +384,50 @@ namespace AutonomousRim.UI
                 Line("Reserva ampliada: "+(AutonomousRimMod.Instance?.Evidence?.Describe(observation.Context,"food-buffer-v1")??"Sem arquivo compartilhado."),Muted);
             }
             if(Button("Registrar um dia estável no histórico entre colônias"))Messages.Message(ai.ArchiveObservation(),MessageTypeDefOf.NeutralEvent,false);
+            Section("Aprendizado por comparação pareada");
+            Line(ai.PolicyComparison.Detail, ai.PolicyComparison.Approved ? Muted : Warning);
+            Line("Janelas descritivas não validam políticas. Ensaios exigem o mesmo save inicial, configuração e duração por par; mortes e fome também entram no resultado.",Muted);
+            if(ai.PolicyComparison.Approved && Button("Aplicar reserva +1 dia validada neste contexto"))ai.ApplyProvenPolicy();
+            var archive=AutonomousRimMod.Instance?.Evidence;
+            Line("Ensaios recarregam um checkpoint próprio. Salve sua partida atual antes de executar outro braço; o teste usa os colonos e recursos reais do checkpoint.",Warning);
+            if(archive!=null && Button("Criar novo checkpoint de comparação A/B")) {
+                try {Messages.Message("Baseline criado: "+PolicyStudyController.SaveBaseline(Find.CurrentMap),MessageTypeDefOf.NeutralEvent,false);}
+                catch(Exception error){Messages.Message("Baseline indisponível: "+error.Message,MessageTypeDefOf.NeutralEvent,false);}
+            }
+            if(archive?.StudySave!=null) {
+                Line("Baseline: "+archive.StudySave+" • repetição "+studyReplica,Muted);
+                if(Button("Escolher próxima repetição (1–8)"))studyReplica=studyReplica%8+1;
+                foreach(string policy in new[]{"observation-v1","food-buffer-v1"})
+                    if(Button("Recarregar baseline e testar: "+policy)) {
+                        try {PolicyStudyController.Replay(policy,studyReplica);}
+                        catch(Exception error){Messages.Message("Ensaio indisponível: "+error.Message,MessageTypeDefOf.NeutralEvent,false);}
+                    }
+            }
+            if(ai.Trial.Result!=null)Line("Ensaio "+ai.Trial.Result.Policy+": "+ai.Trial.Result.Observed+" / "+ai.Trial.Result.Horizon+" ticks • "+
+                (ai.Trial.Result.Interrupted?"interrompido; não conta como evidência":ai.Trial.Result.Completed?"concluído":"em andamento"),Muted);
+            if(archive!=null && Button("Importar arquivo AutonomousRimPolicyTrials.xml das configurações")) {
+                try {
+                    int count=TrialExchange.Import(System.IO.Path.Combine(GenFilePaths.ConfigFolderPath,"AutonomousRimPolicyTrials.xml"),archive);
+                    AutonomousRimMod.Instance.WriteSettings();Messages.Message(count+" ensaios importados; contextos incompatíveis não recomendam mudanças.",MessageTypeDefOf.NeutralEvent,false);
+                }catch(Exception error){Messages.Message("Importação indisponível: "+error.Message,MessageTypeDefOf.NeutralEvent,false);}
+            }
+            if(archive!=null && Button("Aplicação validada ao carregar: "+(archive.ApplyValidatedPolicies?"ligada":"desligada")))
+            {archive.ApplyValidatedPolicies=!archive.ApplyValidatedPolicies;AutonomousRimMod.Instance.WriteSettings();}
+            Section("Desempenho medido • todos os mapas desta sessão");
+            if(Button("Medição: "+(PerformanceTelemetry.Enabled?"ligada":"desligada")))
+            {PerformanceTelemetry.Enabled=!PerformanceTelemetry.Enabled;PerformanceTelemetry.Reset();ai.Performance.Reset();}
+            if(Button("Zerar janela de desempenho")){PerformanceTelemetry.Reset();ai.Performance.Reset();}
+            Line("TPS observado neste mapa: "+ai.Performance.Tps.ToString("0.0")+" • "+ai.Performance.ObservedTicks+" ticks / "+ai.Performance.Seconds.ToString("0.0")+" s. Pausas, loads e mudanças de velocidade reiniciam a amostragem.",Muted);
+            foreach(var timing in PerformanceTelemetry.Snapshot().Take(20))
+                Line(timing.Module+" • "+timing.Calls+" chamadas • média "+timing.MeanMs.ToString("0.000")+" ms • p95 "+timing.P95Ms.ToString("0.000")+" ms • máximo "+timing.MaxMs.ToString("0.000")+" ms • falhas "+timing.Failures,Muted);
+            Line("Tempos inclusivos: não somar pai e filhos. P95 usa as últimas 512 chamadas; média e máximo cobrem a janela inteira. TPS inclui o restante do jogo.",Muted);
+            Line("Thread auxiliar: "+AnalysisWorker.Completed+" tarefas concluídas • "+AnalysisWorker.Milliseconds.ToString("0.0")+" ms acumulados • paralelismo de combate "+(CombatTacticalPlanner.ParallelEnabled?"ligado":"desligado")+". Medição não amplia o uso de threads.",Muted);
+            Line("Fila auxiliar: "+AnalysisWorker.Queued+" • recusadas por lotação: "+AnalysisWorker.Rejected+" • falhas: "+AnalysisWorker.Failed,Muted);
+            if(Button("Comparar execução: "+(CombatTacticalPlanner.ParallelEnabled?"usar modo síncrono":"usar thread auxiliar existente"))) {
+                CombatTacticalPlanner.ParallelEnabled=!CombatTacticalPlanner.ParallelEnabled;
+                foreach(var loadedMap in Find.Maps)CombatTacticalPlanner.Clear(loadedMap);
+                PerformanceTelemetry.Reset();ai.Performance.Reset();
+            }
             Section("Salas existentes • conexões e temperatura");
             foreach(var room in ai.ObservedRooms.Take(16)) {
                 Line("#"+room.Id+" • "+room.Role+" • "+room.Cells+" células • "+room.Temperature.ToString("0.0")+" °C • "+room.Vents+" saídas de ar"+(room.Problems.Length==0?"":" • "+room.Problems),room.Problems.Length==0?Muted:Warning);

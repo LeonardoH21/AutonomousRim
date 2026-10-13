@@ -1,0 +1,17 @@
+{
+  "stage": "policy-candidate-01b0bec2-r1",
+  "flag": "autonomousrimlearningtest",
+  "extraFlags": [
+    "autonomousrimfixturebaseline",
+    "autonomousrimreplica1",
+    "autonomousrimcandidate"
+  ],
+  "resumeSaveHash": "01B0BEC2823B5711CE0CC528CEFE61CF5DC3AD9F6E4A1AB62A598107F0E695FD",
+  "sourceCommit": "f8c4aaf20c23c157b3d304652b6f9e22aeecf1bd",
+  "dllHash": "3268012528ED2D60944D1EB4CB352676228CDE5FAE1EBAB27DF1062DAB46286F",
+  "runtimeHash": "3EC5897B8FBDDFBD48E8ED6781C4642E80A7CA6AD67FB6AB330CACB5EBD58F8F",
+  "result": "PASS",
+  "profile": "C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\policy-candidate-01b0bec2-r1-20261013-040623-270",
+  "sourceDirty": true,
+  "yieldCapsHash": "BEA9183CC1B7AC86C424AB7225F5AAFF6FC8792CBC9FDA2F6FFB3B4170DF0751"
+}

@@ -1,0 +1,200 @@
+Mono path[0] = 'C:/Users/Administrador/Downloads/RimWorld.v1.6.4633/RimWorld.v1.6.4633/game/RimWorldWin64_Data/Managed'
+Mono config path = 'C:/Users/Administrador/Downloads/RimWorld.v1.6.4633/RimWorld.v1.6.4633/game/MonoBleedingEdge/etc'
+[PhysX] Initialized MultithreadedTaskDispatcher with 16 workers.
+Initialize engine version: 2022.3.35f1 (011206c7a712)
+[Subsystems] Discovering subsystems at path C:/Users/Administrador/Downloads/RimWorld.v1.6.4633/RimWorld.v1.6.4633/game/RimWorldWin64_Data/UnitySubsystems
+GfxDevice: creating device client; threaded=0; jobified=0
+Direct3D:
+    Version:  Direct3D 11.0 [level 11.1]
+    Renderer: AMD Radeon RX 9070 XT (ID=0x7550)
+    Vendor:   ATI
+    VRAM:     16188 MB
+    Driver:   32.0.31041.1004
+Begin MonoManager ReloadAssembly
+- Loaded All Assemblies, in  0.087 seconds
+- Finished resetting the current domain, in  0.001 seconds
+D3D11 device created for Microsoft Media Foundation video decoding.
+[PhysX] Initialized MultithreadedTaskDispatcher with 16 workers.
+UnloadTime: 0.472700 ms
+Command line arguments: -batchmode -quicktest -autonomousrimlearningtest -autonomousrimstagedtest -savedatafolder=C:\Users\Administrador\Desktop\ModRimWorld\.tools\validation\policy-candidate-01b0bec2-r1-20261013-033344-100 -logFile C:\Users\Administrador\Desktop\ModRimWorld\.tools\validation\policy-candidate-01b0bec2-r1-20261013-033344-100\Player.log -autonomousrimfixturebaseline -autonomousrimreplica1 -autonomousrimcandidate -autonomousrimprogressionresume
+RimWorld 1.6.4633 rev1261
+Save data folder overridden to C:\Users\Administrador\Desktop\ModRimWorld\.tools\validation\policy-candidate-01b0bec2-r1-20261013-033344-100
+Fallback handler could not load library C:/Users/Administrador/Downloads/RimWorld.v1.6.4633/RimWorld.v1.6.4633/game/RimWorldWin64_Data/MonoBleedingEdge/data-000002886BC31830.dll
+Fallback handler could not load library C:/Users/Administrador/Downloads/RimWorld.v1.6.4633/RimWorld.v1.6.4633/game/RimWorldWin64_Data/MonoBleedingEdge/data-000002886BDD7150.dll
+[AutonomousRim] Loaded successfully.
+Unloading 5 Unused Serialized files (Serialized files now loaded: 5)
+Unloading 99 unused Assets to reduce memory usage. Loaded Objects now: 26461.
+Total: 174.027300 ms (FindLiveObjects: 1.129400 ms CreateObjectMapping: 1.307100 ms MarkObjects: 171.270200 ms  DeleteObjects: 0.320200 ms)
+
+Unloading 3 Unused Serialized files (Serialized files now loaded: 5)
+[PhysX] Initialized MultithreadedTaskDispatcher with 16 workers.
+UnloadTime: 2.016200 ms
+Unloading 2 unused Assets to reduce memory usage. Loaded Objects now: 26476.
+Total: 184.897700 ms (FindLiveObjects: 1.223200 ms CreateObjectMapping: 0.864300 ms MarkObjects: 182.783800 ms  DeleteObjects: 0.026000 ms)
+
+Initializing new game with mods:
+  - brrainz.harmony
+  - Ludeon.RimWorld
+  - Ludeon.RimWorld.Royalty
+  - Ludeon.RimWorld.Ideology
+  - Ludeon.RimWorld.Biotech
+  - Ludeon.RimWorld.Anomaly
+  - Ludeon.RimWorld.Odyssey
+  - LeonardoH21.AutonomousRim
+  - leonardoh21.autonomousrim.runtimechecks
+Unloading 0 Unused Serialized files (Serialized files now loaded: 5)
+Unloading 1 unused Assets to reduce memory usage. Loaded Objects now: 33138.
+Total: 189.744600 ms (FindLiveObjects: 1.413200 ms CreateObjectMapping: 0.993500 ms MarkObjects: 187.280800 ms  DeleteObjects: 0.056900 ms)
+
+Unloading 1 Unused Serialized files (Serialized files now loaded: 5)
+[EliteFixtureBaseline] READY: isolated user save finished loading.
+Unloading 0 unused Assets to reduce memory usage. Loaded Objects now: 27472.
+Total: 209.132400 ms (FindLiveObjects: 1.043500 ms CreateObjectMapping: 0.761000 ms MarkObjects: 207.309700 ms  DeleteObjects: 0.017900 ms)
+
+Unloading 2 Unused Serialized files (Serialized files now loaded: 5)
+[PhysX] Initialized MultithreadedTaskDispatcher with 16 workers.
+UnloadTime: 0.350700 ms
+Unloading 4 unused Assets to reduce memory usage. Loaded Objects now: 27456.
+Total: 165.850800 ms (FindLiveObjects: 1.086200 ms CreateObjectMapping: 0.946000 ms MarkObjects: 163.756300 ms  DeleteObjects: 0.061900 ms)
+
+Loading game from file ModularResume with mods:
+  - brrainz.harmony
+  - Ludeon.RimWorld
+  - Ludeon.RimWorld.Royalty
+  - Ludeon.RimWorld.Ideology
+  - Ludeon.RimWorld.Biotech
+  - Ludeon.RimWorld.Anomaly
+  - Ludeon.RimWorld.Odyssey
+  - LeonardoH21.AutonomousRim
+  - leonardoh21.autonomousrim.runtimechecks
+Unloading 0 Unused Serialized files (Serialized files now loaded: 5)
+Unloading 1 unused Assets to reduce memory usage. Loaded Objects now: 36069.
+Total: 223.930600 ms (FindLiveObjects: 1.389500 ms CreateObjectMapping: 1.348600 ms MarkObjects: 221.133500 ms  DeleteObjects: 0.058800 ms)
+
+[LearningPerformance] PASS: three independent replicated synthetic pairs pass predefined safety and utility criteria
+[LearningPerformance] PASS: one colony and repeated windows are insufficient
+[LearningPerformance] PASS: content and automation contexts cannot be mixed
+[LearningPerformance] PASS: unique synthetic trial accepted
+[LearningPerformance] PASS: unique synthetic trial accepted
+[LearningPerformance] PASS: unique synthetic trial accepted
+[LearningPerformance] PASS: unique synthetic trial accepted
+[LearningPerformance] PASS: unique synthetic trial accepted
+[LearningPerformance] PASS: unique synthetic trial accepted
+[LearningPerformance] PASS: unique synthetic trial accepted
+[LearningPerformance] PASS: unique synthetic trial accepted
+[LearningPerformance] PASS: unique synthetic trial accepted
+[LearningPerformance] PASS: unique synthetic trial accepted
+[LearningPerformance] PASS: unique synthetic trial accepted
+[LearningPerformance] PASS: unique synthetic trial accepted
+[LearningPerformance] PASS: duplicate trial cannot amplify evidence
+[LearningPerformance] PASS: additional death vetoes a food improvement
+[LearningPerformance] PASS: additional hunger vetoes promotion
+[LearningPerformance] PASS: large research regression vetoes promotion
+[LearningPerformance] PASS: production regression vetoes promotion
+[LearningPerformance] PASS: equal outcomes do not invent a useful adjustment
+[LearningPerformance] PASS: different source checkpoint cannot form a pair
+[LearningPerformance] PASS: interrupted or shortened trial cannot count as a full pair
+[LearningPerformance] PASS: nonfinite measurements are rejected
+[LearningPerformance] PASS: disabled telemetry accumulates no samples
+[LearningPerformance] PASS: bounded percentile ring retains total call count
+[LearningPerformance] PASS: failure remains visible without swallowing an exception
+[LearningPerformance] PASS: value-only comparison submitted without accessing mutable game objects on worker
+[LearningPerformance] PASS: sync and asynchronous value-only target assessments are identical
+[LearningPerformance] MICRO sync_ms=0.157 worker_latency_ms=1.311 pairs=96; microbenchmark is not a combat TPS result
+Resolution too small (0x0), resetting UI scale to 1.
+[AutonomousRim.Emergency] Securing → Recovery; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Recovery → Normal; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Normal → Danger; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Danger → Securing; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Securing → Recovery; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Recovery → Danger; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Danger → Securing; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Securing → Danger; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Danger → Securing; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Securing → Danger; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Danger → Securing; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Securing → Danger; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Danger → Securing; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Securing → Recovery; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Recovery → Danger; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Danger → Securing; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Securing → Danger; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Danger → Securing; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Securing → Danger; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Danger → Securing; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Securing → Danger; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Danger → Securing; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Securing → Danger; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Danger → Securing; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Securing → Recovery; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Recovery → Danger; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Danger → Securing; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Securing → Recovery; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Recovery → Danger; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Danger → Securing; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Securing → Danger; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Danger → Securing; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Securing → Danger; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Danger → Securing; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Securing → Danger; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Danger → Securing; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Securing → Danger; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Danger → Securing; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Securing → Danger; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Danger → Securing; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Securing → Recovery; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Recovery → Danger; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Danger → Securing; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Securing → Recovery; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Recovery → Danger; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Danger → Securing; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Securing → Danger; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Danger → Securing; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Securing → Danger; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Danger → Securing; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Securing → Recovery; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Recovery → Danger; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Danger → Securing; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Securing → Danger; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Danger → Securing; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Securing → Recovery; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Recovery → Normal; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Normal → Danger; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Danger → Securing; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Securing → Recovery; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[AutonomousRim.Emergency] Recovery → Normal; humanos 0, manhunters 0, insetos 0, mechs 0, estruturas 0, outros 0
+[LearningPerformance] PASS: native policy trial observes one whole day without changing configuration
+[LearningPerformance] PASS: real native result is archived independently from descriptive windows
+[LearningPerformance] PASS: one real paired scenario cannot trigger cross-colony learning
+[LearningPerformance] PASS: real native ticks are timed per module
+[LearningPerformance] PASS: native work and food costs are measured separately
+[LearningPerformance] PASS: native timing percentiles have bounded valid samples
+[LearningPerformance] PASS: real trial XML roundtrip deduplicates copied evidence
+[LearningPerformance] RESULT policy=food-buffer-v1 ticks=60000 seconds=238.894 tps=251.2 food_min=19.38889 hunger=0 deaths=0 products=40 research=0 worker_tasks=1 parallel=True
+Unloading 1 Unused Serialized files (Serialized files now loaded: 5)
+Unloading 0 unused Assets to reduce memory usage. Loaded Objects now: 27801.
+Total: 270.430100 ms (FindLiveObjects: 1.559000 ms CreateObjectMapping: 1.034600 ms MarkObjects: 267.814700 ms  DeleteObjects: 0.021600 ms)
+
+Unloading 2 Unused Serialized files (Serialized files now loaded: 5)
+[PhysX] Initialized MultithreadedTaskDispatcher with 16 workers.
+UnloadTime: 0.497600 ms
+Unloading 3 unused Assets to reduce memory usage. Loaded Objects now: 27641.
+Total: 168.642500 ms (FindLiveObjects: 1.122800 ms CreateObjectMapping: 0.928500 ms MarkObjects: 166.536000 ms  DeleteObjects: 0.054900 ms)
+
+Loading game from file LearningRoundtrip with mods:
+  - brrainz.harmony
+  - Ludeon.RimWorld
+  - Ludeon.RimWorld.Royalty
+  - Ludeon.RimWorld.Ideology
+  - Ludeon.RimWorld.Biotech
+  - Ludeon.RimWorld.Anomaly
+  - Ludeon.RimWorld.Odyssey
+  - LeonardoH21.AutonomousRim
+  - leonardoh21.autonomousrim.runtimechecks
+Unloading 0 Unused Serialized files (Serialized files now loaded: 5)
+Unloading 0 unused Assets to reduce memory usage. Loaded Objects now: 36074.
+Total: 240.870200 ms (FindLiveObjects: 1.485400 ms CreateObjectMapping: 1.193700 ms MarkObjects: 238.166700 ms  DeleteObjects: 0.024200 ms)
+
+[LearningPerformance] PASS: native save/load preserves chosen version and rollback history
+[LearningPerformance] PASS: loading discards an active session instead of fabricating continuous experimental time
+[LearningPerformance] DONE
