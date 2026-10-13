@@ -86,6 +86,7 @@ namespace AutonomousRim.Execution
                 p.equipment.Primary.TryGetComp<CompEquippable>().PrimaryVerb.CanHitTarget(current) && FriendlyLane(p.Position,current.Position,p,allies)) return current;
             return enemies.OrderByDescending(e => allies.Any(a => a != p && a.Position.DistanceTo(p.Position) < 18 &&
                 (e.CurJob?.targetA.Thing == a || !Ranged(e) && e.Position.DistanceTo(a.Position) < 5)))
+            .ThenByDescending(e => p.Map.GetComponent<AutonomousRimMapComponent>().Doctrine.PriorityTargets.Contains(e.thingIDNumber))
             .ThenBy(e => e.Position.DistanceTo(p.Position)).First();
         }
 
@@ -205,7 +206,7 @@ namespace AutonomousRim.Execution
             job.expiryInterval=job.def==JobDefOf.AttackStatic?1800:600; job.checkOverrideOnExpire=true;
             job.preventFriendlyFire=true;
             if(job.def==JobDefOf.Goto) job.locomotionUrgency=LocomotionUrgency.Sprint;
-            if (!p.jobs.TryTakeOrderedJob(job,JobTag.Misc,false)) return false;
+            if (!OrderedJobDispatcher.Issue(p,job,JobTag.Misc,false)) return false;
             p.drafter.FireAtWill=defensiveFire;
             order.JobId=job.GetUniqueLoadID(); order.LastOrderTick=Find.TickManager.TicksGame; order.Role=role;
             Log.Message($"[AutonomousRim.Combat] {p.LabelShort}: {role}; {job.def.defName} → {job.targetA}");
@@ -237,12 +238,14 @@ namespace AutonomousRim.Execution
                 { excluded.Add(p); orders.Remove(order); } // A later manual order keeps its current fire setting.
             }
             foreach(var p in colonists.Where(Eligible).Where(p=>!p.Drafted && !excluded.Contains(p) &&
-                !orders.Any(o=>o.Pawn==p) && p.CurJob?.playerForced!=true && enemies.Any(e=>e.Position.DistanceTo(p.Position)<50)))
+                !orders.Any(o=>o.Pawn==p) && !ActorCoordinator.Blocked(p,"combate") && p.CurJob?.playerForced!=true && enemies.Any(e=>e.Position.DistanceTo(p.Position)<50)))
             {
                 p.drafter.Drafted=true;
                 bool fire=p.drafter.FireAtWill; p.drafter.FireAtWill=false;
                 orders.Add(new CombatOrder { Pawn=p, Anchor=p.Position, LastOrderTick=-300, OriginalFireAtWill=fire });
             }
+            if(map.GetComponent<AutonomousRimMapComponent>().Doctrine.Internal)
+                foreach(var order in orders.Where(o=>o.Anchor.DistanceTo(o.Pawn.Position)>18))order.Anchor=order.Pawn.Position;
             var allies=orders.Select(o=>o.Pawn).Where(PawnAnalyzer.IsCombatReady).ToList();
             var assessments=CombatTacticalPlanner.Analyze(map,allies,enemies);
             // Keep pair intent across scans, including the partner processed later.
@@ -256,6 +259,8 @@ namespace AutonomousRim.Execution
                 var p=order.Pawn;
                 if(!PawnAnalyzer.IsCombatReady(p)) continue;
                 var target=Target(p,colonists,enemies);
+                if(!globalRetreat && !Wounded(p) && PsycastSupport.TryStun(order,target))continue;
+                if(p.CurJob?.def==JobDefOf.CastAbilityOnThing && p.CurJob.GetUniqueLoadID()==order.JobId && p.stances.FullBodyBusy)continue;
                 var meleeCandidates=new List<Pawn>();
                 if(!Ranged(p))
                 {

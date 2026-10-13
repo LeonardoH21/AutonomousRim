@@ -103,6 +103,7 @@ namespace AutonomousRim.Planning
             target("HospitalBed",state.DownedColonists>0?95:65); target("SolarPanels",energy?55:85); target("GeothermalPower",energy?62:82);
             target("SolarPanels",74);target("Batteries",75);
             target("MicroelectronicsBasics",72); target("MultiAnalyzer",58);
+            foreach(var research in map.GetComponent<AutonomousRimMapComponent>().GoalGraph.Research.Where(r=>!r.IsFinished))target(research.defName,76);
             // Furnishing/economic research is tied to a room and an explicit installation.
             foreach(var room in rooms.Where(r=>r.Kind=="Refeitório e recreação" || r.Kind=="Oficina" || r.Kind=="Fabricação"))
                 foreach(var name in room.Kind=="Refeitório e recreação" ? new[]{"BilliardsTable","TubeTelevision"} :

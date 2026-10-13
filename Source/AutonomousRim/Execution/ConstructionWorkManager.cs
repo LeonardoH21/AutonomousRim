@@ -36,6 +36,7 @@ namespace AutonomousRim.Execution
     {
         public static bool CanDispatch(Pawn p, WorkTypeDef work)
         {
+            if(ActorCoordinator.Blocked(p,"construcao"))return false;
             if (!EquipmentManager.CanAct(p) || !p.workSettings.Initialized || p.WorkTypeIsDisabled(work) || p.workSettings.GetPriority(work) == 0 ||
                 p.needs.food?.CurCategory >= HungerCategory.Hungry || p.needs.rest?.CurLevel < 0.35f || p.needs.joy?.CurLevel < 0.25f && !WorkReadiness.CanBuildRecoveryFurniture(p) ||
                 p.timetable?.CurrentAssignment == TimeAssignmentDefOf.Sleep || p.timetable?.CurrentAssignment == TimeAssignmentDefOf.Joy) return false;

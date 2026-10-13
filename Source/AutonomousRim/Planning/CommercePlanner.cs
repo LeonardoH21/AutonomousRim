@@ -75,6 +75,8 @@ namespace AutonomousRim.Planning
                 need(def,pair.Value+extra,70,"Conjunto militar da etapa "+(checkpoint.Stage+1));
             }
             var ai=map.GetComponent<AutonomousRimMapComponent>();
+            foreach(var supply in ai.GoalGraph.Supplies)
+                need(supply.Key,supply.Value,60,"Dependência de uma produção automática ativa");
             if(ai.EquipmentAutomation)
                 foreach(var request in ai.Industry.Requirements.Where(r=>r.Route=="commerce" && r.Missing>0))
                     need(request.Def,request.Target,75,"Insumo industrial sem fonte local viável");

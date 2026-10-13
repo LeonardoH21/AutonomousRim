@@ -1,0 +1,134 @@
+{
+  "date": "2026-10-13",
+  "scope": "First implementation of colony continuity roadmap; incomplete extensions are documented",
+  "originalColonists": 6,
+  "speed": "3x",
+  "setupCheats": "Fixtures only; native jobs and effects checked",
+  "installedDllHash": "6234A5EBFD10FC4B5093367CC03D02B87DCA9518928342B4FEE690F4E35C0D1A",
+  "sourceBase": "dca140e9da4783b5838b2b0b8ae4a9f8b14b9b57",
+  "stages": [
+    {
+      "stage": "rescue-owner-final-2026-10-13",
+      "result": "PASS",
+      "dllHash": "6234A5EBFD10FC4B5093367CC03D02B87DCA9518928342B4FEE690F4E35C0D1A",
+      "runtimeHash": "FCD22A7D8984BD6D1162006A4DEB090AE9B16DB1F868862D736D99B770A1987E",
+      "sourceSaveHash": "01B0BEC2823B5711CE0CC528CEFE61CF5DC3AD9F6E4A1AB62A598107F0E695FD",
+      "checks": 4,
+      "evidence": [
+        "[MedicalRescueTests] PASS dispatch 1: 6 colonists; 6 enemies, 4 neutralized; 4 defenders vs 2; doctor20 detached; deathTicks=120000; job=Rescue",
+        "[MedicalRescueTests] PASS hospital: native rescue followed by native tend; bleeding stopped, patient alive; no healing after setup.",
+        "[MedicalRescueTests] PASS release 1: helper released automatically after native care.",
+        "[MedicalRescueTests] PASS safety/manual: enemy contact rejected; player draft/order/fire preserved across handoff and immediate disable."
+      ],
+      "profile": "C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\rescue-owner-final-2026-10-13-20261013-175754-479"
+    },
+    {
+      "stage": "continuity-owner-final-2026-10-13",
+      "result": "PASS",
+      "dllHash": "6234A5EBFD10FC4B5093367CC03D02B87DCA9518928342B4FEE690F4E35C0D1A",
+      "runtimeHash": "FCD22A7D8984BD6D1162006A4DEB090AE9B16DB1F868862D736D99B770A1987E",
+      "sourceSaveHash": "01B0BEC2823B5711CE0CC528CEFE61CF5DC3AD9F6E4A1AB62A598107F0E695FD",
+      "checks": 48,
+      "evidence": [
+        "[ColonyContinuity] PASS: watchdog detects four available work hours without progress",
+        "[ColonyContinuity] PASS: real progress clears the stall",
+        "[ColonyContinuity] PASS: sleep/emergency do not accumulate stall time",
+        "[ColonyContinuity] PASS: unchanged construction stall does not flood the ledger",
+        "[ColonyContinuity] PASS: history evicts old events at 64 entries",
+        "[ColonyContinuity] PASS: unpowered electric bench identifies power specifically",
+        "[ColonyContinuity] PASS: unassigned production identifies missing worker",
+        "[ColonyContinuity] PASS: missing stock explanation is specific: stone chunks: sem estoque conhecido; usando Granite chunk: 1 necessários, 0 candidatos no raio/área. Quantidades candidatas não garantem uma combinação válida; a busca nativa recusou o lote amostrado.",
+        "[ColonyContinuity] PASS: native ingredient search identifies missing stock in radius (ingredients: stone chunks: sem estoque conhecido; usando Granite chunk: 1 necessários, 0 candidatos no raio/área. Quantidades candidatas não garantem uma combinação válida; a busca nativa recusou o lote amostrado.)",
+        "[ColonyContinuity] PASS: ingredient excluded by bill filter is unavailable to native search",
+        "[ColonyContinuity] PASS: bill filter exclusion is distinguished from missing stock",
+        "[ColonyContinuity] PASS: ingredient beyond native search radius is distinguished",
+        "[ColonyContinuity] PASS: allowed reachable ingredient makes bill ready",
+        "[ColonyContinuity] PASS: manual suspension is reported and preserved",
+        "[ColonyContinuity] PASS: bill skill restriction is diagnosed",
+        "[ColonyContinuity] PASS: satisfied bill does not mutate native pause flag",
+        "[ColonyContinuity] PASS: sleeping worker does not trigger an eligible production stall",
+        "[ColonyContinuity] PASS: fixture provides an unfinished available research compatible with native simple bench",
+        "[ColonyContinuity] PASS: research diagnoses missing assigned worker",
+        "[ColonyContinuity] PASS: reachable research bench is eligible without issuing a job",
+        "[ColonyContinuity] PASS: research exposes competing work priorities",
+        "[ColonyContinuity] PASS: research outside allowed area does not accumulate eligible stall time: route Bancada proibida, em chamas, obstruída ou fora da área/rota dos pesquisadores.",
+        "[ColonyContinuity] PASS: blocked research interaction cell is distinguished",
+        "[ColonyContinuity] PASS: reserved research bench is distinguished from missing worker",
+        "[ColonyContinuity] PASS: same-origin industrial projects retain independent progress entries",
+        "[ColonyContinuity] PASS: sleeping builders do not display an eligible construction stall",
+        "[ColonyContinuity] PASS: existing construction watchdog is exposed when a capable builder is on shift",
+        "[ColonyContinuity] PASS: universal graph recognizes non-equipment native recipe and bench",
+        "[ColonyContinuity] PASS: dependency graph is bounded",
+        "[ColonyContinuity] PASS: deadline forecast reads season and ready harvest",
+        "[ColonyContinuity] PASS: active DLC checklist reads real native data",
+        "[ColonyContinuity] PASS: gear below 65 percent does not satisfy checkpoint",
+        "[ColonyContinuity] PASS: shared ownership recognizes manual order",
+        "[ColonyContinuity] PASS: automatic recovery preserves manual worker order",
+        "[ColonyContinuity] PASS: stalled native bill gets idle skilled worker",
+        "[ColonyContinuity] PASS: order issued does not count as progress",
+        "[ColonyContinuity] PASS: automatic native recovery remains interruptible by combat and medicine",
+        "[ColonyContinuity] PASS: recovery-owned job is recognized by actor coordinator",
+        "[ColonyContinuity] PASS: native decrease in remaining recipe work clears stall before completion",
+        "[ColonyContinuity] PASS: in-flight native recipe progress was observed",
+        "[ColonyContinuity] PASS: native bill produced actual marble blocks",
+        "[ColonyContinuity] PASS: working/finished production is not a stall",
+        "[ColonyContinuity] PASS: recovery confirmation survives native save/load",
+        "[ColonyContinuity] PASS: 72 hour care window survives load",
+        "[ColonyContinuity] PASS: logistics aggregates survive load",
+        "[ColonyContinuity] PASS: native completion counter survives save/load",
+        "[ColonyContinuity] PASS: diagnostic ledger survives save/load",
+        "[ColonyContinuity] PASS: ledger remains bounded"
+      ],
+      "profile": "C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\continuity-owner-final-2026-10-13-20261013-175841-139"
+    },
+    {
+      "stage": "tactical-owner-final-2026-10-13",
+      "result": "PASS",
+      "dllHash": "6234A5EBFD10FC4B5093367CC03D02B87DCA9518928342B4FEE690F4E35C0D1A",
+      "runtimeHash": "FCD22A7D8984BD6D1162006A4DEB090AE9B16DB1F868862D736D99B770A1987E",
+      "sourceSaveHash": "01B0BEC2823B5711CE0CC528CEFE61CF5DC3AD9F6E4A1AB62A598107F0E695FD",
+      "checks": 8,
+      "evidence": [
+        "[TacticalContinuity] PASS: wall attacker is recognized as priority breach threat",
+        "[TacticalContinuity] PASS: undrafted caster without an available power issues no cast",
+        "[TacticalContinuity] PASS: native valid stun cast is dispatched against nearby threat; report=ability already queued. cast=Verse.AcceptanceReport apply=True sight=True busy=True",
+        "[TacticalContinuity] PASS: cast ownership records actual native ability job",
+        "[TacticalContinuity] PASS: native psycast actually stunned the enemy",
+        "[TacticalContinuity] PASS: native hauling allocator finds destination",
+        "[TacticalContinuity] PASS: completed hauling placed actual cargo in approved storage",
+        "[TacticalContinuity] PASS: logistics measured actual native job duration"
+      ],
+      "profile": "C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\tactical-owner-final-2026-10-13-20261013-175925-253"
+    },
+    {
+      "stage": "melee-owner-final-2026-10-13",
+      "result": "PASS",
+      "dllHash": "6234A5EBFD10FC4B5093367CC03D02B87DCA9518928342B4FEE690F4E35C0D1A",
+      "runtimeHash": "FCD22A7D8984BD6D1162006A4DEB090AE9B16DB1F868862D736D99B770A1987E",
+      "sourceSaveHash": "01B0BEC2823B5711CE0CC528CEFE61CF5DC3AD9F6E4A1AB62A598107F0E695FD",
+      "checks": 3,
+      "evidence": [
+        "[MeleeCoordination] PASS: adjacent defense beyond old anchor; no advance into unsafe distant target",
+        "[MeleeCoordination] PASS: both original melee take native AttackMelee on safe shared alternative",
+        "[MeleeCoordination] PASS: native damage from both original melee; Bravo=22; Foxtrot=11; jointSamples=2; ticks=30"
+      ],
+      "profile": "C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\melee-owner-final-2026-10-13-20261013-175957-354"
+    }
+  ],
+  "limits": [
+    "Not a long campaign or four independent colonies",
+    "72-hour care persistence tested; full 72-hour survival not validated",
+    "No FPS/TPS improvement benchmark yet",
+    "Quest acceptance, permits, mechs, containment and full counter-siege pending"
+  ],
+  "personalSaveHashes": [
+    {
+      "Path": "C:\\Users\\Administrador\\AppData\\LocalLow\\Ludeon Studios\\RimWorld by Ludeon Studios\\Saves\\TESTE V3.rws",
+      "Hash": "01B0BEC2823B5711CE0CC528CEFE61CF5DC3AD9F6E4A1AB62A598107F0E695FD"
+    },
+    {
+      "Path": "C:\\Users\\Administrador\\AppData\\LocalLow\\Ludeon Studios\\RimWorld by Ludeon Studios\\Saves\\TESTE V4 gargalo sets rangeds.rws",
+      "Hash": "A1EE5524D1E65D0ABF6B3786823D8268837688FE2FA086149C8C4EF39B098DBE"
+    }
+  ]
+}

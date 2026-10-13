@@ -16,7 +16,7 @@ namespace AutonomousRim.Execution
         private static JobDef TradeJob=>DefDatabase<JobDef>.GetNamed("AutonomousRim_Trade");
         public static bool Safe(Map map)=>map.GetComponent<AutonomousRimMapComponent>().CurrentState?.Threat?.Immediate!=true &&
             !map.GetComponent<AutonomousRimMapComponent>().SecondarySuspended && !EmergencyManager.LocalFire(map);
-        public static bool Available(Pawn p)=>WorkPriorityManager.CanWork(p) && !WorkReadiness.NeedsRecovery(p) &&
+        public static bool Available(Pawn p)=>!ActorCoordinator.Blocked(p,"comercio") && WorkPriorityManager.CanWork(p) && !WorkReadiness.NeedsRecovery(p) &&
             p.CurJob?.bill?.recipe.products?.Any(product=>CommercePlanner.Products.Contains(product.thingDef.defName))!=true &&
             !(p.CurJob?.bill!=null && p.Map?.GetComponent<AutonomousRimMapComponent>().Coordination.Equipment.Any(d=>d.Bill==p.CurJob.bill && d.Ready)==true) &&
             p.CurJob?.playerForced!=true && p.CurJob?.workGiverDef?.workType!=WorkTypeDefOf.Warden && p.jobs.jobQueue.Count==0 && p.GetLord()==null &&
@@ -78,7 +78,7 @@ namespace AutonomousRim.Execution
                     if(target==null || target.IsForbidden(Faction.OfPlayer) || !p.CanReach(target,target is Pawn?PathEndMode.Touch:PathEndMode.InteractionCell,Danger.None) || !p.CanReserve(target))continue;
                     var job=JobMaker.MakeJob(TradeJob,target);
                     commerce.Negotiator=p; commerce.Visitor=trader as Pawn; commerce.Ship=trader as TradeShip;commerce.JobId=job.GetUniqueLoadID();
-                    p.jobs.TryTakeOrderedJob(job,JobTag.Misc);
+                    OrderedJobDispatcher.Issue(p,job,JobTag.Misc);
                     commerce.Status+=" Negociador "+p.LabelShort+" → "+trader.TraderName;
                     return;
                 }

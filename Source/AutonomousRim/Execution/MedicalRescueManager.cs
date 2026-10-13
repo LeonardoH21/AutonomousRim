@@ -50,7 +50,7 @@ namespace AutonomousRim.Execution
         }
         private static bool Able(Pawn p)=>p!=null && p.Spawned && !p.Dead && !p.Downed && !p.InMentalState &&
             p.health.capacities.CapableOf(PawnCapacityDefOf.Moving) && p.health.capacities.CapableOf(PawnCapacityDefOf.Manipulation);
-        private static bool Available(AutonomousRimMapComponent ai,Pawn p)=>Able(p) && p.workSettings!=null &&
+        private static bool Available(AutonomousRimMapComponent ai,Pawn p)=>Able(p) && !ActorCoordinator.Blocked(p,"medicina") && p.workSettings!=null &&
             !p.InBed() && !p.WorkTagIsDisabled(WorkTags.Caring) && !p.WorkTagIsDisabled(WorkTags.Hauling) &&
             !p.WorkTypeIsDisabled(WorkTypeDefOf.Doctor) && p.health.summaryHealth.SummaryHealthPercent>.8f &&
             p.health.hediffSet.BleedRateTotal<.1f && (p.needs?.rest?.CurLevel??1)>.25f &&
@@ -77,7 +77,7 @@ namespace AutonomousRim.Execution
         {
             job.locomotionUrgency=LocomotionUrgency.Sprint;
             string previous=order.Helper.CurJob?.GetUniqueLoadID();
-            if(!order.Helper.jobs.TryTakeOrderedJob(job,JobTag.Misc,false))return false;
+            if(!OrderedJobDispatcher.Issue(order.Helper,job,JobTag.Misc,false))return false;
             order.PreviousJobId=previous;order.JobId=job.GetUniqueLoadID();order.Stage=stage;
             Log.Message($"[AutonomousRim.Medical] {order.Helper.LabelShort}: {stage} {order.Patient.LabelShort}; morte por sangramento em {HealthUtility.TicksUntilDeathDueToBloodLoss(order.Patient)} ticks.");
             return true;

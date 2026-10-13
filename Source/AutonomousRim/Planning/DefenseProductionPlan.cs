@@ -54,6 +54,16 @@ namespace AutonomousRim.Planning
                 map.mapPawns.FreeColonistsSpawned.All(p=>p.health.hediffSet.BleedRateTotal==0);
             // Stages are demand-driven. Late upgrades wait for stability and an established industry.
             if(stage>=3 && !stable)targets=new Dictionary<string,int>();
+            if(checkpoint.Complete && stable)
+                foreach(var name in checkpoint.Items.Select(i=>i.Target).Distinct().Where(n=>n.Contains("Helmet") || n.Contains("Armor") || n=="Apparel_FlakVest")) {
+                    var def=DefDatabase<ThingDef>.GetNamedSilentFail(name);
+                    var recipe=DefDatabase<RecipeDef>.AllDefsListForReading.FirstOrDefault(r=>r.products?.Any(p=>p.thingDef==def)==true);
+                    if(def==null || !checkpoint.Items.Any(i=>i.Target==name && i.Existing?.def==def) || recipe?.AvailableNow!=true || CommercePlanner.InTransit(map.GetComponent<Core.AutonomousRimMapComponent>().Commerce,def)>0)continue;
+                    bool affordable=recipe.ingredients.All(i=> {var material=LoadoutProgression.Material(i);return material!=null &&
+                        CommercePlanner.Stock(map,material)>=i.CountRequiredOfFor(material,recipe,null)+(material==ThingDefOf.Steel?25:0);});
+                    if(affordable)targets[name]=Math.Max(targets.TryGetValue(name,out int old)?old:0,
+                        checkpoint.Items.Count(i=>i.Target==name)+1);
+                }
             if(stage>=3 && stable)
                 foreach(var material in checkpoint.Materials.Where(p=>p.Key=="ComponentIndustrial" || p.Key=="ComponentSpacer"))
                     targets[material.Key]=Math.Max(material.Key=="ComponentIndustrial"?6:3,material.Value);
@@ -70,7 +80,7 @@ namespace AutonomousRim.Planning
                         foreach (var stuff in DefDatabase<ThingDef>.AllDefsListForReading.Where(d => d.IsStuff && d != ThingDefOf.Steel))
                             owned.Bill.ingredientFilter.SetAllow(stuff, false);
                     owned.Bill.includeEquipped = true; owned.Bill.includeTainted = false;
-                    owned.Bill.hpRange = new FloatRange(0.51f, 1f);
+                    owned.Bill.hpRange = new FloatRange(0.65f, 1f);
                     owned.Bill.suspended = state.EstimatedFoodDays < 1f || stage>=3 && !stable;
                     owned.Signature = ManagedFoodBill.Describe(owned.Bill);
                 }

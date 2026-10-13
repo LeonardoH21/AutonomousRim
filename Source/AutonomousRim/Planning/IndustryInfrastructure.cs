@@ -60,7 +60,7 @@ namespace AutonomousRim.Planning
         private static List<ThingDef> Inputs(Map map,Building_WorkTable table,IEnumerable<Bill_Production> orders)
         {
             var result=orders.Where(b=>b.billStack==table.BillStack).SelectMany(b=>b.recipe.ingredients
-                .Select(i=>IndustrySupplyPlan.PreferredInput(map,b.recipe,b,i))).Where(d=>d!=null).Distinct().ToList();
+                .Select(i=>IndustrySupplyPlan.PreferredInput(map,b.recipe,b,i))).Where(d=>d!=null && !StoragePolicy.IsFood(d) && !d.IsMedicine && d.defName!="Leather_Human").Distinct().ToList();
             var fuel=table.TryGetComp<CompRefuelable>();
             if(result.Count>0 && fuel?.allowAutoRefuel==true && fuel.Props.fuelFilter.Allows(ThingDefOf.WoodLog))result.Add(ThingDefOf.WoodLog);
             return result.Distinct().ToList();
@@ -110,16 +110,16 @@ namespace AutonomousRim.Planning
         }
         public static void Update(Map map,AutonomousRimMapComponent ai,List<RoomProject> projects)
         {
-            if(!ai.BaseAutomation || !ai.EquipmentAutomation || ai.SecondarySuspended || ai.CurrentState?.HostilePawnCount!=0 ||
+            if(!ai.BaseAutomation || (!ai.EquipmentAutomation && !ai.GoalGraph.HasDemand) || ai.SecondarySuspended || ai.CurrentState?.HostilePawnCount!=0 ||
                 ai.CurrentState.Threat?.Immediate==true || ai.CurrentState.EstimatedFoodDays<3 || EmergencyManager.LocalFire(map))
             {Suspend(map,projects);return;}
-            var orders=ai.DefenseBills.Concat(ai.IndustryBills).Where(m=>m.Matches && BillDiagnostics.Requested(m.Bill))
+            var orders=ai.ManagedProduction.Where(m=>m.Matches && BillDiagnostics.Requested(m.Bill))
                 .Select(m=>m.Bill).Take(12).ToList();
             var recipes=LoadoutProgression.Analyze(map,DefenseProductionPlan.Stage(map)).Craft.Keys.Select(name=>
                 DefDatabase<RecipeDef>.AllDefsListForReading.FirstOrDefault(r=>r.products?.Any(p=>p.thingDef.defName==name)==true))
                 .Concat(ai.Industry.Requirements.Where(r=>r.Missing>0 && IndustrySupplyPlan.Component(r.Def))
                     .Select(r=>DefDatabase<RecipeDef>.GetNamedSilentFail("Make_"+r.Def.defName)))
-                .Where(r=>r?.AvailableNow==true).Distinct().Take(8).ToList();
+                .Concat(ai.GoalGraph.Recipes).Where(r=>r?.AvailableNow==true).Distinct().Take(12).ToList();
             int added=0;
             foreach(var recipe in recipes)
             {
@@ -127,7 +127,7 @@ namespace AutonomousRim.Planning
                 var planned=projects.FirstOrDefault(p=>p.Furniture.Any(t=>t.Def is ThingDef d && d.AllRecipes?.Contains(recipe)==true));
                 if(planned!=null)continue; // Preserve priorities, cancellations and approved reference furniture.
                 if(added>=2)break;
-                var def=Benches.Select(n=>DefDatabase<ThingDef>.GetNamedSilentFail(n)).FirstOrDefault(d=>d?.IsResearchFinished==true && d.AllRecipes.Contains(recipe));
+                var def=Benches.Select(n=>DefDatabase<ThingDef>.GetNamedSilentFail(n)).Concat(DefDatabase<ThingDef>.AllDefsListForReading.Where(d=>d.thingClass!=null && typeof(Building_WorkTable).IsAssignableFrom(d.thingClass) && d.building?.isNaturalRock!=true)).FirstOrDefault(d=>d?.IsResearchFinished==true && d.AllRecipes.Contains(recipe));
                 if(def==null || projects.Any(p=>p.LayoutSlot=="industry:bench:"+def.defName))continue;
                 foreach(var host in projects.Where(p=>(p.Kind=="Estoque" || p.Kind=="Oficina" || p.Kind=="Fabricação") &&
                     p.State!=ConstructionState.Paused && (p.Completed || p.FunctionalStorage || p.Shell.Count>0 && p.Shell.All(t=>t.Complete(map)))).ToList())

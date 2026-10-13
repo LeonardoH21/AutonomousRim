@@ -61,7 +61,11 @@ namespace AutonomousRim.Core
                 {typeof(WorkPriorityManager),new[]{"Apply"}}, {typeof(ScheduleManager),new[]{"Apply"}},
                 {typeof(EquipmentManager),new[]{"Apply"}}, {typeof(PrisonManager),new[]{"Apply"}},
                 {typeof(ColonyProgressMonitor),new[]{"Sample"}}, {typeof(RoomObserver),new[]{"Read"}},
-                {typeof(ColonyStateScanner),new[]{"Scan"}}
+                {typeof(ColonyStateScanner),new[]{"Scan"}},
+                {typeof(AutomaticRecovery),new[]{"Apply"}}, {typeof(Planning.GoalDependencyPlanner),new[]{"Update"}},
+                {typeof(Planning.WinterForecast),new[]{"Update"}}, {typeof(Planning.OpportunityPlanner),new[]{"Update"}},
+                {typeof(Planning.DlcReadiness),new[]{"Update"}}, {typeof(Planning.DefenseDoctrine),new[]{"Update"}},
+                {typeof(PostBattleCare),new[]{"Update"}}, {typeof(LogisticsMonitor),new[]{"Observe"}}
             };
             foreach(var target in targets)
                 foreach(var method in target.Key.GetMethods(BindingFlags.Public|BindingFlags.NonPublic|BindingFlags.Instance|BindingFlags.Static)

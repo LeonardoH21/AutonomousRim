@@ -156,10 +156,11 @@ namespace AutonomousRim.RuntimeChecks
                 if(stage==1 && !Elite){stage=2;started=false;Setup();return;}
                 var ai=map.GetComponent<AutonomousRimMapComponent>();ai.SetEmergencyAutomation(false);
                 doctor.drafter.Drafted=true;doctor.drafter.FireAtWill=false;var manual=JobMaker.MakeJob(JobDefOf.Wait_Combat);
-                string manualId=manual.GetUniqueLoadID();
+                string manualId=doctor.CurJob?.JobIsSameAs(doctor,manual)==true?doctor.CurJob.GetUniqueLoadID():manual.GetUniqueLoadID();
                 bool manualAccepted=doctor.jobs.TryTakeOrderedJob(manual,JobTag.Misc,false);
                 Log.Message($"[MedicalRescueTests] MANUAL before enable: accepted={manualAccepted}; requested={manualId}; actual={doctor.CurJob?.GetUniqueLoadID()}; all={string.Join(",",doctor.jobs.AllJobs().Select(j=>j.GetUniqueLoadID()))}; draft={doctor.Drafted}; fire={doctor.drafter.FireAtWill}");
                 ai.SetEmergencyAutomation(true);
+                Check(!ai.CombatOrders.Any(o=>o.Pawn==doctor),"Identical manual order did not release AI combat ownership.");
                 Check(manualAccepted && doctor.Drafted && !doctor.drafter.FireAtWill && doctor.jobs.AllJobs().Any(j=>j.GetUniqueLoadID()==manualId),
                     $"Manual current/queued order or fire setting was overwritten: requested={manualId}; actual={doctor.CurJob?.GetUniqueLoadID()}; all={string.Join(",",doctor.jobs.AllJobs().Select(j=>j.GetUniqueLoadID()))}; draft={doctor.Drafted}; fire={doctor.drafter.FireAtWill}");
                 var unsafeEnemy=Spawn(false,center+new IntVec3(30,0,10),"Gun_Revolver",1);
@@ -169,7 +170,7 @@ namespace AutonomousRim.RuntimeChecks
                 var controlled=ai.CombatOrders.FirstOrDefault(o=>o.Pawn!=doctor && CombatManager.Ranged(o.Pawn));
                 Check(controlled!=null,"No owned ranged combatant available for immediate manual-disable regression.");
                 var manualFighter=controlled.Pawn;manualFighter.drafter.FireAtWill=false;
-                var manualWait=JobMaker.MakeJob(JobDefOf.Wait_Combat);string manualWaitId=manualWait.GetUniqueLoadID();
+                var manualWait=JobMaker.MakeJob(JobDefOf.Wait_Combat);string manualWaitId=manualFighter.CurJob?.JobIsSameAs(manualFighter,manualWait)==true?manualFighter.CurJob.GetUniqueLoadID():manualWait.GetUniqueLoadID();
                 Check(manualFighter.jobs.TryTakeOrderedJob(manualWait,JobTag.Misc,false),"Manual fighter order rejected before disable.");
                 ai.SetCombatAutomation(false);
                 Check(manualFighter.Drafted && !manualFighter.drafter.FireAtWill && manualFighter.jobs.AllJobs().Any(j=>j.GetUniqueLoadID()==manualWaitId),

@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using AutonomousRim.Perception;
 using Verse;
@@ -25,11 +26,25 @@ namespace AutonomousRim.Core
         public ColonyState CurrentState { get; private set; }
         private ProgressState progress = new ProgressState();
         public ProgressState Progress => progress;
+        private LogisticsState logistics=new LogisticsState();
+        public LogisticsState Logistics=>logistics;
+        private RecoveryState recovery=new RecoveryState();
+        public RecoveryState Recovery=>recovery;
+        private List<ManagedFoodBill> dependencyBills=new List<ManagedFoodBill>();
+        public GoalDependencyPlanner GoalGraph { get; } = new GoalDependencyPlanner();
+        public WinterForecast Winter { get; } = new WinterForecast();
+        public DefenseDoctrine Doctrine {get;}=new DefenseDoctrine();
+        public OpportunityPlanner Opportunities {get;}=new OpportunityPlanner();
+        public DlcReadiness Dlc {get;}=new DlcReadiness();
+        private int observedThreatCount;
+        private PostBattleCare aftercare=new PostBattleCare();
+        public PostBattleCare Aftercare=>aftercare;
+        public IEnumerable<ManagedFoodBill> ManagedProduction => ownedBills.Concat(defenseBills).Concat(industryBills).Concat(infrastructureBills).Concat(commerce.Bills).Concat(dependencyBills);
         private ObservationMemory observations=new ObservationMemory();
         public ObservationMemory Observations => observations;
         public TickRateMeter Performance { get; } = new TickRateMeter();
         public PolicyTrialSession Trial { get; } = new PolicyTrialSession();
-        public string PolicyConfiguration => "learning-v1|"+string.Join(",",new[]{baseAutomation,foodAutomation,workAutomation,scheduleAutomation,
+        public string PolicyConfiguration => "learning-v2|continuity-v1|"+string.Join(",",new[]{baseAutomation,foodAutomation,workAutomation,scheduleAutomation,
             equipmentAutomation,strategyAutomation,lootAutomation,combatAutomation,emergencyAutomation,commerceAutomation,prisonAutomation})+
             "|trade="+commerce.RefreshTicks+","+commerce.JointReserve+","+commerce.SilverTarget+
             "|parallel="+CombatTacticalPlanner.ParallelEnabled+","+CombatTacticalPlanner.MinimumPairs;
@@ -112,6 +127,14 @@ namespace AutonomousRim.Core
         public bool CombatAutomation => combatAutomation;
         public string CombatStatus { get; private set; } = "Combate cooperativo desligado.";
         public IReadOnlyList<CombatOrder> CombatOrders => combatOrders;
+        public IReadOnlyList<ConstructionOrder> ConstructionOrders=>constructionOrders;
+        public IReadOnlyList<EquipmentOrder> EquipmentOrders=>equipmentOrders;
+        public void NotifyManualCombatOrder(Pawn pawn)
+        {
+            if(!combatOrders.Any(o=>o.Pawn==pawn))return;
+            combatOrders.RemoveAll(o=>o.Pawn==pawn);
+            if(!combatExcluded.Contains(pawn))combatExcluded.Add(pawn);
+        }
         public bool CanAssignMedical(Pawn pawn)
         {
             if(combatExcluded.Contains(pawn))return false;
@@ -228,11 +251,20 @@ namespace AutonomousRim.Core
             Scribe_Collections.Look(ref workChanges, "workChanges", LookMode.Deep);
             Scribe_Collections.Look(ref scheduleChanges, "scheduleChanges", LookMode.Deep);
             Scribe_Deep.Look(ref progress, "progressDiagnostics");
+            Scribe_Values.Look(ref observedThreatCount,"observedThreatCount");
+            Scribe_Deep.Look(ref logistics,"logistics");
+            Scribe_Deep.Look(ref recovery,"automaticRecovery");
+            Scribe_Deep.Look(ref aftercare,"postBattleCare");
+            Scribe_Collections.Look(ref dependencyBills,"dependencyBills",LookMode.Deep);
             Scribe_Deep.Look(ref observations,"observations");
             Scribe_Deep.Look(ref equipmentDemands, "equipmentDemands");
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
             {
                 progress = progress ?? new ProgressState();
+                logistics=logistics??new LogisticsState();
+                recovery=recovery??new RecoveryState();
+                aftercare=aftercare??new PostBattleCare();
+                dependencyBills=dependencyBills??new List<ManagedFoodBill>();
                 observations=observations??new ObservationMemory();
                 equipmentDemands = equipmentDemands ?? new EquipmentDemandState();
                 strategicPlan = strategicPlan ?? new StrategicPlan();
@@ -315,6 +347,7 @@ namespace AutonomousRim.Core
 
         public void DisableAll()
         {
+            FoodManager.RemoveOwnedBills(dependencyBills);
             SetPrisonAutomation(false);
             SetCommerceAutomation(false);
             SetEmergencyAutomation(false);
@@ -478,8 +511,10 @@ namespace AutonomousRim.Core
             base.MapComponentTick();
 
             int ticks = Find.TickManager?.TicksGame ?? 0;
-            if (CurrentState != null && ticks > 0 && ticks % ThreatIntervalTicks == 0) RefreshThreat(ticks);
-            if (EffectiveCombat && ticks > 0 && ticks % CombatManager.Interval == 0)
+            if (CurrentState != null && ticks > 0 && ticks % ThreatIntervalTicks == 0 &&
+                (CurrentState.Threat.ActiveCount>0 || ticks%120==0 || map.mapPawns.AllPawnsSpawned.Any(ThreatScanner.Active)))RefreshThreat(ticks);
+            if (EffectiveCombat && ticks > 0 && ticks % CombatManager.Interval == 0 &&
+                (combatOrders.Count>0 || CurrentState.Threat.ActiveCount>0 || map.mapPawns.AllPawnsSpawned.Any(ThreatScanner.Active)))
                 CombatStatus = CombatManager.Apply(map, combatOrders, combatExcluded,emergencyAutomation && emergency.Phase==EmergencyPhase.Danger && EmergencyManager.Retreat(CurrentState.Threat));
             else if(combatOrders.Count>0 && !EffectiveCombat)CombatManager.Stop(combatOrders);
 
@@ -494,7 +529,13 @@ namespace AutonomousRim.Core
             if (ticks > 0 && ticks % 1800 == 73) EvaluateStrategy();
             if (ticks > 0 && ticks % 1800 == 173) EvaluateFailure();
             if (ticks <= 0) return;
-            if (ticks % 600 == 317) { ObserveNow(); ColonyProgressMonitor.Sample(map, this); }
+            if (ticks % 600 == 317) { ObserveNow(); ColonyProgressMonitor.Sample(map, this); AutomaticRecovery.Apply(map,this); }
+            if(ticks%1200==397)GoalGraph.Update(map,this,dependencyBills);
+            if(ticks%1200==427)Winter.Update(map,CurrentState);
+            if(ticks%120==37)Doctrine.Update(map);
+            if(ticks%30==7)LogisticsMonitor.Observe(map);
+            if(ticks%2500==487){Opportunities.Update(map,this);Dlc.Update(map);}
+            if(ticks%600==457)aftercare.Update(map,this);
             if (ticks % 600 == 347) equipmentDemands.Reconcile(map, this);
             if (ticks % ScanIntervalTicks == 0)
             {
@@ -559,11 +600,19 @@ namespace AutonomousRim.Core
             if (equipmentAutomation && (force || cycle % 600 == 120)) Industry.Update(map,this,industryBills);
             if (force || cycle % 600 == 120) IndustryInfrastructure.Update(map,this,baseProjects);
             // Industry must gather inputs even when base automation has no projects or is off.
-            if ((baseAutomation || equipmentAutomation) && (force || cycle % 600 == 240))
+            if ((baseAutomation || equipmentAutomation || GoalGraph.HasDemand) && (force || cycle % 600 == 240))
                 GatheringStatus = ConstructionResourceManager.Apply(map, baseAutomation ? baseProjects : new List<RoomProject>(), constructionGathering,
-                    equipmentAutomation ? defenseBills.Concat(industryBills).ToList() : null, equipmentAutomation ? Industry.Targets : null);
+                    ManagedProduction.ToList(), GatheringTargets());
             if (equipmentAutomation && (force || cycle % 900 == 90)) EquipmentStatus = EquipmentManager.Apply(map, CurrentState, equipmentOrders, managedApparel, equipmentExcluded);
             if (force && baseAutomation) ExecuteConstruction(cycle);
+        }
+
+        private Dictionary<ThingDef,int> GatheringTargets()
+        {
+            var result=equipmentAutomation ? new Dictionary<ThingDef,int>(Industry.Targets) : new Dictionary<ThingDef,int>();
+            foreach(var pair in GoalGraph.Supplies)result[pair.Key]=Math.Max(result.TryGetValue(pair.Key,out int old)?old:0,pair.Value);
+            if(baseAutomation && Winter.DaysUntilCold>=0 && Winter.DaysUntilCold<=15)result[ThingDefOf.WoodLog]=Math.Max(result.TryGetValue(ThingDefOf.WoodLog,out int wood)?wood:0,Winter.FuelRequired);
+            return result;
         }
 
         private void RefreshConstructionPlan(int ticks)
@@ -596,7 +645,7 @@ namespace AutonomousRim.Core
             ThreatState previous = CurrentState.Threat;
             ThreatState next = ThreatScanner.Scan(map, CurrentState);
             next.LastTransition = previous.LastTransition;
-            if ((previous.ActiveCount == 0) != (next.ActiveCount == 0))
+            if ((observedThreatCount == 0) != (next.ActiveCount == 0))
             {
                 next.LastTransition = next.ActiveCount > 0
                     ? $"Tick {ticks}: hostile presence detected."
@@ -624,8 +673,9 @@ namespace AutonomousRim.Core
                 }
                 else EmergencyManager.Apply(map,CurrentState,emergency);
             }
-            if (previous.ActiveCount == 0 && next.ActiveCount > 0) FailureAnalyzer.RecordRaidStart(map, CurrentState, failureMemory);
-            if (previous.ActiveCount > 0 && next.ActiveCount == 0) FailureAnalyzer.RecordRaidEnd(CurrentState, failureMemory);
+            if (observedThreatCount == 0 && next.ActiveCount > 0) FailureAnalyzer.RecordRaidStart(map, CurrentState, failureMemory);
+            if (observedThreatCount > 0 && next.ActiveCount == 0) {FailureAnalyzer.RecordRaidEnd(CurrentState, failureMemory);aftercare.Begin(map);}
+            observedThreatCount=next.ActiveCount;
             if (foodAutomation && next.ActiveCount > 0) FoodManager.CancelHunts(map, ownedHunts);
             if (equipmentAutomation && next.ActiveCount > 0) EquipmentManager.CancelPending(equipmentOrders);
         }

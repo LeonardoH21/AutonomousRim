@@ -8,7 +8,7 @@ namespace AutonomousRim.Perception
     public static class FoodReservePolicy
     {
         public static bool PreparingForWinter(Map map) => map != null && map.Tile >= 0 &&
-            (GenDate.Season(Find.TickManager.TicksAbs, Find.WorldGrid.LongLatOf(map.Tile)) == Season.Fall ||
+            (map.GetComponent<AutonomousRimMapComponent>().Winter.DaysUntilCold>=0 && map.GetComponent<AutonomousRimMapComponent>().Winter.DaysUntilCold<=15 || GenDate.Season(Find.TickManager.TicksAbs, Find.WorldGrid.LongLatOf(map.Tile)) == Season.Fall ||
              GenDate.Season(Find.TickManager.TicksAbs, Find.WorldGrid.LongLatOf(map.Tile)) == Season.Winter || map.mapTemperature.OutdoorTemp < 0);
         public static float TargetDays(Map map, int colonists)
         {

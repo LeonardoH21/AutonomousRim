@@ -69,6 +69,7 @@ namespace AutonomousRim.Planning
         public static bool Meets(Pawn p,Thing item,string target)
         {
             if(item==null || !DefenseProductionPlan.Usable(item))return false;
+            if(item.def.useHitPoints && item.HitPoints<item.MaxHitPoints*.65f)return false;
             var reference=Reference(target);if(reference==null)return true;
             if(reference.def.IsWeapon)
             {

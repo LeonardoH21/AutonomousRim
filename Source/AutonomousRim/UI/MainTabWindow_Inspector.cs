@@ -461,6 +461,19 @@ namespace AutonomousRim.UI
                 if (entry.Key.StartsWith("bill:")) Line("Lotes concluídos observados: " + entry.Completions, Muted);
                 if (entry.Key.StartsWith("research:")) Line("Pontos reais: " + entry.Value.ToString("0.0") + " • Sem avanço em trabalho disponível: " + (entry.EligibleTicks / 2500f).ToString("0.1") + " h", Muted);
             }
+            Section("Recuperação automática e responsáveis");
+            foreach(var attempt in ai.Recovery.Attempts.Take(8))Line(attempt.Key+" • tentativa "+attempt.Attempts+"/3 • "+attempt.Result,Muted);
+            foreach(var pawn in Find.CurrentMap.mapPawns.FreeColonistsSpawned)Line(pawn.LabelShort+" • "+(Execution.ActorCoordinator.Owner(pawn)??"disponível para rotina"),Muted);
+            Section("Dependências universais • próximo lote");
+            foreach(var node in ai.GoalGraph.Nodes.Take(16))Line(node.Kind+" • "+node.Detail+(node.Required>0?" • "+node.Available+"/"+node.Required:""),Muted);
+            Section("Inverno e recuperação da batalha");Line(ai.Winter.Status);Line(ai.Aftercare.Status);Line(ai.Doctrine.Status);
+            Section("Logística observada");
+            foreach(var row in ai.Logistics.Rows.Where(r=>r.Trips>0).OrderByDescending(r=>r.Ticks/r.Trips).Take(6))
+                Line(row.Item+" → "+row.Destination+" • "+row.Trips+" transportes • média "+(row.Ticks/(float)row.Trips).ToString("0")+" ticks; tempo inclui espera/coleta, não apenas caminhada.",Muted);
+            if(ai.Logistics.Rows.Any(r=>r.Trips>=3 && r.Ticks/r.Trips>600))Line("Sugestão: aproximar insumos em prateleiras do estoque/oficina aprovados. Nenhuma sala será movida automaticamente.",Warning);
+            Section("Oportunidades e DLCs • avaliação");
+            foreach(var row in ai.Opportunities.Rows.Take(12))Line(row,Muted);
+            foreach(var row in ai.Dlc.Rows.Take(12))Line(row,Muted);
             Section("Histórico recente • preservado no save");
             foreach (var item in ai.Progress.Events.AsEnumerable().Reverse().Take(10))
             {

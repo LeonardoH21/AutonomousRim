@@ -12,6 +12,7 @@ namespace AutonomousRim.Execution
     {
         public static bool CanAct(Pawn pawn)
         {
+            if(ActorCoordinator.Blocked(pawn,"equipamento"))return false;
             if (!WorkPriorityManager.CanWork(pawn) || pawn.IsPrisoner || pawn.jobs == null || pawn.jobs.jobQueue.Count > 0 ||
                 !pawn.health.capacities.CapableOf(PawnCapacityDefOf.Manipulation) ||
                 pawn.needs.food?.CurCategory >= HungerCategory.UrgentlyHungry || pawn.needs.rest?.CurLevel < 0.2f) return false;
@@ -92,7 +93,7 @@ namespace AutonomousRim.Execution
                         }
                 Job job = JobMaker.MakeJob(decision.Wear ? JobDefOf.Wear : JobDefOf.Equip, decision.Item);
                 order.JobId = job.GetUniqueLoadID();
-                if (!pawn.jobs.TryTakeOrderedJob(job, JobTag.Misc, false) || pawn.CurJob?.GetUniqueLoadID() != order.JobId)
+                if (!OrderedJobDispatcher.Issue(pawn,job,JobTag.Misc,false) || pawn.CurJob?.GetUniqueLoadID() != order.JobId)
                 {
                     pawn.jobs.jobQueue.RemoveAll(pawn, j => j.GetUniqueLoadID() == order.JobId);
                     RestoreReleased(order);

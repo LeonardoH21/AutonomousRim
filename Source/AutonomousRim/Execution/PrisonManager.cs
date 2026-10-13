@@ -34,7 +34,7 @@ namespace AutonomousRim.Execution
             p.health.capacities.CapableOf(PawnCapacityDefOf.Moving) && p.health.capacities.CapableOf(PawnCapacityDefOf.Manipulation) &&
             p.workSettings!=null && p.health.summaryHealth.SummaryHealthPercent>.75f && p.health.hediffSet.BleedRateTotal<.05f &&
             (p.needs?.rest?.CurLevel??1)>.3f && (p.needs?.food?.CurLevel??1)>.25f && (p.needs?.mood?.CurLevel??1)>.2f;
-        private static bool Available(Pawn p,PrisonState state) => Able(p) && !p.InBed() && !Reserved(p) &&
+        private static bool Available(Pawn p,PrisonState state) => Able(p) && !ActorCoordinator.Blocked(p,"prisao") && !p.InBed() && !Reserved(p) &&
             !MedicalRescueManager.Reserved(p) && !state.Excluded.Contains(p) && p.CurJob?.playerForced!=true &&
             !CommerceCaravanManager.Reserved(p.Map.GetComponent<AutonomousRimMapComponent>().Commerce,p);
         private static bool OwnPatients(Map map) => map.mapPawns.FreeColonistsSpawned.Any(p=>p.Downed && !p.InBed() ||
@@ -78,7 +78,7 @@ namespace AutonomousRim.Execution
             if(job==null)return false;
             var order=new PrisonOrder{Helper=helper,Patient=patient,Bed=bed,PreviousJobId=helper.CurJob?.GetUniqueLoadID(),Stage=stage};
             job.locomotionUrgency=LocomotionUrgency.Sprint;
-            if(!helper.jobs.TryTakeOrderedJob(job,JobTag.Misc,false))return false;
+            if(!OrderedJobDispatcher.Issue(helper,job,JobTag.Misc,false))return false;
             order.JobId=job.GetUniqueLoadID();state.Orders.Add(order);return true;
         }
         private static bool ClosedBed(Building_Bed bed) => bed.ForPrisoners && !bed.Destroyed && bed.Position.IsInPrisonCell(bed.Map) &&

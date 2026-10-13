@@ -90,7 +90,7 @@ namespace AutonomousRim.Execution
                 if(!cell.IsValid) { state.MissingShelters++; continue; } // Never force a rescue/escape through a firing lane.
                 bool fire=pawn.drafter.FireAtWill; pawn.drafter.Drafted=true; pawn.drafter.FireAtWill=false;
                 var job=JobMaker.MakeJob(JobDefOf.Goto,cell); job.locomotionUrgency=LocomotionUrgency.Sprint;
-                if(pawn.jobs.TryTakeOrderedJob(job,JobTag.Misc,false))
+                if(OrderedJobDispatcher.Issue(pawn,job,JobTag.Misc,false))
                     state.Evacuations.Add(new CombatOrder{Pawn=pawn,JobId=job.GetUniqueLoadID(),Role="Abrigo civil",OriginalFireAtWill=fire});
                 else { pawn.drafter.Drafted=false; pawn.drafter.FireAtWill=fire; }
             }
