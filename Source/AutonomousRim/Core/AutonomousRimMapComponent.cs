@@ -25,6 +25,7 @@ namespace AutonomousRim.Core
 
         public ColonyState CurrentState { get; private set; }
         public ExistingHousing Housing {get;}=new ExistingHousing();
+        public ExistingFacilities Facilities {get;}=new ExistingFacilities();
         public ConstructionWorkIndex WorkIndex {get;}=new ConstructionWorkIndex();
         private ProgressState progress = new ProgressState();
         public ProgressState Progress => progress;
@@ -622,7 +623,7 @@ namespace AutonomousRim.Core
         {
             bool climate = DefDatabase<ResearchProjectDef>.GetNamed("AirConditioning").IsFinished;
             if (baseProjects.Count == 0 && ticks - lastPlanTick >= 1200 || plannedPawnCount != map.mapPawns.FreeColonistsSpawnedCount || plannedClimateResearch != climate ||
-                baseProjects.Exists(p => p.Kind == RingBasePlanner.ReservationKind || p.Kind == ModularBasePlanner.ReservationKind) && ticks - lastPlanTick >= 1200)
+                baseProjects.Exists(p => p.Kind == RingBasePlanner.ReservationKind || p.Kind == ModularBasePlanner.ReservationKind || p.ExistingFacilityProxy) && ticks - lastPlanTick >= 1200)
                 PreviewBase();
         }
 

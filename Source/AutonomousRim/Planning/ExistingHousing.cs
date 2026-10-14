@@ -12,7 +12,7 @@ namespace AutonomousRim.Planning
         public void Refresh(Map map,bool force=false)
         {
             int tick=Find.TickManager.TicksGame;if(!force && tick<nextTick)return;nextTick=tick+120;
-            Beds=map.listerBuildings.AllBuildingsColonistOfClass<Building_Bed>().Where(b=>b.Spawned && !b.ForPrisoners && !b.Medical &&
+            Beds=map.listerBuildings.AllBuildingsColonistOfClass<Building_Bed>().Where(b=>b.Spawned && b.ForOwnerType==BedOwnerType.Colonist && !b.Medical &&
                 b.def.building.bed_humanlike && !b.IsForbidden(Faction.OfPlayer) && !b.IsBurning() && b.GetRoom() is Room room &&
                 !room.Dereferenced && !room.PsychologicallyOutdoors && !room.IsDoorway &&
                 (room.Role==RoomRoleDefOf.Bedroom || room.Role==RoomRoleDefOf.Barracks)).Distinct().ToList();

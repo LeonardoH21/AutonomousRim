@@ -65,7 +65,7 @@ namespace AutonomousRim.Planning
         }
         public static void RepairUnissuedKitchenConflicts(Map map, IReadOnlyList<RoomProject> projects)
         {
-            foreach (var room in projects.Where(p => (p.Kind == "Hospital" || p.Kind == "Oficina") && p.State != ConstructionState.Paused))
+            foreach (var room in projects.Where(p => !p.ExistingFacility && (p.Kind == "Hospital" || p.Kind == "Oficina") && p.State != ConstructionState.Paused))
                 foreach (var task in room.Furniture.Where(t => t.MedicalBed || t.Def.defName == "HandTailoringBench"))
                 {
                     if (task.Issued || task.Pending != null || task.CancelledByPlayer || task.Complete(map) ||
@@ -84,7 +84,7 @@ namespace AutonomousRim.Planning
                 }
             // Migrate the former kitchen layout only before a table has been ordered.
             // Existing furniture, invested frames and player cancellations stay intact.
-            foreach (var room in projects.Where(p => p.Kind == "Cozinha" && p.State != ConstructionState.Paused))
+            foreach (var room in projects.Where(p => !p.ExistingFacility && p.Kind == "Cozinha" && p.State != ConstructionState.Paused))
             {
                 var oldPosition = room.Origin + new IntVec3(2, 0, 1);
                 var table = room.Furniture.FirstOrDefault(t => t.Def.defName == "TableButcher" && t.Position == oldPosition);
@@ -182,7 +182,8 @@ namespace AutonomousRim.Planning
 
         public static string Plan(Map map, List<RoomProject> projects)
         {
-            if (projects.Count == 0 || projects.Any(p => p.Kind == ModularBasePlanner.ReservationKind)) return ModularBasePlanner.Plan(map, projects);
+            map.GetComponent<AutonomousRim.Core.AutonomousRimMapComponent>().Facilities.Reconcile(map,projects);
+            if (projects.All(p=>p.ExistingFacilityProxy || p.LayoutSlot?.StartsWith("existing:")==true) || projects.Any(p => p.Kind == ModularBasePlanner.ReservationKind)) return ModularBasePlanner.Plan(map, projects);
             if (projects.Any(p => p.Kind == CourtyardBasePlanner.ReservationKind)) return CourtyardBasePlanner.Plan(map, projects);
             if (projects.Any(p => p.Kind == RingBasePlanner.ReservationKind)) return RingBasePlanner.Plan(map, projects);
             Pawn anchorPawn = map.mapPawns.FreeColonistsSpawned.FirstOrDefault();

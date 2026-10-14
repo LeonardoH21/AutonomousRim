@@ -105,6 +105,10 @@ namespace AutonomousRim.Planning
         public bool Started;
         public bool Completed;
         public bool HousingRecognized;
+        public bool ExistingFacility;
+        public bool ExistingFacilityProxy;
+        public string ExistingFacilityKind;
+        public IntVec3 ExistingFacilityAnchor;
         public ConstructionState State;
         public ConstructionPriority Priority = ConstructionPriority.High;
         public string BlockReason;
@@ -146,6 +150,10 @@ namespace AutonomousRim.Planning
             Scribe_Values.Look(ref Started, "started"); Scribe_Values.Look(ref Completed, "completed");
             Scribe_Values.Look(ref State, "state"); Scribe_Values.Look(ref Priority, "priority", ConstructionPriority.High);
             Scribe_Values.Look(ref BlockReason, "blockReason");Scribe_Values.Look(ref HousingRecognized,"housingRecognized");
+            Scribe_Values.Look(ref ExistingFacility,"existingFacility");
+            Scribe_Values.Look(ref ExistingFacilityProxy,"existingFacilityProxy");
+            Scribe_Values.Look(ref ExistingFacilityKind,"existingFacilityKind");
+            Scribe_Values.Look(ref ExistingFacilityAnchor,"existingFacilityAnchor");
             Scribe_Values.Look(ref LastProgressTick, "lastProgressTick"); Scribe_Values.Look(ref LastProgress, "lastProgress");
             Scribe_Values.Look(ref LastRecoveryTick, "lastRecoveryTick"); Scribe_Values.Look(ref FunctionalStorage, "functionalStorage");
             Scribe_Values.Look(ref LastRecoveryLogTick, "lastRecoveryLogTick");

@@ -22,6 +22,7 @@ namespace AutonomousRim.Execution
             nextTick=tick+60;projectCount=projects.Count;Owners.Clear();Tasks.Clear();ClearOwners.Clear();Protected.Clear();Interactions.Clear();DebrisCells.Clear();
             foreach(var project in projects.OrderBy(p=>p.Priority))
             {
+                if(project.ExistingFacility)continue;
                 foreach(var cell in project.OwnedClearCells)if(!ClearOwners.ContainsKey(cell))ClearOwners[cell]=project;
                 var stage=project.Started && !project.Completed && project.State!=ConstructionState.Paused ? new HashSet<ConstructionTask>(BaseConstructionManager.CurrentStage(map,project)) : null;
                 foreach(var task in BaseConstructionManager.Tasks(project))

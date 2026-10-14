@@ -152,6 +152,7 @@ namespace AutonomousRim.Planning
             p.NoRoofCells.Add(p.Origin+new IntVec3(13,0,3));PrepareEntrances(map,projects,p);
             p.Furniture.Add(Make(p,entries.First(e=>e.Def=="WoodFiredGenerator")));
             if(auxiliary)return;
+            if(projects.Any(r=>r.Kind=="Hospital" && r.ExistingFacility))return;
             var hospital=new RoomProject{Kind="Hospital",ReferenceLayout="hospital",LayoutSlot=p.LayoutSlot.Substring(0,p.LayoutSlot.LastIndexOf(':')+1)+"12",
                 LayoutAnchor=root,Origin=origin+new IntVec3(0,0,6),InteriorSize=11,InteriorHeight=5};
             foreach(var e in entries.Where(e=>e.Z>=6 && Structure(e.Def)))hospital.Shell.Add(Make(p,e));
@@ -199,7 +200,7 @@ namespace AutonomousRim.Planning
         }
         public static bool FillEnergy(Map map,List<RoomProject> projects)
         {
-            foreach(var p in projects.Where(p=>p.ReferenceLayout=="energy_bank"))
+            foreach(var p in projects.Where(p=>p.ReferenceLayout=="energy_bank" && !p.ExistingFacility))
             foreach(var e in ReferenceLayoutData.Get("energy_hospital").Where(e=>e.Def=="WoodFiredGenerator"))
                 if(!p.Furniture.Any(t=>t.Def.defName==e.Def && t.Position==p.Origin+new IntVec3(e.X,0,e.Z)))
                 {p.Furniture.Add(Make(p,e));p.Completed=false;return true;}
@@ -207,7 +208,7 @@ namespace AutonomousRim.Planning
         }
         public static void Reconcile(Map map,List<RoomProject> projects)
         {
-            foreach(var p in projects.Where(p=>p.ReferenceLayout!=null).ToList())
+            foreach(var p in projects.Where(p=>p.ReferenceLayout!=null && !p.ExistingFacility).ToList())
             {
                 bool ready=p.Completed;
                 if(p.ReferenceLayout=="workshop_storage_a" || p.ReferenceLayout=="workshop_storage_b")ReconcileStore(map,p);

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using AutonomousRim.Core;
 using AutonomousRim.Execution;
+using AutonomousRim.Planning;
 using HarmonyLib;
 using RimWorld;
 using Verse;
@@ -16,9 +17,9 @@ namespace AutonomousRim.RuntimeChecks
         {
             if(!GenCommandLine.CommandLineArgPassed("autonomousrimlonebenchmark"))return;
             var harmony=new Harmony("autonomousrim.l1.benchmark");
-            foreach(var type in new[]{typeof(BaseConstructionManager),typeof(ConstructionWorkManager),typeof(WorkGiver_AutonomousConstruction),typeof(ConstructionResourceManager),typeof(StoragePolicy),typeof(LootAccessManager)})
+            foreach(var type in new[]{typeof(BaseConstructionManager),typeof(ConstructionWorkManager),typeof(WorkGiver_AutonomousConstruction),typeof(ConstructionResourceManager),typeof(StoragePolicy),typeof(LootAccessManager),typeof(ExistingFacilities),typeof(ExistingFacilityImprovements)})
                 foreach(var method in type.GetMethods(BindingFlags.DeclaredOnly|BindingFlags.Public|BindingFlags.NonPublic|BindingFlags.Static|BindingFlags.Instance)
-                    .Where(m=>!m.IsAbstract && m.GetMethodBody()!=null && new[]{"Apply","CanDispatch","ConstructionDebrisJob","InteractionClearance","JobOnThing","GetPriority","PendingReason","ManageFoodStorage"}.Contains(m.Name)))
+                    .Where(m=>!m.IsAbstract && m.GetMethodBody()!=null && new[]{"Apply","CanDispatch","ConstructionDebrisJob","InteractionClearance","JobOnThing","GetPriority","PendingReason","ManageFoodStorage","Refresh","Reconcile","Plan"}.Contains(m.Name)))
                     harmony.Patch(method,prefix:new HarmonyMethod(typeof(ModuleTimingPatch),nameof(ModuleTimingPatch.Prefix)),finalizer:new HarmonyMethod(typeof(ModuleTimingPatch),nameof(ModuleTimingPatch.Finalizer)));
         }
     }

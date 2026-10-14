@@ -47,6 +47,10 @@ namespace AutonomousRim.RuntimeChecks
                 }
                 if(phase==1)
                 {
+                    // Keep this contract focused on bench/buffer execution. Recognition
+                    // may discover other manual facilities and schedule full base expansion;
+                    // that independent behavior is covered by L1 construction trials.
+                    AccessTools.Field(typeof(AutonomousRimMapComponent),"lastPlanTick").SetValue(ai,Find.TickManager.TicksGame);
                     if(Find.TickManager.TicksGame%60!=0)return;
                     var buffers=projects.Where(p=>p.LayoutSlot?.StartsWith("industry:buffer:")==true && p.Furniture[0].SupplyBench==table).ToList();
                     foreach(var t in buffers.SelectMany(p=>p.Furniture).Where(t=>t.Complete(map) && t.SettingsConfigured))
@@ -131,6 +135,7 @@ namespace AutonomousRim.RuntimeChecks
                 AccessTools.Field(typeof(AutonomousRimMapComponent),"equipmentAutomation").SetValue(ai,true);
                 AccessTools.Field(typeof(AutonomousRimMapComponent),"plannedPawnCount").SetValue(ai,6);
                 AccessTools.Field(typeof(AutonomousRimMapComponent),"plannedClimateResearch").SetValue(ai,true);
+                AccessTools.Field(typeof(AutonomousRimMapComponent),"lastPlanTick").SetValue(ai,Find.TickManager.TicksGame);
                 float baselineFood=ai.CurrentState.EstimatedFoodDays;ai.CurrentState.EstimatedFoodDays=2;Refresh(ai);
                 Check(projects.Count==1,"low food does not plan benches/buffers");ai.CurrentState.EstimatedFoodDays=baselineFood;
                 host.State=ConstructionState.Paused;Refresh(ai);Check(projects.Count==1,"paused host is not extended");host.State=ConstructionState.Completed;

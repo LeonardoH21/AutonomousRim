@@ -232,6 +232,8 @@ namespace AutonomousRim.UI
         {
             Line("Construção automática: " + (ai.BaseAutomation ? "ligada" : "desligada"), Accent);
             Line("Camas em quartos/dormitórios reconhecidos: "+ai.Housing.Count(map)+" / "+map.mapPawns.FreeColonistsSpawnedCount+" colonos. Layouts manuais são preservados.",Muted);
+            ai.Facilities.Refresh(map,ai.BaseProjects);
+            foreach(var service in ai.Facilities.Services)Line(service.Kind+" existente • "+service.Anchor+" • "+service.Detail,Muted);
             Line("Última avaliação: " + ai.BaseStatus); Line("Última avaliação da coleta: " + ai.GatheringStatus, Muted);
             if (Button("Visualizar / planejar base")) { ai.PreviewBase(); nextMetrics = 0; }
             Widgets.CheckboxLabeled(new Rect(0, y, width, 28f), "Mostrar apenas projetos com impedimentos", ref onlyBlocked); y += 34;
@@ -239,7 +241,7 @@ namespace AutonomousRim.UI
             foreach (var p in ai.BaseProjects.Where(p => !onlyBlocked || (!p.Completed && (!string.IsNullOrEmpty(p.BlockReason) || p.Stalled || p.State == ConstructionState.WaitingMaterials || p.State == ConstructionState.Blocked))))
             {
                 Section(p.Kind + " • " + State(p.State));
-                Line("Área " + p.InteriorSize + "×" + p.Height + " • " + Priority(p.Priority) + " • posição " + p.Origin, Muted);
+                Line(p.ExistingFacility ? "Instalação manual em "+p.ExistingFacilityAnchor : "Área " + p.InteriorSize + "×" + p.Height + " • " + Priority(p.Priority) + " • posição " + p.Origin, Muted);
                 if (projectProgress.TryGetValue(p, out var n) && n[1] > 0) Progress("Estrutura, pisos e móveis", (float)n[0] / n[1], n[0] + "/" + n[1], Accent);
                 if (functionality.TryGetValue(p, out string functional)) Line(functional);
                 if (!string.IsNullOrEmpty(p.BlockReason)) Line(p.BlockReason, Warning);
@@ -531,7 +533,7 @@ namespace AutonomousRim.UI
             foreach (var p in ai.BaseProjects)
             {
                 int count = 0, complete = 0;
-                foreach (var task in p.Shell.Concat(p.Furniture).Where(t => t.Def != null && !t.CancelledByPlayer))
+                foreach (var task in Execution.BaseConstructionManager.Tasks(p).Where(t => t.Def != null && !t.CancelledByPlayer))
                 {
                     bool ready = task.Complete(map); count++; if (ready) complete++;
                     string key = task.Position + "/" + task.Def.defName + "/" + task.Rotation.AsInt;

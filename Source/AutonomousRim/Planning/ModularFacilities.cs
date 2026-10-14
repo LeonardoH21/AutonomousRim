@@ -95,7 +95,7 @@ namespace AutonomousRim.Planning
                 if(def==null || !def.IsResearchFinished || projects.SelectMany(BaseConstructionManager.Tasks).Any(t=>t.Def==def) ||
                     map.listerBuildings.allBuildingsColonist.Any(b=>b.def==def))continue;
                 // Each installable bench serves crafting, medicine, recycling or trade.
-                var rooms=projects.Where(p=>p.Kind=="Oficina" || p.Kind=="Fabricação").ToList();
+                var rooms=projects.Where(p=>!p.ExistingFacility && (p.Kind=="Oficina" || p.Kind=="Fabricação")).ToList();
                 if(rooms.Count==0)continue;
                 if(rooms.Any(room=>Place(map,projects,room,name,room.Origin+new IntVec3(2,0,8))))continue;
                 var root=projects.First(p=>p.Kind==ModularBasePlanner.ReservationKind).LayoutAnchor;
@@ -107,6 +107,7 @@ namespace AutonomousRim.Planning
 
         public static string FunctionalStatus(Map map,IReadOnlyList<RoomProject> projects,RoomProject room)
         {
+            if(room.ExistingFacility)return "Instalação existente reconhecida; móveis e configuração manual preservados. Complementos têm sua própria fila.";
             if(!ModularBasePlanner.IsModular(room))return null;
             if(room.Crop!=null)
             {

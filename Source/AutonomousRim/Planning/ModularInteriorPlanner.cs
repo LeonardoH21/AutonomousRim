@@ -20,7 +20,7 @@ namespace AutonomousRim.Planning
         }
         public static void Plan(Map map, List<RoomProject> projects)
         {
-            foreach (var room in projects.Where(p => ModularBasePlanner.IsModular(p) && p.Crop == null && p.Completed && p.ReferenceLayout==null).ToList())
+            foreach (var room in projects.Where(p => !p.ExistingFacility && ModularBasePlanner.IsModular(p) && p.Crop == null && p.Completed && p.ReferenceLayout==null).ToList())
             {
                 string slot = "interior:" + room.LayoutSlot;
                 if (projects.Any(p => p.LayoutSlot == slot) || room.State == ConstructionState.Paused) continue;
@@ -72,7 +72,7 @@ namespace AutonomousRim.Planning
                 // Workbenches are reconciled after every unlock by ModularFacilities.
                 projects.Add(finish);
             }
-            foreach (var room in projects.Where(p => ModularBasePlanner.IsModular(p) && p.Completed && p.ReferenceLayout==null).ToList())
+            foreach (var room in projects.Where(p => !p.ExistingFacility && ModularBasePlanner.IsModular(p) && p.Completed && p.ReferenceLayout==null).ToList())
             {
                 string name = room.Kind == "Energia e climatização" && !room.Furniture.Any(t=>t.Def.defName=="Battery") ? "Battery" : null;
                 if (name == null || !DefDatabase<ThingDef>.GetNamed(name).IsResearchFinished || projects.Any(p => p.LayoutSlot == "upgrade:" + room.LayoutSlot)) continue;
@@ -84,7 +84,7 @@ namespace AutonomousRim.Planning
                 projects.Add(upgrade);
             }
             // Only consider room heating after nine genuinely enclosed, roofed rooms exist.
-            var closed = projects.Where(p => ModularBasePlanner.IsModular(p) && p.Crop == null && p.ReferenceLayout==null && p.RequiresRoof &&
+            var closed = projects.Where(p => !p.ExistingFacility && ModularBasePlanner.IsModular(p) && p.Crop == null && p.ReferenceLayout==null && p.RequiresRoof &&
                 p.Shell.All(t => t.Complete(map)) && p.RoofArea.All(c => c.Roofed(map))).ToList();
             if (closed.Count >= 9 && map.mapTemperature.OutdoorTemp < 16)
                 foreach (var room in closed.Where(p => p.Kind != "Freezer" && p.Kind != "Energia e climatização" && p.Kind != "Gerador auxiliar"))
@@ -148,9 +148,9 @@ namespace AutonomousRim.Planning
         {
             var power = projects.FirstOrDefault(p => p.LayoutSlot == "modular-cables");
             if (power == null) return;
-            var generator = projects.SelectMany(p => p.Furniture).FirstOrDefault(t => t.Def.defName == "WoodFiredGenerator");
+            var generator = projects.Where(p=>!p.ExistingFacility).SelectMany(p => p.Furniture).FirstOrDefault(t => t.Def.defName == "WoodFiredGenerator");
             if (generator == null) return;
-            var generators = projects.SelectMany(p => p.Furniture).Where(t => t.Def.defName == "WoodFiredGenerator" || t.Def.defName == "Battery")
+            var generators = projects.Where(p=>!p.ExistingFacility).SelectMany(p => p.Furniture).Where(t => t.Def.defName == "WoodFiredGenerator" || t.Def.defName == "Battery")
                 .SelectMany(t => GenAdj.OccupiedRect(t.Position, t.Rotation, t.Def.Size)).ToHashSet();
             foreach (var old in power.Furniture.Where(t => generators.Contains(t.Position)).ToList())
             {
@@ -174,7 +174,7 @@ namespace AutonomousRim.Planning
                 }
             }
             flood();
-            foreach (var source in projects.SelectMany(p => p.Furniture).Where(t => t.Def.defName == "WoodFiredGenerator").ToList())
+            foreach (var source in projects.Where(p=>!p.ExistingFacility).SelectMany(p => p.Furniture).Where(t => t.Def.defName == "WoodFiredGenerator").ToList())
             {
                 if (connected.Contains(source.Position)) continue;
                 var start = connected.OrderBy(c => c.DistanceToSquared(source.Position)).First();
@@ -185,7 +185,7 @@ namespace AutonomousRim.Planning
                 { power.Furniture.Add(ModularBasePlanner.Thing(cable(c), c)); power.Completed = false; }
                 flood();
             }
-            foreach (var consumer in projects.SelectMany(p => p.Furniture).Where(t => t.Def is ThingDef d &&
+            foreach (var consumer in projects.Where(p=>!p.ExistingFacility).SelectMany(p => p.Furniture).Where(t => t.Def is ThingDef d &&
                 d.comps?.OfType<CompProperties_Power>().Any(c => c.PowerConsumption > 0) == true).ToList())
             {
                 var dest = consumer.Position;

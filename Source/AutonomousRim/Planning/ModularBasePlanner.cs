@@ -162,6 +162,9 @@ namespace AutonomousRim.Planning
         }
         public static string Plan(Map map, List<RoomProject> projects)
         {
+            var facilities=map.GetComponent<AutonomousRim.Core.AutonomousRimMapComponent>().Facilities;
+            facilities.Reconcile(map,projects);
+            ExistingFacilityImprovements.Plan(map,projects,facilities);
             var pawn = map.mapPawns.FreeColonistsSpawned.FirstOrDefault();
             if (pawn == null) return "Sem colonos para planejar.";
             var marker = projects.FirstOrDefault(p => p.Kind == ReservationKind);
@@ -232,13 +235,19 @@ namespace AutonomousRim.Planning
                     if (!projects.Any(p => p.Kind == kind)) { AddRoom(map, projects, root, kind, 2); break; }
             if (DefDatabase<ResearchProjectDef>.GetNamed("Fabrication").IsFinished && projects.Any(p => p.Kind == "Oficina" && p.Completed) && !projects.Any(p => p.Kind == "Fabricação"))
                 AddRoom(map, projects, root, "Fabricação", 2);
-            if (DefDatabase<ResearchProjectDef>.GetNamed("MicroelectronicsBasics").IsFinished && !projects.Any(p => p.Kind == "Laboratório" || p.ReferenceLayout=="research_two_bedrooms"))
+            if (DefDatabase<ResearchProjectDef>.GetNamed("MicroelectronicsBasics").IsFinished && !projects.Any(p => p.Kind == "Laboratório" || p.ReferenceLayout=="research_two_bedrooms" || p.Kind=="Pesquisa" && p.ExistingFacility))
                 AddRoom(map, projects, root, "Laboratório", 4);
             ReferenceModulePlanner.Reconcile(map,projects);
             ModularInteriorPlanner.Plan(map, projects);
             float demand = projects.SelectMany(BaseConstructionManager.Tasks).Where(t => t.Def is ThingDef)
                 .Sum(t => Math.Max(0, ((ThingDef)t.Def).GetCompProperties<CompProperties_Power>()?.PowerConsumption ?? 0));
-            int generators = projects.SelectMany(p => p.Furniture).Count(t => t.Def.defName == "WoodFiredGenerator");
+            int generators = projects.Where(p=>!p.ExistingFacility).SelectMany(p => p.Furniture).Count(t => t.Def.defName == "WoodFiredGenerator");
+            var pendingPowerTasks=projects.SelectMany(BaseConstructionManager.Tasks).Where(t=>t.Def is ThingDef).ToList();
+            demand+=map.listerBuildings.allBuildingsColonist.Where(b=>!pendingPowerTasks.Any(t=>t.Position==b.Position && t.Def==b.def))
+                .Sum(b=>Math.Max(0,b.def.GetCompProperties<CompProperties_Power>()?.PowerConsumption??0));
+            float manualPower=map.listerBuildings.allBuildingsColonist.Where(b=>b.TryGetComp<CompPowerPlant>()!=null &&
+                !pendingPowerTasks.Any(t=>t.Position==b.Position && t.Def==b.def))
+                .Sum(b=>Math.Max(b.TryGetComp<CompPowerTrader>()?.PowerOutput??0,-(b.def.GetCompProperties<CompProperties_Power>()?.PowerConsumption??0)));
             bool runningGenerator = projects.SelectMany(p => p.Furniture).Any(t => t.Def.defName == "WoodFiredGenerator" && t.Complete(map));
             // Six generators are not a capacity limit: advanced benches, hospital,
             // prison and heating can exceed 6 kW and make native power shed loads.
@@ -246,7 +255,7 @@ namespace AutonomousRim.Planning
             float generatorCapacity = Math.Abs(DefDatabase<ThingDef>.GetNamed("WoodFiredGenerator")
                 .GetCompProperties<CompProperties_Power>()?.PowerConsumption ?? -1000);
             float requiredPower = demand + Math.Max(200, demand * .15f);
-            if ((coreReady || runningGenerator) && generatorCapacity > 0 && requiredPower > generators * generatorCapacity)
+            if ((coreReady || runningGenerator) && generatorCapacity > 0 && requiredPower > generators * generatorCapacity + manualPower)
                 {
                 if(!ReferenceModulePlanner.FillEnergy(map,projects)) ReferenceModulePlanner.AddEnergy(map,projects,root,true);
             }
@@ -254,8 +263,8 @@ namespace AutonomousRim.Planning
             if (!projects.Any(p => p.Kind == "Pesquisa"))
                 AddRoom(map, projects, root, "Pesquisa", 2);
             ModularFacilities.Reconcile(map, projects);
-            var generator = projects.SelectMany(p => p.Furniture).FirstOrDefault(t => t.Def.defName == "WoodFiredGenerator");
-            var freezer = projects.FirstOrDefault(p => p.Kind == "Freezer");
+            var generator = projects.Where(p=>!p.ExistingFacility).SelectMany(p => p.Furniture).FirstOrDefault(t => t.Def.defName == "WoodFiredGenerator");
+            var freezer = projects.FirstOrDefault(p => p.Kind == "Freezer" && !p.ExistingFacility);
             if (generator != null && freezer != null && !projects.Any(p => p.LayoutSlot == "modular-cables"))
             {
                 var power = new RoomProject { Kind = "Conexão elétrica", LayoutSlot = "modular-cables", RequiresRoof = false,

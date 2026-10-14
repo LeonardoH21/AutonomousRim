@@ -74,6 +74,8 @@ namespace AutonomousRim.Planning
                 d.GetCompProperties<CompProperties_Power>()?.transmitsPower==true && t.Position.DistanceToSquared(cell)<=36);
         private static ConstructionTask Place(Map map,List<RoomProject> projects,RoomProject host,ThingDef def,IntVec3 near)
         {
+            var actualRoom=host.ExistingFacility?host.ExistingFacilityAnchor.GetRoom(map):null;
+            if(host.ExistingFacility && (actualRoom==null || actualRoom.PsychologicallyOutdoors))return null;
             var tasks=projects.SelectMany(BaseConstructionManager.Tasks).Where(t=>t.Def is ThingDef && !t.Def.defName.Contains("Conduit")).ToList();
             var occupied=new HashSet<IntVec3>(tasks.SelectMany(t=>GenAdj.OccupiedRect(t.Position,t.Rotation,t.Def.Size)));
             occupied.UnionWith(map.listerBuildings.allBuildingsColonist.SelectMany(b=>b.OccupiedRect()));
@@ -87,10 +89,10 @@ namespace AutonomousRim.Planning
             foreach(var rot in new[]{Rot4.North,Rot4.East,Rot4.South,Rot4.West})
             {
                 var rect=GenAdj.OccupiedRect(c,rot,def.Size);var access=c+def.interactionCellOffset.RotatedBy(rot);
-                if(rect.Any(n=>!n.InBounds(map) || !host.Interior.Contains(n) || occupied.Contains(n) || interactions.Contains(n) ||
+                if(rect.Any(n=>!n.InBounds(map) || !host.Interior.Contains(n) || host.ExistingFacility && !actualRoom.ContainsCell(n) || occupied.Contains(n) || interactions.Contains(n) ||
                     n.x==host.Interior.CenterCell.x || n.z==host.Interior.CenterCell.z || n.GetEdifice(map)!=null ||
                     n.GetThingList(map).Any(t=>t is Blueprint || t is Frame) || n.GetZone(map)!=null && n.GetZone(map)!=host.Stockpile || doors.Any(d=>n.DistanceToSquared(d)<=2)))continue;
-                if(def.hasInteractionCell && (!host.Interior.Contains(access) || occupied.Contains(access) || access.GetEdifice(map)!=null ||
+                if(def.hasInteractionCell && (!host.Interior.Contains(access) || host.ExistingFacility && !actualRoom.ContainsCell(access) || occupied.Contains(access) || access.GetEdifice(map)!=null ||
                     access.GetThingList(map).Any(t=>t is Blueprint || t is Frame)))continue;
                 if(!GenConstruct.CanPlaceBlueprintAt(def,c,rot,map,stuffDef:def.MadeFromStuff?ThingDefOf.WoodLog:null) || !PowerNearby(map,projects,def,c))continue;
                 var reach=def.hasInteractionCell?access:c;

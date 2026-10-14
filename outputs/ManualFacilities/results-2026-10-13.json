@@ -1,0 +1,179 @@
+{
+  "date": "2026-10-13",
+  "timezone": "America/Sao_Paulo",
+  "installedDllHash": "C495642E704E98C6E2A45A379EF0F8BCD28B9E16AA0D0F172517DC02ABD9A438",
+  "originalSaveHashes": {
+    "V3": "01B0BEC2823B5711CE0CC528CEFE61CF5DC3AD9F6E4A1AB62A598107F0E695FD",
+    "L1": "919248EB574C63AF85380F399D69843C4BEA92851E4232670F0BB3111E2D0774"
+  },
+  "notes": [
+    "Fixtures spawn rooms/resources; native L1 progress does not",
+    "Industry fixture freezes global planning to isolate bench/buffer execution",
+    "Final rotation/irregular-cell guards validated by 33 checks; earlier native regressions retain their own DLL hashes",
+    "Short timing samples show low inventory cost, not an FPS or TPS improvement",
+    "Original missing gene references remain a test limitation"
+  ],
+  "runs": [
+    {
+      "manifest": {
+        "stage": "manual-facilities-rotation-release",
+        "flag": "autonomousrimexistingfacilities",
+        "extraFlags": [],
+        "resumeSaveHash": "919248EB574C63AF85380F399D69843C4BEA92851E4232670F0BB3111E2D0774",
+        "sourceCommit": "3ecd05ea407e87d6e32de4fe7eb95af98dc0f595",
+        "dllHash": "C495642E704E98C6E2A45A379EF0F8BCD28B9E16AA0D0F172517DC02ABD9A438",
+        "runtimeHash": "F307715D4C89E149D2E7611C6F642FDC2F3847ADA5403C31C042EBAD58AB99FE",
+        "result": "PASS",
+        "profile": "C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\manual-facilities-rotation-release-20261014-000946-698",
+        "sourceDirty": true,
+        "yieldCapsHash": "BEA9183CC1B7AC86C424AB7225F5AAFF6FC8792CBC9FDA2F6FFB3B4170DF0751"
+      },
+      "evidence": [
+        "[ExistingFacilities] PASS: native manual service recognized: Cozinha",
+        "[ExistingFacilities] PASS: native manual service recognized: Abate",
+        "[ExistingFacilities] PASS: native manual service recognized: Pesquisa",
+        "[ExistingFacilities] PASS: native manual service recognized: Hospital",
+        "[ExistingFacilities] PASS: native manual service recognized: Freezer",
+        "[ExistingFacilities] PASS: native manual service recognized: Estoque",
+        "[ExistingFacilities] PASS: native manual service recognized: Oficina",
+        "[ExistingFacilities] PASS: native manual service recognized: Refeitório e recreação",
+        "[ExistingFacilities] PASS: native manual service recognized: Energia e climatização",
+        "[ExistingFacilities] PASS: native manual service recognized: Medicamentos",
+        "[ExistingFacilities] PASS: manual rotation differs from old owned template and is still recognized",
+        "[ExistingFacilities] PASS: queued energy room fulfilled by manual installation",
+        "[ExistingFacilities] PASS: only AI blueprint withdrawn; player blueprint and invested frame preserved",
+        "[ExistingFacilities] PASS: superseded template excluded from resource/work queue",
+        "[ExistingFacilities] PASS: industrial placement uses real cells of irregular manual room",
+        "[ExistingFacilities] PASS: no duplicate queued walled module: Cozinha",
+        "[ExistingFacilities] PASS: no duplicate queued walled module: Abate",
+        "[ExistingFacilities] PASS: no duplicate queued walled module: Pesquisa",
+        "[ExistingFacilities] PASS: no duplicate queued walled module: Hospital",
+        "[ExistingFacilities] PASS: no duplicate queued walled module: Freezer",
+        "[ExistingFacilities] PASS: no duplicate queued walled module: Estoque",
+        "[ExistingFacilities] PASS: no duplicate queued walled module: Oficina",
+        "[ExistingFacilities] PASS: no duplicate queued walled module: Refeitório e recreação",
+        "[ExistingFacilities] PASS: hospital capacity complemented inside existing room",
+        "[ExistingFacilities] PASS: manual filters, priorities and temperature preserved",
+        "[ExistingFacilities] PASS: second planning pass creates no duplicate supplements",
+        "[ExistingFacilities] PASS: missing medical bed emitted as native blueprint inside manual hospital",
+        "[ExistingFacilities] PASS: bindings survive native save/load and revalidation",
+        "[ExistingFacilities] PASS: original colonists and bedrooms preserved",
+        "[ExistingFacilities] PASS: removed research bench no longer satisfies goal",
+        "[ExistingFacilities] PASS: relocated manual bench recognized without exact template position",
+        "[ExistingFacilities] PASS: prisoner bed rejected as colonist hospital",
+        "[ExistingFacilities] PASS: blocked interaction cell rejected as usable kitchen",
+        "[ExistingFacilities] DONE checks=33"
+      ]
+    },
+    {
+      "manifest": {
+        "stage": "manual-facilities-rotation-profile",
+        "flag": "autonomousrimlonebenchmark",
+        "extraFlags": [
+          "autonomousrimloneverify"
+        ],
+        "resumeSaveHash": "919248EB574C63AF85380F399D69843C4BEA92851E4232670F0BB3111E2D0774",
+        "sourceCommit": "3ecd05ea407e87d6e32de4fe7eb95af98dc0f595",
+        "dllHash": "C495642E704E98C6E2A45A379EF0F8BCD28B9E16AA0D0F172517DC02ABD9A438",
+        "runtimeHash": "F307715D4C89E149D2E7611C6F642FDC2F3847ADA5403C31C042EBAD58AB99FE",
+        "result": "PASS",
+        "profile": "C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\manual-facilities-rotation-profile-20261014-001033-698",
+        "sourceDirty": true,
+        "yieldCapsHash": "BEA9183CC1B7AC86C424AB7225F5AAFF6FC8792CBC9FDA2F6FFB3B4170DF0751"
+      },
+      "evidence": [
+        "[L1Benchmark] TPS 250.8 elapsed=7.97",
+        "[L1Benchmark] COST ExistingFacilities.Reconcile calls=19 totalMs=17.0 meanMs=0.90 p95=7.08",
+        "[L1Benchmark] COST ExistingFacilities.Refresh calls=19 totalMs=15.0 meanMs=0.79 p95=6.46",
+        "[L1Benchmark] COST ExistingFacilityImprovements.Plan calls=1 totalMs=0.4 meanMs=0.37 p95=0.37",
+        "[L1Benchmark] PASS: 8 existing bedrooms; three changed layouts adopted; original beds preserved; freezer/power no longer wait for bedrooms.",
+        "[L1Benchmark] DONE"
+      ]
+    },
+    {
+      "manifest": {
+        "stage": "manual-facilities-queued",
+        "flag": "autonomousrimqueuedconstructiontest",
+        "extraFlags": [],
+        "resumeSaveHash": "01B0BEC2823B5711CE0CC528CEFE61CF5DC3AD9F6E4A1AB62A598107F0E695FD",
+        "sourceCommit": "3ecd05ea407e87d6e32de4fe7eb95af98dc0f595",
+        "dllHash": "03EC95E0A89B59EA182575FAE9BCA1DD18EDD4AD2A0F34B888EF79781DF796F9",
+        "runtimeHash": "B3A6F09692991C144DDC58267B2DB33FB52F442F9BD60723F45C3369F6CBBDDF",
+        "result": "PASS",
+        "profile": "C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\manual-facilities-queued-20261013-235607-450",
+        "sourceDirty": true,
+        "yieldCapsHash": "BEA9183CC1B7AC86C424AB7225F5AAFF6FC8792CBC9FDA2F6FFB3B4170DF0751"
+      },
+      "evidence": [
+        "[QueuedConstructionTests] PASS: real native opportunistic hauling accepted; queued construction ownership survives Apply without another order.",
+        "[QueuedConstructionTests] DONE: wood stored and wall built by native jobs; disable removes queued owned order and preserves manual order; original six profiles retained."
+      ]
+    },
+    {
+      "manifest": {
+        "stage": "manual-facilities-industry",
+        "flag": "autonomousrimindustryinfrastructuretest",
+        "extraFlags": [
+          "autonomousrimfixturebaseline"
+        ],
+        "resumeSaveHash": "01B0BEC2823B5711CE0CC528CEFE61CF5DC3AD9F6E4A1AB62A598107F0E695FD",
+        "sourceCommit": "3ecd05ea407e87d6e32de4fe7eb95af98dc0f595",
+        "dllHash": "03EC95E0A89B59EA182575FAE9BCA1DD18EDD4AD2A0F34B888EF79781DF796F9",
+        "runtimeHash": "B3A6F09692991C144DDC58267B2DB33FB52F442F9BD60723F45C3369F6CBBDDF",
+        "result": "PASS",
+        "profile": "C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\manual-facilities-industry-20261013-235701-784",
+        "sourceDirty": true,
+        "yieldCapsHash": "BEA9183CC1B7AC86C424AB7225F5AAFF6FC8792CBC9FDA2F6FFB3B4170DF0751"
+      },
+      "evidence": [
+        "[IndustryInfrastructure] PASS: low food does not plan benches/buffers",
+        "[IndustryInfrastructure] PASS: paused host is not extended",
+        "[IndustryInfrastructure] PASS: base toggle gates new infrastructure",
+        "[IndustryInfrastructure] PASS: equipment toggle gates new infrastructure",
+        "[IndustryInfrastructure] PASS: unowned player zone blocks additions instead of losing cells",
+        "[IndustryInfrastructure] PASS: unsupported terrain blocks native benches and shelves",
+        "[IndustryInfrastructure] PASS: native melee loadout demand plans missing researched smithy inside existing storage room",
+        "[IndustryInfrastructure] PASS: bounded two one-cell shelves planned for active tailoring order",
+        "[IndustryInfrastructure] PASS: buffer placement preserves interaction cell, central corridors and eight-cell radius",
+        "[IndustryInfrastructure] PASS: planned tasks prevent duplicate additions",
+        "[IndustryInfrastructure] PASS: player cancellation is not replaced",
+        "[IndustryInfrastructure] PASS: missing smithy and two ingredient shelves built by native construction; cloth hauled into buffer and pants crafted by native jobs",
+        "[IndustryInfrastructure] PASS: local fire correctly suspends buffers before stable policy fixture",
+        "[IndustryInfrastructure] PASS: stable storage-policy fixture has no local fire",
+        "[IndustryInfrastructure] PASS: tailoring buffers accept recipe inputs and exclude medicine/food",
+        "[IndustryInfrastructure] PASS: repeated reviews do not duplicate benches or buffers",
+        "[IndustryInfrastructure] PASS: manual priority/filter edits release control without overwriting",
+        "[IndustryInfrastructure] PASS: low food releases industrial storage emphasis",
+        "[IndustryInfrastructure] PASS: stable demand restores only intact buffer priority; fire=False suspended=False manual=False requested=True matches=True billSuspended=False mode=RepeatCount remaining=29 target=6",
+        "[IndustryInfrastructure] PASS: immediate threat releases buffer emphasis without emergency toggle",
+        "[IndustryInfrastructure] PASS: manual quality range is detected independently of item list",
+        "[IndustryInfrastructure] PASS: native bench reference survives save/load",
+        "[IndustryInfrastructure] PASS: manual filter and relinquished ownership survive save/load",
+        "[IndustryInfrastructure] PASS: controlled signature survives native save/load",
+        "[IndustryInfrastructure] PASS: shutdown releases buffer emphasis while preserving player settings",
+        "[IndustryInfrastructure] DONE"
+      ]
+    },
+    {
+      "manifest": {
+        "stage": "manual-facilities-l1-progress",
+        "flag": "autonomousrimloneprogress",
+        "extraFlags": [],
+        "resumeSaveHash": "919248EB574C63AF85380F399D69843C4BEA92851E4232670F0BB3111E2D0774",
+        "sourceCommit": "3ecd05ea407e87d6e32de4fe7eb95af98dc0f595",
+        "dllHash": "03EC95E0A89B59EA182575FAE9BCA1DD18EDD4AD2A0F34B888EF79781DF796F9",
+        "runtimeHash": "B3A6F09692991C144DDC58267B2DB33FB52F442F9BD60723F45C3369F6CBBDDF",
+        "result": "PASS",
+        "profile": "C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\manual-facilities-l1-progress-20261013-235810-213",
+        "sourceDirty": true,
+        "yieldCapsHash": "BEA9183CC1B7AC86C424AB7225F5AAFF6FC8792CBC9FDA2F6FFB3B4170DF0751"
+      },
+      "evidence": [
+        "[L1Construction] PASS: Freezer actual native tasks 24 -> 30 / 176; state=Active; ",
+        "[L1Construction] PASS: Energia e climatização actual native tasks 0 -> 55 / 93; state=Active; Vegetação na obra: corte nativo antes de entregar/construir.",
+        "[L1Construction] PASS: original eight colonists alive and manual bedrooms preserved for 12 game hours.",
+        "[L1Construction] DONE"
+      ]
+    }
+  ]
+}

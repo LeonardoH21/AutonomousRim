@@ -11,7 +11,7 @@ namespace AutonomousRim.Execution
     public static class BaseConstructionManager
     {
         public const int MaxActiveProjects = 9, MaxPending = 90, MaxPerCycle = 24, ExecutionInterval = 30, ReviewInterval = 120, StallTicks = 1800;
-        public static IEnumerable<ConstructionTask> Tasks(RoomProject p) => p.Shell.Concat(p.Furniture);
+        public static IEnumerable<ConstructionTask> Tasks(RoomProject p) => p.ExistingFacility ? Enumerable.Empty<ConstructionTask>() : p.Shell.Concat(p.Furniture);
         public static bool CanContinueExistingWork(RoomProject p) => p.State == ConstructionState.Active || p.State == ConstructionState.WaitingMaterials;
         public static bool Matches(ConstructionTask task, Thing thing)
         {
@@ -250,6 +250,7 @@ namespace AutonomousRim.Execution
         }
         public static string Apply(Map map, List<RoomProject> projects)
         {
+            map.GetComponent<Core.AutonomousRimMapComponent>().Facilities.Reconcile(map,projects);
             int ticks = Find.TickManager.TicksGame;
             bool danger = map.mapPawns.AllPawnsSpawned.Any(p => !p.Dead && !p.Downed && p.HostileTo(Faction.OfPlayer));
             CompleteDoorFloorPlan(map, projects);
@@ -263,6 +264,13 @@ namespace AutonomousRim.Execution
             var builders = Builders(map);
             foreach (var p in projects)
             {
+                if(p.ExistingFacility)continue;
+                if(p.ExistingFacilityKind!=null && p.LayoutSlot?.StartsWith("existing:")==true)
+                {
+                    bool source=map.GetComponent<Core.AutonomousRimMapComponent>().Facilities.Services.Any(s=>s.Kind==p.ExistingFacilityKind &&
+                        (s.Anchor==p.ExistingFacilityAnchor || s.Room!=null && p.ExistingFacilityAnchor.GetRoom(map)==s.Room));
+                    if(!source){p.State=ConstructionState.Paused;p.BlockReason="Instalação manual de origem ausente ou inacessível; complemento suspenso.";continue;}
+                }
                 p.BlockReason = null;
                 if(p.Kind=="Quarto" && map.GetComponent<AutonomousRim.Core.AutonomousRimMapComponent>().Housing.Ready(map,p) &&
                     (p.HousingRecognized || Tasks(p).Any(t=>t.WasCompleted && !t.Complete(map) && (t.Def is ThingDef bedDef && typeof(Building_Bed).IsAssignableFrom(bedDef.thingClass) || p.Shell.Contains(t)))))
