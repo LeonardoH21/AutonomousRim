@@ -49,7 +49,7 @@ namespace AutonomousRim.Execution
             var ai=pawn.Map.GetComponent<AutonomousRimMapComponent>();var index=ai.WorkIndex;index.Refresh(pawn.Map,ai.BaseProjects);
             RoomProject p=null;if(target.Thing!=null)index.Owners.TryGetValue(target.Thing,out p);if(p==null)index.ClearOwners.TryGetValue(target.Cell,out p);
             if (p == null) return 0;
-            return 4000 - (int)p.Priority * 1000 + 400 - RingBasePlanner.Rank(p.Kind) * 60;
+            return 4000 - (int)p.Priority * 1000 + 400 - (BaseConstructionManager.PowerProject(p)?-2:RingBasePlanner.Rank(p.Kind)) * 60;
         }
         public override Danger MaxPathDanger(Pawn pawn) => Danger.None;
         public override bool HasJobOnThing(Pawn pawn, Thing t, bool forced = false) => JobOnThing(pawn, t, false) != null;

@@ -88,7 +88,9 @@ namespace AutonomousRim.Execution
             var floors = p.Furniture.Where(t => t.Def is TerrainDef).ToList();
             return floors.Any(t => !t.Complete(map)) ? floors : FurnitureStage(map, p);
         }
-        private static int ExecutionRank(Map map, RoomProject p) => p.Kind == "Recreação inicial" ? -1 : ModularBasePlanner.IsModular(p) ? ModularBasePlanner.Rank(p.Kind) : CourtyardSupport(map,p) &&
+        public static bool PowerProject(RoomProject p) => p.Kind=="Energia e climatização" || p.Kind=="Gerador auxiliar" ||
+            p.Kind=="Conexão elétrica" || p.Kind=="Baterias" || p.Kind=="Complemento de Energia e climatização";
+        private static int ExecutionRank(Map map, RoomProject p) => PowerProject(p) ? -2 : p.Kind == "Recreação inicial" ? -1 : ModularBasePlanner.IsModular(p) ? ModularBasePlanner.Rank(p.Kind) : CourtyardSupport(map,p) &&
             FurnitureStage(map,p).Any(t => t.Def == ThingDefOf.Bed && !t.Complete(map)) ? -1 : RingBasePlanner.Rank(p.Kind);
         private static IEnumerable<RoomProject> NeededBedrooms(Map map, List<RoomProject> all)
         {
@@ -251,6 +253,9 @@ namespace AutonomousRim.Execution
         public static string Apply(Map map, List<RoomProject> projects)
         {
             map.GetComponent<Core.AutonomousRimMapComponent>().Facilities.Reconcile(map,projects);
+            foreach(var power in projects.Where(PowerProject))power.Priority=ConstructionPriority.Critical;
+            foreach(var prep in projects.Where(p=>p.Kind=="Preparação do terreno" && projects.Any(owner=>PowerProject(owner) &&
+                (p.LayoutSlot=="prep:"+owner.LayoutSlot || p.LayoutSlot=="entry:"+owner.LayoutSlot))))prep.Priority=ConstructionPriority.Critical;
             int ticks = Find.TickManager.TicksGame;
             bool danger = map.mapPawns.AllPawnsSpawned.Any(p => !p.Dead && !p.Downed && p.HostileTo(Faction.OfPlayer));
             CompleteDoorFloorPlan(map, projects);
@@ -282,8 +287,6 @@ namespace AutonomousRim.Execution
                 if(p.HousingRecognized){p.HousingRecognized=false;p.Completed=false;}
                 if(p.Stockpile!=null && (p.Stockpile.Cells.Count==0 || !map.zoneManager.AllZones.Contains(p.Stockpile)))p.Stockpile=null;
                 if(!danger)foreach(var c in p.NoRoofCells)map.areaManager.NoRoof[c]=true;
-                if (p.Kind == "Energia e climatização") p.Priority = (map.mapTemperature.OutdoorTemp < 0 || map.mapTemperature.OutdoorTemp > 35) &&
-                    projects.Any(r => r.RequiresRoof && r.Shell.All(t => t.Complete(map))) ? ConstructionPriority.Critical : ConstructionPriority.High;
                 foreach (var t in Tasks(p))
                 {
                     if(danger && t.UpgradeTo!=null)continue;

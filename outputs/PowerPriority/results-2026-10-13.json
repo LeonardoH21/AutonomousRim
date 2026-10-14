@@ -1,0 +1,80 @@
+{
+  "date": "2026-10-13",
+  "timezone": "America/Sao_Paulo",
+  "originalSaveHash": "919248EB574C63AF85380F399D69843C4BEA92851E4232670F0BB3111E2D0774",
+  "installedDllHash": "A78AA5F11A94D22CC00E26138BC2B541158BF65313C35953D2AC7BEFEFB7C918",
+  "runs": [
+    {
+      "manifest": {
+        "stage": "l1-power-priority",
+        "flag": "autonomousrimloneprogress",
+        "extraFlags": [],
+        "resumeSaveHash": "919248EB574C63AF85380F399D69843C4BEA92851E4232670F0BB3111E2D0774",
+        "sourceCommit": "bdfdebc4a56fc9b59976e773d1316a276fc96165",
+        "dllHash": "A78AA5F11A94D22CC00E26138BC2B541158BF65313C35953D2AC7BEFEFB7C918",
+        "runtimeHash": "F307715D4C89E149D2E7611C6F642FDC2F3847ADA5403C31C042EBAD58AB99FE",
+        "result": "FAIL",
+        "profile": "C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\l1-power-priority-20261014-011529-698",
+        "sourceDirty": true,
+        "yieldCapsHash": "BEA9183CC1B7AC86C424AB7225F5AAFF6FC8792CBC9FDA2F6FFB3B4170DF0751",
+        "error": "Stage failed: C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\l1-power-priority-20261014-011529-698\\Player.log"
+      },
+      "evidence": [
+        "[L1Construction] PROGRESS 6000 Freezer Active tasks=24 initial=24 Vegetação na obra: corte nativo antes de entregar/construir.",
+        "[L1Construction] PROGRESS 6000 Energia e climatização Active tasks=32 initial=0 ",
+        "[L1Construction] PROGRESS 12000 Freezer Active tasks=24 initial=24 Vegetação na obra: corte nativo antes de entregar/construir.",
+        "[L1Construction] PROGRESS 12000 Energia e climatização Active tasks=36 initial=0 ",
+        "[L1Construction] PROGRESS 18000 Freezer Active tasks=24 initial=24 Vegetação na obra: corte nativo antes de entregar/construir.",
+        "[L1Construction] PROGRESS 18000 Energia e climatização Active tasks=53 initial=0 Vegetação na obra: corte nativo antes de entregar/construir.",
+        "[L1Construction] PROGRESS 24000 Freezer Active tasks=24 initial=24 Vegetação na obra: corte nativo antes de entregar/construir.",
+        "[L1Construction] PROGRESS 24000 Energia e climatização Active tasks=62 initial=0 ",
+        "[L1Construction] PROGRESS 30000 Freezer Active tasks=24 initial=24 Vegetação na obra: corte nativo antes de entregar/construir.",
+        "[L1Construction] PROGRESS 30000 Energia e climatização Active tasks=84 initial=0 Vegetação na obra: corte nativo antes de entregar/construir.",
+        "[L1Construction] FAIL: System.Exception: No actual construction progress: Freezer Active Vegetação na obra: corte nativo antes de entregar/construir."
+      ]
+    },
+    {
+      "manifest": {
+        "stage": "l1-power-priority-24h",
+        "flag": "autonomousrimloneprogress",
+        "extraFlags": [
+          "autonomousrimlonepowerpriority"
+        ],
+        "resumeSaveHash": "919248EB574C63AF85380F399D69843C4BEA92851E4232670F0BB3111E2D0774",
+        "sourceCommit": "bdfdebc4a56fc9b59976e773d1316a276fc96165",
+        "dllHash": "A78AA5F11A94D22CC00E26138BC2B541158BF65313C35953D2AC7BEFEFB7C918",
+        "runtimeHash": "665EDB1563555D1F2CCAB93AC0C80AE05FE24797DC53BE2ED9E605BA6C7CEAB8",
+        "result": "PASS",
+        "profile": "C:\\Users\\Administrador\\Desktop\\ModRimWorld\\.tools\\validation\\l1-power-priority-24h-20261014-012045-839",
+        "sourceDirty": true,
+        "yieldCapsHash": "BEA9183CC1B7AC86C424AB7225F5AAFF6FC8792CBC9FDA2F6FFB3B4170DF0751"
+      },
+      "evidence": [
+        "[L1Construction] PROGRESS 6000 Freezer Active tasks=24 initial=24 Vegetação na obra: corte nativo antes de entregar/construir.",
+        "[L1Construction] PROGRESS 6000 Energia e climatização Active tasks=29 initial=0 ",
+        "[L1Construction] PROGRESS 12000 Freezer Active tasks=24 initial=24 Vegetação na obra: corte nativo antes de entregar/construir.",
+        "[L1Construction] PROGRESS 12000 Energia e climatização Active tasks=36 initial=0 ",
+        "[L1Construction] PROGRESS 18000 Freezer Active tasks=24 initial=24 Vegetação na obra: corte nativo antes de entregar/construir.",
+        "[L1Construction] PROGRESS 18000 Energia e climatização Active tasks=49 initial=0 Vegetação na obra: corte nativo antes de entregar/construir.",
+        "[L1Construction] PROGRESS 24000 Freezer Active tasks=24 initial=24 Vegetação na obra: corte nativo antes de entregar/construir.",
+        "[L1Construction] PROGRESS 24000 Energia e climatização Active tasks=73 initial=0 ",
+        "[L1Construction] PROGRESS 30000 Freezer Active tasks=26 initial=24 Vegetação na obra: corte nativo antes de entregar/construir.",
+        "[L1Construction] PROGRESS 30000 Energia e climatização Active tasks=73 initial=0 Vegetação na obra: corte nativo antes de entregar/construir.",
+        "[L1Construction] PROGRESS 36000 Freezer Active tasks=26 initial=24 Vegetação na obra: corte nativo antes de entregar/construir.",
+        "[L1Construction] PROGRESS 36000 Energia e climatização Active tasks=73 initial=0 Vegetação na obra: corte nativo antes de entregar/construir.",
+        "[L1Construction] PROGRESS 42000 Freezer Active tasks=28 initial=24 ",
+        "[L1Construction] PROGRESS 42000 Energia e climatização Active tasks=73 initial=0 Vegetação na obra: corte nativo antes de entregar/construir.",
+        "[L1Construction] PROGRESS 48000 Freezer Active tasks=28 initial=24 Vegetação na obra: corte nativo antes de entregar/construir.",
+        "[L1Construction] PROGRESS 48000 Energia e climatização Active tasks=73 initial=0 ",
+        "[L1Construction] PROGRESS 54000 Freezer Active tasks=28 initial=24 ",
+        "[L1Construction] PROGRESS 54000 Energia e climatização Active tasks=92 initial=0 ",
+        "[L1Construction] PROGRESS 60000 Freezer Active tasks=35 initial=24 ",
+        "[L1Construction] PROGRESS 60000 Energia e climatização Active tasks=92 initial=0 Materiais existem: aguardando entrega/construção; conferir ocupação e prioridades de Construction/Hauling.",
+        "[L1Construction] PASS: Freezer actual native tasks 24 -> 35 / 176; state=Active; ",
+        "[L1Construction] PASS: Energia e climatização actual native tasks 0 -> 92 / 93; state=Active; Materiais existem: aguardando entrega/construção; conferir ocupação e prioridades de Construction/Hauling.",
+        "[L1Construction] PASS: original eight colonists alive and manual bedrooms preserved for 24 game hours.",
+        "[L1Construction] DONE"
+      ]
+    }
+  ]
+}

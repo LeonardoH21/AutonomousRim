@@ -38,7 +38,8 @@ namespace AutonomousRim.RuntimeChecks
                 }
                 int elapsed=Find.TickManager.TicksGame-first;
                 if(elapsed%6000==0)foreach(var service in services)Log.Message("[L1Construction] PROGRESS "+elapsed+" "+service.Kind+" "+service.State+" tasks="+BaseConstructionManager.Tasks(service).Count(t=>t.Complete(map))+" initial="+initial[service.Kind]+" "+service.BlockReason);
-                if(elapsed<30000)return;
+                int duration=GenCommandLine.CommandLineArgPassed("autonomousrimlonepowerpriority")?60000:30000;
+                if(elapsed<duration)return;
                 if(colonists.Any(id=>!map.mapPawns.FreeColonistsSpawned.Any(p=>p.thingIDNumber==id&&!p.Dead)))throw new Exception("Original colony lost a member");
                 if(beds.Any(pair=>!map.listerBuildings.AllBuildingsColonistOfClass<Building_Bed>().Any(b=>b.thingIDNumber==pair.Key&&b.Position==pair.Value)))throw new Exception("Player bedrooms changed");
                 foreach(var service in services)
@@ -47,8 +48,8 @@ namespace AutonomousRim.RuntimeChecks
                     if(complete<=initial[service.Kind])throw new Exception("No actual construction progress: "+service.Kind+" "+service.State+" "+service.BlockReason);
                     Log.Message("[L1Construction] PASS: "+service.Kind+" actual native tasks "+initial[service.Kind]+" -> "+complete+" / "+BaseConstructionManager.Tasks(service).Count()+"; state="+service.State+"; "+service.BlockReason);
                 }
-                Log.Message("[L1Construction] PASS: original eight colonists alive and manual bedrooms preserved for 12 game hours.");
-                GameDataSaveLoader.SaveGame("AutonomousRim_L1_12h_Corrigido");done=true;Log.Message("[L1Construction] DONE");
+                Log.Message("[L1Construction] PASS: original eight colonists alive and manual bedrooms preserved for "+(duration/2500)+" game hours.");
+                GameDataSaveLoader.SaveGame(duration==60000?"AutonomousRim_L1_24h_Energia_Prioritaria":"AutonomousRim_L1_12h_Corrigido");done=true;Log.Message("[L1Construction] DONE");
             }
             catch(Exception error){done=true;GameDataSaveLoader.SaveGame("L1ConstructionFailure");Log.Error("[L1Construction] FAIL: "+error);}
         }
