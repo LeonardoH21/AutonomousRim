@@ -43,6 +43,10 @@ namespace AutonomousRim.Planning
 
         public static List<EquipmentDecision> Plan(Map map, List<Execution.ManagedApparel> owned, bool considerForbidden = false)
         {
+            using(EquipmentEvaluationScope.Begin(map))return PlanCore(map,owned,considerForbidden);
+        }
+        private static List<EquipmentDecision> PlanCore(Map map,List<Execution.ManagedApparel> owned,bool considerForbidden)
+        {
             var proposals = new List<EquipmentDecision>();
             var weapons = map.listerThings.ThingsInGroup(ThingRequestGroup.Weapon)
                 .Where(t => !t.Position.Fogged(map) && (considerForbidden || !t.IsForbidden(Faction.OfPlayer)))

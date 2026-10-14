@@ -1,0 +1,1915 @@
+{
+  "save": "TESTE A1.rws",
+  "originalSaveSha256": "0A84A8E96A31C9E690E77EF4E16D0A01B7E66EF7193A853F419381191184835E",
+  "baselineCommit": "028a240",
+  "correctedDllSha256": "ABB40BF6D6C989E99E958C553B046BA4F64CF74A85914B6ABF4CEA68EE88EBE0",
+  "longBenchmark": {
+    "speed": "3x",
+    "warmupTicks": 3000,
+    "sampleTicks": 8000,
+    "resolution": "1920x1080",
+    "originalPopulation": 7,
+    "initialThings": 31555,
+    "initialProjects": 91
+  },
+  "backgroundGpuSnapshots": [
+    {
+      "process": "Albion-Online",
+      "engine": "3D",
+      "utilizationPercent": [
+        49,
+        54,
+        48
+      ]
+    },
+    {
+      "process": "AMDRSServ",
+      "engine": "Video Codec",
+      "utilizationPercent": [
+        32,
+        37,
+        31
+      ]
+    }
+  ],
+  "runs": [
+    {
+      "stage": "a1-after-visible-on",
+      "result": "PASS",
+      "dllHash": "ABB40BF6D6C989E99E958C553B046BA4F64CF74A85914B6ABF4CEA68EE88EBE0",
+      "runtimeHash": "2BDDAA143FFC6C34A0F65A093D89E3F95BFC73AAF57A896FC7959B6A4BCBD807",
+      "resumeSaveHash": "0A84A8E96A31C9E690E77EF4E16D0A01B7E66EF7193A853F419381191184835E",
+      "usePlayerMods": null,
+      "profile": ".tools\\validation\\a1-after-visible-on-20261014-040311-965",
+      "fps": 22.7,
+      "tps": 224.5,
+      "costs": [
+        {
+          "module": "AutonomousRimMapComponent.MapComponentTick",
+          "calls": 2000,
+          "totalMs": 2891.7,
+          "meanMs": 1.45,
+          "p95Ms": 0.05
+        },
+        {
+          "module": "AutonomousRimMapComponent.ManageColony",
+          "calls": 67,
+          "totalMs": 1186.0,
+          "meanMs": 17.7,
+          "p95Ms": 65.77
+        },
+        {
+          "module": "AutonomousRimMapComponent.ExecuteConstruction",
+          "calls": 67,
+          "totalMs": 898.7,
+          "meanMs": 13.41,
+          "p95Ms": 24.65
+        },
+        {
+          "module": "ConstructionWorkManager.Apply",
+          "calls": 67,
+          "totalMs": 660.3,
+          "meanMs": 9.86,
+          "p95Ms": 13.22
+        },
+        {
+          "module": "ConstructionWorkManager.CanDispatch",
+          "calls": 3752,
+          "totalMs": 637.9,
+          "meanMs": 0.17,
+          "p95Ms": 1.07
+        },
+        {
+          "module": "LootAccessManager.Apply",
+          "calls": 34,
+          "totalMs": 518.2,
+          "meanMs": 15.24,
+          "p95Ms": 23.66
+        },
+        {
+          "module": "FoodManager.Apply",
+          "calls": 3,
+          "totalMs": 355.3,
+          "meanMs": 118.44,
+          "p95Ms": 159.2
+        },
+        {
+          "module": "ColonyStateScanner.Scan",
+          "calls": 14,
+          "totalMs": 258.4,
+          "meanMs": 18.46,
+          "p95Ms": 30.23
+        },
+        {
+          "module": "BaseConstructionManager.Apply",
+          "calls": 17,
+          "totalMs": 238.1,
+          "meanMs": 14.01,
+          "p95Ms": 57.71
+        },
+        {
+          "module": "AutonomousRimMapComponent.ObserveNow",
+          "calls": 9,
+          "totalMs": 179.0,
+          "meanMs": 19.89,
+          "p95Ms": 30.93
+        },
+        {
+          "module": "AutonomousRimMapComponent.EvaluateStrategy",
+          "calls": 1,
+          "totalMs": 142.7,
+          "meanMs": 142.65,
+          "p95Ms": 142.65
+        },
+        {
+          "module": "AutonomousRimMapComponent.RefreshThreat",
+          "calls": 17,
+          "totalMs": 142.3,
+          "meanMs": 8.37,
+          "p95Ms": 12.96
+        },
+        {
+          "module": "PrisonManager.Apply",
+          "calls": 3,
+          "totalMs": 113.4,
+          "meanMs": 37.81,
+          "p95Ms": 51.79
+        },
+        {
+          "module": "ConstructionWorkManager.ConstructionDebrisJob",
+          "calls": 469,
+          "totalMs": 98.3,
+          "meanMs": 0.21,
+          "p95Ms": 1.22
+        },
+        {
+          "module": "ConstructionWorkManager.InteractionClearance",
+          "calls": 469,
+          "totalMs": 76.9,
+          "meanMs": 0.16,
+          "p95Ms": 1.07
+        },
+        {
+          "module": "WorkPriorityManager.Apply",
+          "calls": 3,
+          "totalMs": 67.9,
+          "meanMs": 22.63,
+          "p95Ms": 43.87
+        },
+        {
+          "module": "StoragePolicy.ManageFoodStorage",
+          "calls": 10,
+          "totalMs": 65.7,
+          "meanMs": 6.57,
+          "p95Ms": 10.83
+        },
+        {
+          "module": "CommerceManager.Apply",
+          "calls": 3,
+          "totalMs": 62.5,
+          "meanMs": 20.82,
+          "p95Ms": 34.16
+        },
+        {
+          "module": "ConstructionResourceManager.Apply",
+          "calls": 3,
+          "totalMs": 29.6,
+          "meanMs": 9.86,
+          "p95Ms": 13.12
+        },
+        {
+          "module": "ColonyProgressMonitor.Sample",
+          "calls": 3,
+          "totalMs": 27.7,
+          "meanMs": 9.23,
+          "p95Ms": 16.94
+        },
+        {
+          "module": "ScheduleManager.Apply",
+          "calls": 6,
+          "totalMs": 26.5,
+          "meanMs": 4.41,
+          "p95Ms": 8.97
+        },
+        {
+          "module": "ExistingFacilities.Reconcile",
+          "calls": 19,
+          "totalMs": 22.9,
+          "meanMs": 1.21,
+          "p95Ms": 7.45
+        },
+        {
+          "module": "ExistingFacilities.Refresh",
+          "calls": 19,
+          "totalMs": 22.1,
+          "meanMs": 1.16,
+          "p95Ms": 7.36
+        },
+        {
+          "module": "GoalDependencyPlanner.Update",
+          "calls": 2,
+          "totalMs": 15.6,
+          "meanMs": 7.79,
+          "p95Ms": 11.74
+        },
+        {
+          "module": "WorkGiver_AutonomousConstruction.JobOnThing",
+          "calls": 619,
+          "totalMs": 9.5,
+          "meanMs": 0.02,
+          "p95Ms": 0.04
+        },
+        {
+          "module": "RoomObserver.Read",
+          "calls": 3,
+          "totalMs": 7.4,
+          "meanMs": 2.46,
+          "p95Ms": 3.53
+        },
+        {
+          "module": "WinterForecast.Update",
+          "calls": 2,
+          "totalMs": 6.1,
+          "meanMs": 3.07,
+          "p95Ms": 3.48
+        },
+        {
+          "module": "AutonomousRimMapComponent.EvaluateFailure",
+          "calls": 1,
+          "totalMs": 5.9,
+          "meanMs": 5.93,
+          "p95Ms": 5.93
+        },
+        {
+          "module": "EquipmentManager.Apply",
+          "calls": 2,
+          "totalMs": 5.9,
+          "meanMs": 2.95,
+          "p95Ms": 4.27
+        },
+        {
+          "module": "BaseConstructionManager.PendingReason",
+          "calls": 31,
+          "totalMs": 5.6,
+          "meanMs": 0.18,
+          "p95Ms": 0.67
+        },
+        {
+          "module": "OpportunityPlanner.Update",
+          "calls": 1,
+          "totalMs": 4.4,
+          "meanMs": 4.44,
+          "p95Ms": 4.44
+        },
+        {
+          "module": "AutomaticRecovery.Apply",
+          "calls": 3,
+          "totalMs": 4.3,
+          "meanMs": 1.43,
+          "p95Ms": 1.89
+        },
+        {
+          "module": "DlcReadiness.Update",
+          "calls": 1,
+          "totalMs": 1.3,
+          "meanMs": 1.3,
+          "p95Ms": 1.3
+        },
+        {
+          "module": "LogisticsMonitor.Observe",
+          "calls": 67,
+          "totalMs": 0.6,
+          "meanMs": 0.01,
+          "p95Ms": 0.02
+        },
+        {
+          "module": "DefenseDoctrine.Update",
+          "calls": 17,
+          "totalMs": 0.6,
+          "meanMs": 0.04,
+          "p95Ms": 0.29
+        },
+        {
+          "module": "ExistingFacilityImprovements.Plan",
+          "calls": 1,
+          "totalMs": 0.1,
+          "meanMs": 0.08,
+          "p95Ms": 0.08
+        },
+        {
+          "module": "WorkGiver_AutonomousConstruction.GetPriority",
+          "calls": 16,
+          "totalMs": 0.1,
+          "meanMs": 0.0,
+          "p95Ms": 0.02
+        },
+        {
+          "module": "PostBattleCare.Update",
+          "calls": 4,
+          "totalMs": 0.0,
+          "meanMs": 0.0,
+          "p95Ms": 0.01
+        },
+        {
+          "module": "CommerceCaravanManager.Apply",
+          "calls": 3,
+          "totalMs": 0.0,
+          "meanMs": 0.0,
+          "p95Ms": 0.0
+        }
+      ],
+      "checks": []
+    },
+    {
+      "stage": "a1-before-visible-off",
+      "result": "PASS",
+      "dllHash": "A78AA5F11A94D22CC00E26138BC2B541158BF65313C35953D2AC7BEFEFB7C918",
+      "runtimeHash": "2BDDAA143FFC6C34A0F65A093D89E3F95BFC73AAF57A896FC7959B6A4BCBD807",
+      "resumeSaveHash": "0A84A8E96A31C9E690E77EF4E16D0A01B7E66EF7193A853F419381191184835E",
+      "usePlayerMods": null,
+      "profile": ".tools\\validation\\a1-before-visible-off-20261014-040000-688",
+      "fps": 44.7,
+      "tps": 296.8,
+      "costs": [
+        {
+          "module": "AutonomousRimMapComponent.MapComponentTick",
+          "calls": 2000,
+          "totalMs": 440.1,
+          "meanMs": 0.22,
+          "p95Ms": 0.02
+        },
+        {
+          "module": "ColonyStateScanner.Scan",
+          "calls": 12,
+          "totalMs": 206.0,
+          "meanMs": 17.16,
+          "p95Ms": 26.19
+        },
+        {
+          "module": "AutonomousRimMapComponent.RefreshThreat",
+          "calls": 17,
+          "totalMs": 148.6,
+          "meanMs": 8.74,
+          "p95Ms": 28.87
+        },
+        {
+          "module": "AutonomousRimMapComponent.ObserveNow",
+          "calls": 7,
+          "totalMs": 138.9,
+          "meanMs": 19.84,
+          "p95Ms": 27.04
+        },
+        {
+          "module": "AutonomousRimMapComponent.EvaluateStrategy",
+          "calls": 1,
+          "totalMs": 32.2,
+          "meanMs": 32.24,
+          "p95Ms": 32.24
+        },
+        {
+          "module": "RoomObserver.Read",
+          "calls": 3,
+          "totalMs": 7.1,
+          "meanMs": 2.36,
+          "p95Ms": 3.19
+        },
+        {
+          "module": "WinterForecast.Update",
+          "calls": 2,
+          "totalMs": 6.4,
+          "meanMs": 3.19,
+          "p95Ms": 4.04
+        },
+        {
+          "module": "AutonomousRimMapComponent.EvaluateFailure",
+          "calls": 1,
+          "totalMs": 6.0,
+          "meanMs": 6.03,
+          "p95Ms": 6.03
+        },
+        {
+          "module": "OpportunityPlanner.Update",
+          "calls": 1,
+          "totalMs": 2.9,
+          "meanMs": 2.95,
+          "p95Ms": 2.95
+        },
+        {
+          "module": "ColonyProgressMonitor.Sample",
+          "calls": 3,
+          "totalMs": 2.7,
+          "meanMs": 0.9,
+          "p95Ms": 2.04
+        },
+        {
+          "module": "AutonomousRimMapComponent.ManageColony",
+          "calls": 67,
+          "totalMs": 2.2,
+          "meanMs": 0.03,
+          "p95Ms": 0.02
+        },
+        {
+          "module": "AutomaticRecovery.Apply",
+          "calls": 3,
+          "totalMs": 1.0,
+          "meanMs": 0.35,
+          "p95Ms": 0.98
+        },
+        {
+          "module": "LogisticsMonitor.Observe",
+          "calls": 67,
+          "totalMs": 1.0,
+          "meanMs": 0.02,
+          "p95Ms": 0.02
+        },
+        {
+          "module": "DlcReadiness.Update",
+          "calls": 1,
+          "totalMs": 0.9,
+          "meanMs": 0.87,
+          "p95Ms": 0.87
+        },
+        {
+          "module": "DefenseDoctrine.Update",
+          "calls": 17,
+          "totalMs": 0.6,
+          "meanMs": 0.04,
+          "p95Ms": 0.3
+        },
+        {
+          "module": "GoalDependencyPlanner.Update",
+          "calls": 2,
+          "totalMs": 0.1,
+          "meanMs": 0.03,
+          "p95Ms": 0.05
+        },
+        {
+          "module": "PostBattleCare.Update",
+          "calls": 4,
+          "totalMs": 0.0,
+          "meanMs": 0.0,
+          "p95Ms": 0.01
+        }
+      ],
+      "checks": []
+    },
+    {
+      "stage": "a1-before-visible-on",
+      "result": "PASS",
+      "dllHash": "A78AA5F11A94D22CC00E26138BC2B541158BF65313C35953D2AC7BEFEFB7C918",
+      "runtimeHash": "2BDDAA143FFC6C34A0F65A093D89E3F95BFC73AAF57A896FC7959B6A4BCBD807",
+      "resumeSaveHash": "0A84A8E96A31C9E690E77EF4E16D0A01B7E66EF7193A853F419381191184835E",
+      "usePlayerMods": null,
+      "profile": ".tools\\validation\\a1-before-visible-on-20261014-035921-782",
+      "fps": 33.6,
+      "tps": 156.7,
+      "costs": [
+        {
+          "module": "AutonomousRimMapComponent.MapComponentTick",
+          "calls": 2000,
+          "totalMs": 7528.7,
+          "meanMs": 3.76,
+          "p95Ms": 0.04
+        },
+        {
+          "module": "AutonomousRimMapComponent.ManageColony",
+          "calls": 67,
+          "totalMs": 4951.6,
+          "meanMs": 73.9,
+          "p95Ms": 197.94
+        },
+        {
+          "module": "LootAccessManager.Apply",
+          "calls": 34,
+          "totalMs": 4270.3,
+          "meanMs": 125.6,
+          "p95Ms": 168.77
+        },
+        {
+          "module": "ColonyStateScanner.Scan",
+          "calls": 14,
+          "totalMs": 1745.7,
+          "meanMs": 124.69,
+          "p95Ms": 146.45
+        },
+        {
+          "module": "AutonomousRimMapComponent.ObserveNow",
+          "calls": 9,
+          "totalMs": 1153.2,
+          "meanMs": 128.13,
+          "p95Ms": 147.02
+        },
+        {
+          "module": "AutonomousRimMapComponent.ExecuteConstruction",
+          "calls": 67,
+          "totalMs": 679.3,
+          "meanMs": 10.14,
+          "p95Ms": 18.69
+        },
+        {
+          "module": "ConstructionWorkManager.Apply",
+          "calls": 67,
+          "totalMs": 502.0,
+          "meanMs": 7.49,
+          "p95Ms": 9.56
+        },
+        {
+          "module": "ConstructionWorkManager.CanDispatch",
+          "calls": 3752,
+          "totalMs": 485.7,
+          "meanMs": 0.13,
+          "p95Ms": 0.92
+        },
+        {
+          "module": "FoodManager.Apply",
+          "calls": 3,
+          "totalMs": 231.1,
+          "meanMs": 77.02,
+          "p95Ms": 88.34
+        },
+        {
+          "module": "AutonomousRimMapComponent.EvaluateStrategy",
+          "calls": 1,
+          "totalMs": 195.2,
+          "meanMs": 195.2,
+          "p95Ms": 195.2
+        },
+        {
+          "module": "BaseConstructionManager.Apply",
+          "calls": 17,
+          "totalMs": 177.0,
+          "meanMs": 10.41,
+          "p95Ms": 45.54
+        },
+        {
+          "module": "AutonomousRimMapComponent.RefreshThreat",
+          "calls": 17,
+          "totalMs": 102.9,
+          "meanMs": 6.05,
+          "p95Ms": 8.42
+        },
+        {
+          "module": "ConstructionWorkManager.ConstructionDebrisJob",
+          "calls": 469,
+          "totalMs": 73.1,
+          "meanMs": 0.16,
+          "p95Ms": 0.94
+        },
+        {
+          "module": "PrisonManager.Apply",
+          "calls": 3,
+          "totalMs": 61.8,
+          "meanMs": 20.61,
+          "p95Ms": 27.27
+        },
+        {
+          "module": "ConstructionWorkManager.InteractionClearance",
+          "calls": 469,
+          "totalMs": 59.8,
+          "meanMs": 0.13,
+          "p95Ms": 0.83
+        },
+        {
+          "module": "CommerceManager.Apply",
+          "calls": 3,
+          "totalMs": 48.5,
+          "meanMs": 16.16,
+          "p95Ms": 24.96
+        },
+        {
+          "module": "StoragePolicy.ManageFoodStorage",
+          "calls": 10,
+          "totalMs": 48.3,
+          "meanMs": 4.83,
+          "p95Ms": 7.94
+        },
+        {
+          "module": "WorkPriorityManager.Apply",
+          "calls": 3,
+          "totalMs": 44.4,
+          "meanMs": 14.8,
+          "p95Ms": 23.65
+        },
+        {
+          "module": "ConstructionResourceManager.Apply",
+          "calls": 3,
+          "totalMs": 27.3,
+          "meanMs": 9.09,
+          "p95Ms": 10.24
+        },
+        {
+          "module": "ColonyProgressMonitor.Sample",
+          "calls": 3,
+          "totalMs": 20.4,
+          "meanMs": 6.81,
+          "p95Ms": 11.4
+        },
+        {
+          "module": "ExistingFacilities.Reconcile",
+          "calls": 19,
+          "totalMs": 19.0,
+          "meanMs": 1.0,
+          "p95Ms": 6.98
+        },
+        {
+          "module": "ExistingFacilities.Refresh",
+          "calls": 19,
+          "totalMs": 18.7,
+          "meanMs": 0.99,
+          "p95Ms": 6.92
+        },
+        {
+          "module": "ScheduleManager.Apply",
+          "calls": 6,
+          "totalMs": 13.0,
+          "meanMs": 2.17,
+          "p95Ms": 3.21
+        },
+        {
+          "module": "GoalDependencyPlanner.Update",
+          "calls": 2,
+          "totalMs": 9.7,
+          "meanMs": 4.84,
+          "p95Ms": 7.0
+        },
+        {
+          "module": "WorkGiver_AutonomousConstruction.JobOnThing",
+          "calls": 619,
+          "totalMs": 7.2,
+          "meanMs": 0.01,
+          "p95Ms": 0.03
+        },
+        {
+          "module": "RoomObserver.Read",
+          "calls": 3,
+          "totalMs": 6.0,
+          "meanMs": 1.99,
+          "p95Ms": 2.82
+        },
+        {
+          "module": "WinterForecast.Update",
+          "calls": 2,
+          "totalMs": 4.8,
+          "meanMs": 2.42,
+          "p95Ms": 2.69
+        },
+        {
+          "module": "BaseConstructionManager.PendingReason",
+          "calls": 31,
+          "totalMs": 4.1,
+          "meanMs": 0.13,
+          "p95Ms": 0.51
+        },
+        {
+          "module": "EquipmentManager.Apply",
+          "calls": 2,
+          "totalMs": 4.0,
+          "meanMs": 1.99,
+          "p95Ms": 2.93
+        },
+        {
+          "module": "AutonomousRimMapComponent.EvaluateFailure",
+          "calls": 1,
+          "totalMs": 3.7,
+          "meanMs": 3.73,
+          "p95Ms": 3.73
+        },
+        {
+          "module": "OpportunityPlanner.Update",
+          "calls": 1,
+          "totalMs": 3.2,
+          "meanMs": 3.25,
+          "p95Ms": 3.25
+        },
+        {
+          "module": "AutomaticRecovery.Apply",
+          "calls": 3,
+          "totalMs": 2.9,
+          "meanMs": 0.96,
+          "p95Ms": 1.12
+        },
+        {
+          "module": "DlcReadiness.Update",
+          "calls": 1,
+          "totalMs": 0.7,
+          "meanMs": 0.66,
+          "p95Ms": 0.66
+        },
+        {
+          "module": "LogisticsMonitor.Observe",
+          "calls": 67,
+          "totalMs": 0.4,
+          "meanMs": 0.01,
+          "p95Ms": 0.01
+        },
+        {
+          "module": "DefenseDoctrine.Update",
+          "calls": 17,
+          "totalMs": 0.3,
+          "meanMs": 0.02,
+          "p95Ms": 0.14
+        },
+        {
+          "module": "ExistingFacilityImprovements.Plan",
+          "calls": 1,
+          "totalMs": 0.1,
+          "meanMs": 0.06,
+          "p95Ms": 0.06
+        },
+        {
+          "module": "WorkGiver_AutonomousConstruction.GetPriority",
+          "calls": 16,
+          "totalMs": 0.0,
+          "meanMs": 0.0,
+          "p95Ms": 0.01
+        },
+        {
+          "module": "PostBattleCare.Update",
+          "calls": 4,
+          "totalMs": 0.0,
+          "meanMs": 0.0,
+          "p95Ms": 0.0
+        },
+        {
+          "module": "CommerceCaravanManager.Apply",
+          "calls": 3,
+          "totalMs": 0.0,
+          "meanMs": 0.0,
+          "p95Ms": 0.0
+        }
+      ],
+      "checks": []
+    },
+    {
+      "stage": "a1-long-after",
+      "result": "PASS",
+      "dllHash": "ABB40BF6D6C989E99E958C553B046BA4F64CF74A85914B6ABF4CEA68EE88EBE0",
+      "runtimeHash": "20F441D676277924195BAF59847105CEE19146808216BE217733B8AEFFDED69B",
+      "resumeSaveHash": "0A84A8E96A31C9E690E77EF4E16D0A01B7E66EF7193A853F419381191184835E",
+      "usePlayerMods": null,
+      "profile": ".tools\\validation\\a1-long-after-20261014-041311-269",
+      "fps": 87.6,
+      "tps": 190.6,
+      "costs": [
+        {
+          "module": "AutonomousRimMapComponent.MapComponentTick",
+          "calls": 8000,
+          "totalMs": 8646.3,
+          "meanMs": 1.08,
+          "p95Ms": 0.05
+        },
+        {
+          "module": "AutonomousRimMapComponent.ManageColony",
+          "calls": 267,
+          "totalMs": 3504.2,
+          "meanMs": 13.12,
+          "p95Ms": 39.4
+        },
+        {
+          "module": "AutonomousRimMapComponent.ExecuteConstruction",
+          "calls": 267,
+          "totalMs": 2918.3,
+          "meanMs": 10.93,
+          "p95Ms": 22.43
+        },
+        {
+          "module": "ConstructionWorkManager.Apply",
+          "calls": 267,
+          "totalMs": 2261.6,
+          "meanMs": 8.47,
+          "p95Ms": 15.42
+        },
+        {
+          "module": "ConstructionWorkManager.CanDispatch",
+          "calls": 13098,
+          "totalMs": 2166.4,
+          "meanMs": 0.17,
+          "p95Ms": 0.02
+        },
+        {
+          "module": "LootAccessManager.Apply",
+          "calls": 134,
+          "totalMs": 1670.3,
+          "meanMs": 12.46,
+          "p95Ms": 17.85
+        },
+        {
+          "module": "FoodManager.Apply",
+          "calls": 13,
+          "totalMs": 988.5,
+          "meanMs": 76.03,
+          "p95Ms": 105.69
+        },
+        {
+          "module": "ColonyStateScanner.Scan",
+          "calls": 61,
+          "totalMs": 880.0,
+          "meanMs": 14.43,
+          "p95Ms": 19.6
+        },
+        {
+          "module": "BaseConstructionManager.Apply",
+          "calls": 67,
+          "totalMs": 655.6,
+          "meanMs": 9.79,
+          "p95Ms": 14.11
+        },
+        {
+          "module": "AutonomousRimMapComponent.ObserveNow",
+          "calls": 39,
+          "totalMs": 640.2,
+          "meanMs": 16.42,
+          "p95Ms": 26.28
+        },
+        {
+          "module": "AutonomousRimMapComponent.RefreshThreat",
+          "calls": 67,
+          "totalMs": 482.4,
+          "meanMs": 7.2,
+          "p95Ms": 8.21
+        },
+        {
+          "module": "ConstructionWorkManager.ConstructionDebrisJob",
+          "calls": 1635,
+          "totalMs": 331.7,
+          "meanMs": 0.2,
+          "p95Ms": 0.98
+        },
+        {
+          "module": "ConstructionWorkManager.InteractionClearance",
+          "calls": 1635,
+          "totalMs": 267.2,
+          "meanMs": 0.16,
+          "p95Ms": 0.9
+        },
+        {
+          "module": "StoragePolicy.ManageFoodStorage",
+          "calls": 40,
+          "totalMs": 195.9,
+          "meanMs": 4.9,
+          "p95Ms": 5.7
+        },
+        {
+          "module": "PrisonManager.Apply",
+          "calls": 13,
+          "totalMs": 180.6,
+          "meanMs": 13.9,
+          "p95Ms": 25.11
+        },
+        {
+          "module": "CommerceManager.Apply",
+          "calls": 13,
+          "totalMs": 173.7,
+          "meanMs": 13.36,
+          "p95Ms": 15.88
+        },
+        {
+          "module": "AutonomousRimMapComponent.EvaluateStrategy",
+          "calls": 4,
+          "totalMs": 149.9,
+          "meanMs": 37.46,
+          "p95Ms": 38.63
+        },
+        {
+          "module": "WorkPriorityManager.Apply",
+          "calls": 13,
+          "totalMs": 120.1,
+          "meanMs": 9.24,
+          "p95Ms": 13.93
+        },
+        {
+          "module": "ConstructionResourceManager.Apply",
+          "calls": 13,
+          "totalMs": 92.2,
+          "meanMs": 7.09,
+          "p95Ms": 7.97
+        },
+        {
+          "module": "ExistingFacilities.Reconcile",
+          "calls": 81,
+          "totalMs": 63.2,
+          "meanMs": 0.78,
+          "p95Ms": 2.64
+        },
+        {
+          "module": "ExistingFacilities.Refresh",
+          "calls": 81,
+          "totalMs": 62.3,
+          "meanMs": 0.77,
+          "p95Ms": 2.63
+        },
+        {
+          "module": "ScheduleManager.Apply",
+          "calls": 26,
+          "totalMs": 52.7,
+          "meanMs": 2.03,
+          "p95Ms": 2.48
+        },
+        {
+          "module": "BaseConstructionManager.PendingReason",
+          "calls": 332,
+          "totalMs": 43.9,
+          "meanMs": 0.13,
+          "p95Ms": 0.47
+        },
+        {
+          "module": "ColonyProgressMonitor.Sample",
+          "calls": 13,
+          "totalMs": 31.5,
+          "meanMs": 2.42,
+          "p95Ms": 5.44
+        },
+        {
+          "module": "RoomObserver.Read",
+          "calls": 13,
+          "totalMs": 28.6,
+          "meanMs": 2.2,
+          "p95Ms": 2.85
+        },
+        {
+          "module": "GoalDependencyPlanner.Update",
+          "calls": 7,
+          "totalMs": 27.4,
+          "meanMs": 3.91,
+          "p95Ms": 8.58
+        },
+        {
+          "module": "WorkGiver_AutonomousConstruction.JobOnThing",
+          "calls": 1388,
+          "totalMs": 17.5,
+          "meanMs": 0.01,
+          "p95Ms": 0.03
+        },
+        {
+          "module": "WinterForecast.Update",
+          "calls": 7,
+          "totalMs": 16.2,
+          "meanMs": 2.32,
+          "p95Ms": 2.66
+        },
+        {
+          "module": "AutomaticRecovery.Apply",
+          "calls": 13,
+          "totalMs": 12.8,
+          "meanMs": 0.99,
+          "p95Ms": 1.28
+        },
+        {
+          "module": "AutonomousRimMapComponent.EvaluateFailure",
+          "calls": 4,
+          "totalMs": 8.0,
+          "meanMs": 2.0,
+          "p95Ms": 2.2
+        },
+        {
+          "module": "OpportunityPlanner.Update",
+          "calls": 4,
+          "totalMs": 4.4,
+          "meanMs": 1.1,
+          "p95Ms": 2.24
+        },
+        {
+          "module": "LogisticsMonitor.Observe",
+          "calls": 267,
+          "totalMs": 2.2,
+          "meanMs": 0.01,
+          "p95Ms": 0.01
+        },
+        {
+          "module": "DefenseDoctrine.Update",
+          "calls": 67,
+          "totalMs": 1.2,
+          "meanMs": 0.02,
+          "p95Ms": 0.04
+        },
+        {
+          "module": "EquipmentManager.Apply",
+          "calls": 9,
+          "totalMs": 0.3,
+          "meanMs": 0.04,
+          "p95Ms": 0.07
+        },
+        {
+          "module": "DlcReadiness.Update",
+          "calls": 4,
+          "totalMs": 0.2,
+          "meanMs": 0.05,
+          "p95Ms": 0.06
+        },
+        {
+          "module": "WorkGiver_AutonomousConstruction.GetPriority",
+          "calls": 37,
+          "totalMs": 0.1,
+          "meanMs": 0.0,
+          "p95Ms": 0.0
+        },
+        {
+          "module": "PostBattleCare.Update",
+          "calls": 14,
+          "totalMs": 0.0,
+          "meanMs": 0.0,
+          "p95Ms": 0.0
+        },
+        {
+          "module": "CommerceCaravanManager.Apply",
+          "calls": 13,
+          "totalMs": 0.0,
+          "meanMs": 0.0,
+          "p95Ms": 0.0
+        },
+        {
+          "module": "ExistingFacilityImprovements.Plan",
+          "calls": 7,
+          "totalMs": 0.0,
+          "meanMs": 0.0,
+          "p95Ms": 0.0
+        }
+      ],
+      "checks": [
+        "cached and uncached equipment decisions identical, including changed condition and allow state; evaluation restored"
+      ]
+    },
+    {
+      "stage": "a1-long-after-repeat",
+      "result": "PASS",
+      "dllHash": "ABB40BF6D6C989E99E958C553B046BA4F64CF74A85914B6ABF4CEA68EE88EBE0",
+      "runtimeHash": "61CA687D2F404532055BFA681EAF231105DB8B3964523B46E8F3822268797237",
+      "resumeSaveHash": "0A84A8E96A31C9E690E77EF4E16D0A01B7E66EF7193A853F419381191184835E",
+      "usePlayerMods": null,
+      "profile": ".tools\\validation\\a1-long-after-repeat-20261014-041621-612",
+      "fps": 30.6,
+      "tps": 285.3,
+      "costs": [
+        {
+          "module": "AutonomousRimMapComponent.MapComponentTick",
+          "calls": 8000,
+          "totalMs": 8147.3,
+          "meanMs": 1.02,
+          "p95Ms": 0.04
+        },
+        {
+          "module": "AutonomousRimMapComponent.ManageColony",
+          "calls": 267,
+          "totalMs": 3494.4,
+          "meanMs": 13.09,
+          "p95Ms": 52.34
+        },
+        {
+          "module": "AutonomousRimMapComponent.ExecuteConstruction",
+          "calls": 267,
+          "totalMs": 2323.1,
+          "meanMs": 8.7,
+          "p95Ms": 19.62
+        },
+        {
+          "module": "LootAccessManager.Apply",
+          "calls": 134,
+          "totalMs": 1656.4,
+          "meanMs": 12.36,
+          "p95Ms": 17.74
+        },
+        {
+          "module": "ConstructionWorkManager.Apply",
+          "calls": 267,
+          "totalMs": 1640.2,
+          "meanMs": 6.14,
+          "p95Ms": 9.44
+        },
+        {
+          "module": "ConstructionWorkManager.CanDispatch",
+          "calls": 11446,
+          "totalMs": 1554.1,
+          "meanMs": 0.14,
+          "p95Ms": 0.82
+        },
+        {
+          "module": "FoodManager.Apply",
+          "calls": 13,
+          "totalMs": 983.2,
+          "meanMs": 75.63,
+          "p95Ms": 100.8
+        },
+        {
+          "module": "ColonyStateScanner.Scan",
+          "calls": 61,
+          "totalMs": 935.2,
+          "meanMs": 15.33,
+          "p95Ms": 21.81
+        },
+        {
+          "module": "BaseConstructionManager.Apply",
+          "calls": 67,
+          "totalMs": 681.8,
+          "meanMs": 10.18,
+          "p95Ms": 15.32
+        },
+        {
+          "module": "AutonomousRimMapComponent.ObserveNow",
+          "calls": 39,
+          "totalMs": 671.1,
+          "meanMs": 17.21,
+          "p95Ms": 24.46
+        },
+        {
+          "module": "AutonomousRimMapComponent.RefreshThreat",
+          "calls": 67,
+          "totalMs": 501.6,
+          "meanMs": 7.49,
+          "p95Ms": 9.66
+        },
+        {
+          "module": "ConstructionWorkManager.ConstructionDebrisJob",
+          "calls": 1428,
+          "totalMs": 232.2,
+          "meanMs": 0.16,
+          "p95Ms": 1.02
+        },
+        {
+          "module": "PrisonManager.Apply",
+          "calls": 13,
+          "totalMs": 203.2,
+          "meanMs": 15.63,
+          "p95Ms": 21.22
+        },
+        {
+          "module": "StoragePolicy.ManageFoodStorage",
+          "calls": 40,
+          "totalMs": 197.7,
+          "meanMs": 4.94,
+          "p95Ms": 5.85
+        },
+        {
+          "module": "ConstructionWorkManager.InteractionClearance",
+          "calls": 1428,
+          "totalMs": 194.7,
+          "meanMs": 0.14,
+          "p95Ms": 0.96
+        },
+        {
+          "module": "AutonomousRimMapComponent.EvaluateStrategy",
+          "calls": 4,
+          "totalMs": 173.5,
+          "meanMs": 43.36,
+          "p95Ms": 63.76
+        },
+        {
+          "module": "CommerceManager.Apply",
+          "calls": 13,
+          "totalMs": 158.4,
+          "meanMs": 12.18,
+          "p95Ms": 13.27
+        },
+        {
+          "module": "WorkPriorityManager.Apply",
+          "calls": 13,
+          "totalMs": 125.5,
+          "meanMs": 9.66,
+          "p95Ms": 12.36
+        },
+        {
+          "module": "ConstructionResourceManager.Apply",
+          "calls": 13,
+          "totalMs": 94.9,
+          "meanMs": 7.3,
+          "p95Ms": 9.47
+        },
+        {
+          "module": "ScheduleManager.Apply",
+          "calls": 26,
+          "totalMs": 61.6,
+          "meanMs": 2.37,
+          "p95Ms": 5.14
+        },
+        {
+          "module": "BaseConstructionManager.PendingReason",
+          "calls": 389,
+          "totalMs": 54.7,
+          "meanMs": 0.14,
+          "p95Ms": 0.45
+        },
+        {
+          "module": "ExistingFacilities.Reconcile",
+          "calls": 81,
+          "totalMs": 54.2,
+          "meanMs": 0.67,
+          "p95Ms": 2.84
+        },
+        {
+          "module": "ExistingFacilities.Refresh",
+          "calls": 81,
+          "totalMs": 53.3,
+          "meanMs": 0.66,
+          "p95Ms": 2.83
+        },
+        {
+          "module": "ColonyProgressMonitor.Sample",
+          "calls": 13,
+          "totalMs": 43.8,
+          "meanMs": 3.37,
+          "p95Ms": 7.58
+        },
+        {
+          "module": "GoalDependencyPlanner.Update",
+          "calls": 7,
+          "totalMs": 30.3,
+          "meanMs": 4.33,
+          "p95Ms": 10.97
+        },
+        {
+          "module": "RoomObserver.Read",
+          "calls": 13,
+          "totalMs": 28.5,
+          "meanMs": 2.19,
+          "p95Ms": 3.43
+        },
+        {
+          "module": "WinterForecast.Update",
+          "calls": 7,
+          "totalMs": 17.7,
+          "meanMs": 2.53,
+          "p95Ms": 2.96
+        },
+        {
+          "module": "AutomaticRecovery.Apply",
+          "calls": 13,
+          "totalMs": 14.4,
+          "meanMs": 1.11,
+          "p95Ms": 1.31
+        },
+        {
+          "module": "WorkGiver_AutonomousConstruction.JobOnThing",
+          "calls": 552,
+          "totalMs": 12.3,
+          "meanMs": 0.02,
+          "p95Ms": 0.09
+        },
+        {
+          "module": "AutonomousRimMapComponent.EvaluateFailure",
+          "calls": 4,
+          "totalMs": 8.3,
+          "meanMs": 2.08,
+          "p95Ms": 2.32
+        },
+        {
+          "module": "OpportunityPlanner.Update",
+          "calls": 4,
+          "totalMs": 4.6,
+          "meanMs": 1.14,
+          "p95Ms": 1.37
+        },
+        {
+          "module": "LogisticsMonitor.Observe",
+          "calls": 267,
+          "totalMs": 2.5,
+          "meanMs": 0.01,
+          "p95Ms": 0.02
+        },
+        {
+          "module": "DefenseDoctrine.Update",
+          "calls": 67,
+          "totalMs": 1.1,
+          "meanMs": 0.02,
+          "p95Ms": 0.03
+        },
+        {
+          "module": "EquipmentManager.Apply",
+          "calls": 9,
+          "totalMs": 0.6,
+          "meanMs": 0.06,
+          "p95Ms": 0.21
+        },
+        {
+          "module": "DlcReadiness.Update",
+          "calls": 4,
+          "totalMs": 0.2,
+          "meanMs": 0.06,
+          "p95Ms": 0.08
+        },
+        {
+          "module": "WorkGiver_AutonomousConstruction.GetPriority",
+          "calls": 68,
+          "totalMs": 0.2,
+          "meanMs": 0.0,
+          "p95Ms": 0.0
+        },
+        {
+          "module": "ExistingFacilityImprovements.Plan",
+          "calls": 7,
+          "totalMs": 0.0,
+          "meanMs": 0.01,
+          "p95Ms": 0.01
+        },
+        {
+          "module": "CommerceCaravanManager.Apply",
+          "calls": 13,
+          "totalMs": 0.0,
+          "meanMs": 0.0,
+          "p95Ms": 0.0
+        },
+        {
+          "module": "PostBattleCare.Update",
+          "calls": 14,
+          "totalMs": 0.0,
+          "meanMs": 0.0,
+          "p95Ms": 0.0
+        }
+      ],
+      "checks": [
+        "cached and uncached equipment decisions identical, including changed condition and allow state; evaluation restored",
+        "seven original colonists and all original bedroom positions preserved"
+      ]
+    },
+    {
+      "stage": "a1-long-before",
+      "result": "PASS",
+      "dllHash": "A77E54B687F6216B9ACF3578F8A3B81D3068103FD6B633A5110A08528AB3F637",
+      "runtimeHash": "20F441D676277924195BAF59847105CEE19146808216BE217733B8AEFFDED69B",
+      "resumeSaveHash": "0A84A8E96A31C9E690E77EF4E16D0A01B7E66EF7193A853F419381191184835E",
+      "usePlayerMods": null,
+      "profile": ".tools\\validation\\a1-long-before-20261014-041111-371",
+      "fps": 16.5,
+      "tps": 137.9,
+      "costs": [
+        {
+          "module": "AutonomousRimMapComponent.MapComponentTick",
+          "calls": 8000,
+          "totalMs": 37122.9,
+          "meanMs": 4.64,
+          "p95Ms": 0.05
+        },
+        {
+          "module": "AutonomousRimMapComponent.ManageColony",
+          "calls": 267,
+          "totalMs": 24559.5,
+          "meanMs": 91.98,
+          "p95Ms": 226.26
+        },
+        {
+          "module": "LootAccessManager.Apply",
+          "calls": 134,
+          "totalMs": 21224.8,
+          "meanMs": 158.39,
+          "p95Ms": 192.0
+        },
+        {
+          "module": "ColonyStateScanner.Scan",
+          "calls": 61,
+          "totalMs": 9888.1,
+          "meanMs": 162.1,
+          "p95Ms": 191.08
+        },
+        {
+          "module": "AutonomousRimMapComponent.ObserveNow",
+          "calls": 39,
+          "totalMs": 6462.4,
+          "meanMs": 165.7,
+          "p95Ms": 226.4
+        },
+        {
+          "module": "AutonomousRimMapComponent.ExecuteConstruction",
+          "calls": 267,
+          "totalMs": 2685.3,
+          "meanMs": 10.06,
+          "p95Ms": 20.18
+        },
+        {
+          "module": "ConstructionWorkManager.Apply",
+          "calls": 267,
+          "totalMs": 2015.4,
+          "meanMs": 7.55,
+          "p95Ms": 10.84
+        },
+        {
+          "module": "ConstructionWorkManager.CanDispatch",
+          "calls": 13453,
+          "totalMs": 1918.6,
+          "meanMs": 0.14,
+          "p95Ms": 0.03
+        },
+        {
+          "module": "FoodManager.Apply",
+          "calls": 13,
+          "totalMs": 1016.3,
+          "meanMs": 78.17,
+          "p95Ms": 105.01
+        },
+        {
+          "module": "AutonomousRimMapComponent.EvaluateStrategy",
+          "calls": 4,
+          "totalMs": 769.4,
+          "meanMs": 192.36,
+          "p95Ms": 207.12
+        },
+        {
+          "module": "BaseConstructionManager.Apply",
+          "calls": 67,
+          "totalMs": 668.7,
+          "meanMs": 9.98,
+          "p95Ms": 14.56
+        },
+        {
+          "module": "AutonomousRimMapComponent.RefreshThreat",
+          "calls": 67,
+          "totalMs": 500.6,
+          "meanMs": 7.47,
+          "p95Ms": 10.61
+        },
+        {
+          "module": "ConstructionWorkManager.ConstructionDebrisJob",
+          "calls": 1681,
+          "totalMs": 305.3,
+          "meanMs": 0.18,
+          "p95Ms": 0.93
+        },
+        {
+          "module": "ConstructionWorkManager.InteractionClearance",
+          "calls": 1681,
+          "totalMs": 259.7,
+          "meanMs": 0.15,
+          "p95Ms": 0.84
+        },
+        {
+          "module": "CommerceManager.Apply",
+          "calls": 13,
+          "totalMs": 215.2,
+          "meanMs": 16.56,
+          "p95Ms": 29.94
+        },
+        {
+          "module": "StoragePolicy.ManageFoodStorage",
+          "calls": 40,
+          "totalMs": 201.9,
+          "meanMs": 5.05,
+          "p95Ms": 5.73
+        },
+        {
+          "module": "PrisonManager.Apply",
+          "calls": 13,
+          "totalMs": 187.9,
+          "meanMs": 14.45,
+          "p95Ms": 25.76
+        },
+        {
+          "module": "WorkPriorityManager.Apply",
+          "calls": 13,
+          "totalMs": 150.0,
+          "meanMs": 11.53,
+          "p95Ms": 19.58
+        },
+        {
+          "module": "ConstructionResourceManager.Apply",
+          "calls": 13,
+          "totalMs": 109.8,
+          "meanMs": 8.44,
+          "p95Ms": 10.94
+        },
+        {
+          "module": "ScheduleManager.Apply",
+          "calls": 26,
+          "totalMs": 68.1,
+          "meanMs": 2.62,
+          "p95Ms": 6.1
+        },
+        {
+          "module": "ExistingFacilities.Reconcile",
+          "calls": 81,
+          "totalMs": 55.0,
+          "meanMs": 0.68,
+          "p95Ms": 2.87
+        },
+        {
+          "module": "ExistingFacilities.Refresh",
+          "calls": 81,
+          "totalMs": 54.1,
+          "meanMs": 0.67,
+          "p95Ms": 2.86
+        },
+        {
+          "module": "BaseConstructionManager.PendingReason",
+          "calls": 326,
+          "totalMs": 40.2,
+          "meanMs": 0.12,
+          "p95Ms": 0.48
+        },
+        {
+          "module": "ColonyProgressMonitor.Sample",
+          "calls": 13,
+          "totalMs": 35.4,
+          "meanMs": 2.72,
+          "p95Ms": 5.7
+        },
+        {
+          "module": "RoomObserver.Read",
+          "calls": 13,
+          "totalMs": 31.0,
+          "meanMs": 2.39,
+          "p95Ms": 3.63
+        },
+        {
+          "module": "GoalDependencyPlanner.Update",
+          "calls": 7,
+          "totalMs": 27.9,
+          "meanMs": 3.98,
+          "p95Ms": 8.61
+        },
+        {
+          "module": "WorkGiver_AutonomousConstruction.JobOnThing",
+          "calls": 1654,
+          "totalMs": 23.0,
+          "meanMs": 0.01,
+          "p95Ms": 0.04
+        },
+        {
+          "module": "WinterForecast.Update",
+          "calls": 7,
+          "totalMs": 18.5,
+          "meanMs": 2.64,
+          "p95Ms": 2.83
+        },
+        {
+          "module": "AutomaticRecovery.Apply",
+          "calls": 13,
+          "totalMs": 15.3,
+          "meanMs": 1.17,
+          "p95Ms": 2.03
+        },
+        {
+          "module": "AutonomousRimMapComponent.EvaluateFailure",
+          "calls": 4,
+          "totalMs": 7.4,
+          "meanMs": 1.84,
+          "p95Ms": 1.91
+        },
+        {
+          "module": "OpportunityPlanner.Update",
+          "calls": 4,
+          "totalMs": 5.3,
+          "meanMs": 1.32,
+          "p95Ms": 2.4
+        },
+        {
+          "module": "LogisticsMonitor.Observe",
+          "calls": 267,
+          "totalMs": 2.5,
+          "meanMs": 0.01,
+          "p95Ms": 0.01
+        },
+        {
+          "module": "DefenseDoctrine.Update",
+          "calls": 67,
+          "totalMs": 1.1,
+          "meanMs": 0.02,
+          "p95Ms": 0.03
+        },
+        {
+          "module": "EquipmentManager.Apply",
+          "calls": 9,
+          "totalMs": 0.4,
+          "meanMs": 0.04,
+          "p95Ms": 0.07
+        },
+        {
+          "module": "DlcReadiness.Update",
+          "calls": 4,
+          "totalMs": 0.3,
+          "meanMs": 0.06,
+          "p95Ms": 0.12
+        },
+        {
+          "module": "WorkGiver_AutonomousConstruction.GetPriority",
+          "calls": 51,
+          "totalMs": 0.1,
+          "meanMs": 0.0,
+          "p95Ms": 0.0
+        },
+        {
+          "module": "CommerceCaravanManager.Apply",
+          "calls": 13,
+          "totalMs": 0.0,
+          "meanMs": 0.0,
+          "p95Ms": 0.0
+        },
+        {
+          "module": "ExistingFacilityImprovements.Plan",
+          "calls": 7,
+          "totalMs": 0.0,
+          "meanMs": 0.0,
+          "p95Ms": 0.0
+        },
+        {
+          "module": "PostBattleCare.Update",
+          "calls": 14,
+          "totalMs": 0.0,
+          "meanMs": 0.0,
+          "p95Ms": 0.0
+        }
+      ],
+      "checks": []
+    },
+    {
+      "stage": "a1-player-mods-after",
+      "result": "PASS",
+      "dllHash": "ABB40BF6D6C989E99E958C553B046BA4F64CF74A85914B6ABF4CEA68EE88EBE0",
+      "runtimeHash": "61CA687D2F404532055BFA681EAF231105DB8B3964523B46E8F3822268797237",
+      "resumeSaveHash": "0A84A8E96A31C9E690E77EF4E16D0A01B7E66EF7193A853F419381191184835E",
+      "usePlayerMods": true,
+      "profile": ".tools\\validation\\a1-player-mods-after-20261014-041815-209",
+      "fps": 31.8,
+      "tps": 288.3,
+      "costs": [
+        {
+          "module": "AutonomousRimMapComponent.MapComponentTick",
+          "calls": 8000,
+          "totalMs": 8438.5,
+          "meanMs": 1.05,
+          "p95Ms": 0.07
+        },
+        {
+          "module": "AutonomousRimMapComponent.ManageColony",
+          "calls": 267,
+          "totalMs": 3579.1,
+          "meanMs": 13.41,
+          "p95Ms": 49.09
+        },
+        {
+          "module": "AutonomousRimMapComponent.ExecuteConstruction",
+          "calls": 267,
+          "totalMs": 2661.0,
+          "meanMs": 9.97,
+          "p95Ms": 19.84
+        },
+        {
+          "module": "ConstructionWorkManager.Apply",
+          "calls": 267,
+          "totalMs": 2003.0,
+          "meanMs": 7.5,
+          "p95Ms": 9.99
+        },
+        {
+          "module": "ConstructionWorkManager.CanDispatch",
+          "calls": 12977,
+          "totalMs": 1916.4,
+          "meanMs": 0.15,
+          "p95Ms": 0.95
+        },
+        {
+          "module": "LootAccessManager.Apply",
+          "calls": 134,
+          "totalMs": 1645.4,
+          "meanMs": 12.28,
+          "p95Ms": 16.37
+        },
+        {
+          "module": "FoodManager.Apply",
+          "calls": 13,
+          "totalMs": 1074.6,
+          "meanMs": 82.66,
+          "p95Ms": 120.19
+        },
+        {
+          "module": "ColonyStateScanner.Scan",
+          "calls": 61,
+          "totalMs": 864.1,
+          "meanMs": 14.17,
+          "p95Ms": 16.25
+        },
+        {
+          "module": "BaseConstructionManager.Apply",
+          "calls": 67,
+          "totalMs": 656.7,
+          "meanMs": 9.8,
+          "p95Ms": 13.73
+        },
+        {
+          "module": "AutonomousRimMapComponent.ObserveNow",
+          "calls": 39,
+          "totalMs": 619.4,
+          "meanMs": 15.88,
+          "p95Ms": 21.24
+        },
+        {
+          "module": "AutonomousRimMapComponent.RefreshThreat",
+          "calls": 67,
+          "totalMs": 470.5,
+          "meanMs": 7.02,
+          "p95Ms": 8.24
+        },
+        {
+          "module": "ConstructionWorkManager.ConstructionDebrisJob",
+          "calls": 1624,
+          "totalMs": 289.3,
+          "meanMs": 0.18,
+          "p95Ms": 1.01
+        },
+        {
+          "module": "ConstructionWorkManager.InteractionClearance",
+          "calls": 1624,
+          "totalMs": 239.7,
+          "meanMs": 0.15,
+          "p95Ms": 0.93
+        },
+        {
+          "module": "StoragePolicy.ManageFoodStorage",
+          "calls": 40,
+          "totalMs": 214.9,
+          "meanMs": 5.37,
+          "p95Ms": 6.47
+        },
+        {
+          "module": "PrisonManager.Apply",
+          "calls": 13,
+          "totalMs": 203.8,
+          "meanMs": 15.68,
+          "p95Ms": 30.77
+        },
+        {
+          "module": "CommerceManager.Apply",
+          "calls": 13,
+          "totalMs": 200.5,
+          "meanMs": 15.43,
+          "p95Ms": 31.02
+        },
+        {
+          "module": "AutonomousRimMapComponent.EvaluateStrategy",
+          "calls": 4,
+          "totalMs": 163.2,
+          "meanMs": 40.8,
+          "p95Ms": 53.33
+        },
+        {
+          "module": "WorkPriorityManager.Apply",
+          "calls": 13,
+          "totalMs": 125.7,
+          "meanMs": 9.67,
+          "p95Ms": 13.73
+        },
+        {
+          "module": "ConstructionResourceManager.Apply",
+          "calls": 13,
+          "totalMs": 96.8,
+          "meanMs": 7.45,
+          "p95Ms": 9.76
+        },
+        {
+          "module": "BaseConstructionManager.PendingReason",
+          "calls": 346,
+          "totalMs": 65.0,
+          "meanMs": 0.19,
+          "p95Ms": 0.53
+        },
+        {
+          "module": "ScheduleManager.Apply",
+          "calls": 26,
+          "totalMs": 62.1,
+          "meanMs": 2.39,
+          "p95Ms": 4.04
+        },
+        {
+          "module": "ExistingFacilities.Reconcile",
+          "calls": 81,
+          "totalMs": 55.3,
+          "meanMs": 0.68,
+          "p95Ms": 2.64
+        },
+        {
+          "module": "ExistingFacilities.Refresh",
+          "calls": 81,
+          "totalMs": 54.4,
+          "meanMs": 0.67,
+          "p95Ms": 2.63
+        },
+        {
+          "module": "ColonyProgressMonitor.Sample",
+          "calls": 13,
+          "totalMs": 32.9,
+          "meanMs": 2.53,
+          "p95Ms": 4.97
+        },
+        {
+          "module": "GoalDependencyPlanner.Update",
+          "calls": 7,
+          "totalMs": 27.9,
+          "meanMs": 3.99,
+          "p95Ms": 8.24
+        },
+        {
+          "module": "RoomObserver.Read",
+          "calls": 13,
+          "totalMs": 24.5,
+          "meanMs": 1.89,
+          "p95Ms": 2.71
+        },
+        {
+          "module": "WinterForecast.Update",
+          "calls": 7,
+          "totalMs": 16.7,
+          "meanMs": 2.38,
+          "p95Ms": 2.64
+        },
+        {
+          "module": "WorkGiver_AutonomousConstruction.JobOnThing",
+          "calls": 1216,
+          "totalMs": 15.9,
+          "meanMs": 0.01,
+          "p95Ms": 0.02
+        },
+        {
+          "module": "AutomaticRecovery.Apply",
+          "calls": 13,
+          "totalMs": 12.5,
+          "meanMs": 0.96,
+          "p95Ms": 1.44
+        },
+        {
+          "module": "AutonomousRimMapComponent.EvaluateFailure",
+          "calls": 4,
+          "totalMs": 7.9,
+          "meanMs": 1.98,
+          "p95Ms": 2.23
+        },
+        {
+          "module": "OpportunityPlanner.Update",
+          "calls": 4,
+          "totalMs": 4.8,
+          "meanMs": 1.21,
+          "p95Ms": 1.44
+        },
+        {
+          "module": "LogisticsMonitor.Observe",
+          "calls": 267,
+          "totalMs": 1.9,
+          "meanMs": 0.01,
+          "p95Ms": 0.01
+        },
+        {
+          "module": "DefenseDoctrine.Update",
+          "calls": 67,
+          "totalMs": 1.1,
+          "meanMs": 0.02,
+          "p95Ms": 0.02
+        },
+        {
+          "module": "EquipmentManager.Apply",
+          "calls": 9,
+          "totalMs": 0.3,
+          "meanMs": 0.04,
+          "p95Ms": 0.07
+        },
+        {
+          "module": "DlcReadiness.Update",
+          "calls": 4,
+          "totalMs": 0.2,
+          "meanMs": 0.04,
+          "p95Ms": 0.04
+        },
+        {
+          "module": "WorkGiver_AutonomousConstruction.GetPriority",
+          "calls": 54,
+          "totalMs": 0.1,
+          "meanMs": 0.0,
+          "p95Ms": 0.01
+        },
+        {
+          "module": "CommerceCaravanManager.Apply",
+          "calls": 13,
+          "totalMs": 0.0,
+          "meanMs": 0.0,
+          "p95Ms": 0.0
+        },
+        {
+          "module": "PostBattleCare.Update",
+          "calls": 14,
+          "totalMs": 0.0,
+          "meanMs": 0.0,
+          "p95Ms": 0.0
+        },
+        {
+          "module": "ExistingFacilityImprovements.Plan",
+          "calls": 7,
+          "totalMs": 0.0,
+          "meanMs": 0.0,
+          "p95Ms": 0.0
+        }
+      ],
+      "checks": [
+        "cached and uncached equipment decisions identical, including changed condition and allow state; evaluation restored",
+        "seven original colonists and all original bedroom positions preserved"
+      ]
+    },
+    {
+      "stage": "a1-queued-regression",
+      "result": "PASS",
+      "dllHash": "ABB40BF6D6C989E99E958C553B046BA4F64CF74A85914B6ABF4CEA68EE88EBE0",
+      "runtimeHash": "20F441D676277924195BAF59847105CEE19146808216BE217733B8AEFFDED69B",
+      "resumeSaveHash": "01B0BEC2823B5711CE0CC528CEFE61CF5DC3AD9F6E4A1AB62A598107F0E695FD",
+      "usePlayerMods": null,
+      "profile": ".tools\\validation\\a1-queued-regression-20261014-041454-607",
+      "fps": null,
+      "tps": null,
+      "costs": [],
+      "checks": [
+        "real native opportunistic hauling accepted; queued construction ownership survives Apply without another order."
+      ]
+    }
+  ]
+}

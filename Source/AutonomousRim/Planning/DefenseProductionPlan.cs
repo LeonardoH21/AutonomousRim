@@ -14,6 +14,8 @@ namespace AutonomousRim.Planning
         public static List<Pawn> Fighters(Map map) => map.mapPawns.AllPawnsSpawned.Where(p =>
             p.IsFreeColonist && !p.Dead && p.ageTracker.AgeBiologicalYears >= 18 && !p.WorkTagIsDisabled(WorkTags.Violent)).ToList();
         public static bool Melee(Pawn pawn)
+            => EquipmentEvaluationScope.Melee(pawn,()=>MeleeCore(pawn));
+        private static bool MeleeCore(Pawn pawn)
         {
             if (pawn.Map == null) return TraitAnalyzer.PreferMelee(pawn);
             var fighters = Fighters(pawn.Map);

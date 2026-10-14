@@ -67,6 +67,8 @@ namespace AutonomousRim.Planning
             }
         }
         public static bool Meets(Pawn p,Thing item,string target)
+            => EquipmentEvaluationScope.Meets(p,item,target,()=>MeetsCore(p,item,target));
+        private static bool MeetsCore(Pawn p,Thing item,string target)
         {
             if(item==null || !DefenseProductionPlan.Usable(item))return false;
             if(item.def.useHitPoints && item.HitPoints<item.MaxHitPoints*.65f)return false;
@@ -167,6 +169,8 @@ namespace AutonomousRim.Planning
             return result;
         }
         public static int Stage(Map map)
+            => EquipmentEvaluationScope.Stage(map,()=>StageCore(map));
+        private static int StageCore(Map map)
         {
             var commerce=map.GetComponent<AutonomousRimMapComponent>().Commerce;
             // Departing fighters must not falsely advance the colony's equipment checkpoint.

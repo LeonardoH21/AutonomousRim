@@ -72,8 +72,10 @@ namespace AutonomousRim.Execution
                 int wood = ground.Where(t => t.def == ThingDefOf.WoodLog && !t.IsForbidden(Faction.OfPlayer)).Sum(t => t.stackCount);
                 if (fuel > wood) { materials.TryGetValue(ThingDefOf.WoodLog, out int construction); materials[ThingDefOf.WoodLog] = Math.Max(construction, fuel - wood); }
             }
-            var gear = EquipmentPlanner.Plan(map, apparel, true).Where(d => equipmentAllowed(d.Pawn)).GroupBy(d => d.Pawn)
-                .Select(g => g.OrderByDescending(d => d.Gain).First()).Select(d => d.Item).ToHashSet();
+            var gear = ground.Any(t=>t.IsForbidden(Faction.OfPlayer) && (t.def.IsWeapon || t.def.IsApparel)) && pawns.Any(equipmentAllowed)
+                ? EquipmentPlanner.Plan(map, apparel, true).Where(d => equipmentAllowed(d.Pawn)).GroupBy(d => d.Pawn)
+                    .Select(g => g.OrderByDescending(d => d.Gain).First()).Select(d => d.Item).ToHashSet()
+                : new HashSet<Thing>();
             var textileDefs = new HashSet<ThingDef>();
             int textileNeed = 0;
             foreach (var order in (productionBills ?? new List<ManagedFoodBill>()).Where(o => o.Matches && !o.Bill.suspended &&

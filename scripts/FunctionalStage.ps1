@@ -1,4 +1,4 @@
-param(
+﻿param(
  [string]$RimWorldDir='C:\Users\Administrador\Downloads\RimWorld.v1.6.4633\RimWorld.v1.6.4633\game',
  [Parameter(Mandatory=$true)][ValidatePattern('^[a-z0-9-]+$')][string]$Stage,
  [Parameter(Mandatory=$true)][ValidatePattern('^autonomousrim[a-z]+$')][string]$Flag,
@@ -6,7 +6,8 @@ param(
  [ValidatePattern('^autonomousrim[a-z0-9]+$')][string[]]$ExtraFlags=@(),
  [string]$ResumeSave,
  [ValidateRange(60,3600)][int]$TimeoutSeconds=600,
- [switch]$Visible
+ [switch]$Visible,
+ [switch]$UsePlayerMods
 )
 $ErrorActionPreference='Stop'
 $root=Split-Path $PSScriptRoot -Parent
@@ -23,6 +24,15 @@ foreach($expansion in @('Royalty','Ideology','Biotech','Anomaly','Odyssey')){
 foreach($package in @('leonardoh21.autonomousrim','leonardoh21.autonomousrim.runtimechecks')){
  $node=$config.CreateElement('li');$node.InnerText=$package;$config.ModsConfigData.activeMods.AppendChild($node)|Out-Null
 }
+if($UsePlayerMods){
+ $playerConfig=Join-Path $env:USERPROFILE 'AppData\LocalLow\Ludeon Studios\RimWorld by Ludeon Studios\Config\ModsConfig.xml'
+ if(!(Test-Path -LiteralPath $playerConfig)){throw 'Player ModsConfig.xml not found.'}
+ [xml]$config=Get-Content -LiteralPath $playerConfig -Raw
+ if('leonardoh21.autonomousrim' -notin @($config.ModsConfigData.activeMods.li)){throw 'Player profile must enable AutonomousRim.'}
+ if('leonardoh21.autonomousrim.runtimechecks' -notin @($config.ModsConfigData.activeMods.li)){
+  $node=$config.CreateElement('li');$node.InnerText='leonardoh21.autonomousrim.runtimechecks';$config.ModsConfigData.activeMods.AppendChild($node)|Out-Null
+ }
+}
 $config.Save("$profile\Config\ModsConfig.xml")
 Set-Content -LiteralPath "$profile\Config\Prefs.xml" -Encoding utf8 -Value '<PrefsData><devMode>False</devMode><runInBackground>True</runInBackground><autosaveIntervalDays>100</autosaveIntervalDays><pauseOnLoad>False</pauseOnLoad><pauseOnError>False</pauseOnError><fullscreen>False</fullscreen><volumeMaster>0</volumeMaster></PrefsData>'
 if($Flag -eq 'autonomousrimenhancedtest' -or 'autonomousrimelitesix' -in $ExtraFlags){
@@ -38,7 +48,7 @@ try {
  New-Item -ItemType Directory -Path "$addon\About","$addon\Assemblies" -Force|Out-Null
  Copy-Item -LiteralPath "$root\.tools\runtime-checks\Assemblies\AutonomousRim.RuntimeChecks.dll" -Destination "$addon\Assemblies\AutonomousRim.RuntimeChecks.dll"
  Set-Content -LiteralPath "$addon\About\About.xml" -Encoding utf8 -Value '<ModMetaData><name>AutonomousRim Runtime Checks</name><author>AutonomousRim</author><packageId>leonardoh21.autonomousrim.runtimechecks</packageId><supportedVersions><li>1.6</li></supportedVersions><loadAfter><li>leonardoh21.autonomousrim</li></loadAfter></ModMetaData>'
- $manifest=[ordered]@{stage=$Stage;flag=$Flag;extraFlags=@($ExtraFlags);resumeSaveHash=$(if($ResumeSave){(Get-FileHash -LiteralPath $ResumeSave).Hash}else{$null});sourceCommit=(git -C $root rev-parse HEAD);dllHash=(Get-FileHash "$game\Mods\AutonomousRim\1.6\Assemblies\AutonomousRim.dll").Hash;runtimeHash=(Get-FileHash "$addon\Assemblies\AutonomousRim.RuntimeChecks.dll").Hash;result='RUNNING';profile=$profile}
+ $manifest=[ordered]@{stage=$Stage;usePlayerMods=[bool]$UsePlayerMods;flag=$Flag;extraFlags=@($ExtraFlags);resumeSaveHash=$(if($ResumeSave){(Get-FileHash -LiteralPath $ResumeSave).Hash}else{$null});sourceCommit=(git -C $root rev-parse HEAD);dllHash=(Get-FileHash "$game\Mods\AutonomousRim\1.6\Assemblies\AutonomousRim.dll").Hash;runtimeHash=(Get-FileHash "$addon\Assemblies\AutonomousRim.RuntimeChecks.dll").Hash;result='RUNNING';profile=$profile}
  $manifest.sourceDirty=[bool](git -C $root status --porcelain)
  $taskPatch=Join-Path $game 'Mods\AutonomousRim\Patches\EnhancedWorldYieldCaps.xml'
  if(Test-Path -LiteralPath $taskPatch){$manifest.yieldCapsHash=(Get-FileHash -LiteralPath $taskPatch).Hash}
